@@ -43,6 +43,21 @@ jobs:
           path: ~/.cache/kokoro
           key: kokoro-model-v1.0
 
+      - name: Set up Node (for the Remotion renderer)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Cache Remotion node_modules (includes headless Chrome)
+        uses: actions/cache@v4
+        with:
+          path: remotion/node_modules
+          key: remotion-${{ hashFiles('remotion/package.json') }}
+
+      - name: Node dependencies (Remotion)
+        working-directory: remotion
+        run: npm install --no-audit --no-fund
+
       - name: Python dependencies
         run: pip install -r requirements.txt
 
