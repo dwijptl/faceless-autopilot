@@ -12,8 +12,9 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from 'remotion';
+import {BRAND, StylePack} from './styles';
 
-// ── Font (Google Fonts, loaded at render time; safe fallback) ──────────
+// ── Font (Google Fonts Inter, loaded at render time; safe fallback) ────
 let FONT = 'Inter, -apple-system, "DejaVu Sans", sans-serif';
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -27,7 +28,7 @@ export const fontFamily = FONT;
 
 type Asset = {path: string; kind: string; duration?: number};
 
-// ── Ken Burns still: slow zoom + drift, alternating direction ─────────
+// ── Ken Burns still ────────────────────────────────────────────────────
 export const KenBurnsImage: React.FC<{
   src: string;
   durationInFrames: number;
@@ -56,7 +57,7 @@ export const KenBurnsImage: React.FC<{
   );
 };
 
-// ── Video shot: cover-fit, gentle push-in, loops if clip is short ─────
+// ── Video shot ─────────────────────────────────────────────────────────
 const VideoShot: React.FC<{
   asset: Asset;
   shotFrames: number;
@@ -68,7 +69,6 @@ const VideoShot: React.FC<{
   const assetFrames = Math.max(Math.round((asset.duration ?? 6) * fps) - 2, 1);
   const offsetChoices = Math.max(assetFrames - shotFrames, 0);
   const trimBefore = Math.floor(random(`tb-${seed}`) * offsetChoices);
-
   const video = (
     <OffthreadVideo
       muted
@@ -77,7 +77,6 @@ const VideoShot: React.FC<{
       style={{width: '100%', height: '100%', objectFit: 'cover'}}
     />
   );
-
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <AbsoluteFill style={{transform: `scale(${scale})`}}>
@@ -91,113 +90,112 @@ const VideoShot: React.FC<{
   );
 };
 
-// ── Scene visual: chops the scene into shots across its assets ────────
+// ── Scene visual with style grade ──────────────────────────────────────
 export const SceneVisual: React.FC<{
   assets: Asset[];
   sceneFrames: number;
   fps: number;
   maxShotSeconds: number;
   sceneN: number;
-}> = ({assets, sceneFrames, fps, maxShotSeconds, sceneN}) => {
+  style: StylePack;
+  dim?: boolean; // for kinetic/stat overlay scenes
+}> = ({assets, sceneFrames, fps, maxShotSeconds, sceneN, style, dim}) => {
   const maxShot = Math.round(maxShotSeconds * fps);
   const shots: {from: number; frames: number; asset: Asset; idx: number}[] = [];
   let cursor = 0;
   let i = 0;
-  while (cursor < sceneFrames) {
+  while (cursor < sceneFrames && assets.length > 0) {
     const remaining = sceneFrames - cursor;
     const frames = remaining < maxShot * 1.5 ? remaining : maxShot;
     shots.push({from: cursor, frames, asset: assets[i % assets.length], idx: i});
     cursor += frames;
     i += 1;
-    if (i > 200) break; // safety
+    if (i > 200) break;
   }
   return (
-    <AbsoluteFill style={{backgroundColor: '#0b0f1a'}}>
-      {shots.map((s) => (
-        <Sequence key={s.idx} from={s.from} durationInFrames={s.frames}>
-          {s.asset.kind === 'video' ? (
-            <VideoShot
-              asset={s.asset}
-              shotFrames={s.frames}
-              fps={fps}
-              seed={`${sceneN}-${s.idx}`}
-            />
-          ) : (
-            <KenBurnsImage
-              src={staticFile(s.asset.path)}
-              durationInFrames={s.frames}
-              seed={`${sceneN}-${s.idx}`}
-            />
-          )}
-        </Sequence>
-      ))}
+    <AbsoluteFill style={{backgroundColor: style.bg}}>
+      <AbsoluteFill style={{filter: style.visualFilter}}>
+        {shots.map((s) => (
+          <Sequence key={s.idx} from={s.from} durationInFrames={s.frames}>
+            {s.asset.kind === 'video' ? (
+              <VideoShot asset={s.asset} shotFrames={s.frames} fps={fps}
+                seed={`${sceneN}-${s.idx}`} />
+            ) : (
+              <KenBurnsImage src={staticFile(s.asset.path)}
+                durationInFrames={s.frames} seed={`${sceneN}-${s.idx}`} />
+            )}
+          </Sequence>
+        ))}
+      </AbsoluteFill>
+      <AbsoluteFill style={{background: style.gradeOverlay, pointerEvents: 'none'}} />
+      {dim ? (
+        <AbsoluteFill style={{background: 'rgba(6,10,20,0.55)'}} />
+      ) : null}
     </AbsoluteFill>
   );
 };
 
-// ── Lower third scene title: springs in, slides away ──────────────────
-export const LowerThird: React.FC<{title: string; accent: string}> = ({
+// ── Lower third (3 variants) ───────────────────────────────────────────
+export const LowerThird: React.FC<{title: string; style: StylePack}> = ({
   title,
-  accent,
+  style,
 }) => {
   const frame = useCurrentFrame();
   const {fps, height, width} = useVideoConfig();
   const appear = spring({frame: frame - 8, fps, config: {damping: 200, stiffness: 120}});
   const hold = 2.6 * fps;
-  const exit = interpolate(frame, [hold, hold + 12], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
+  const exit = interpolate(frame, [hold, hold + 12], [0, 1],
+    {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const x = interpolate(appear, [0, 1], [-420, 0]) - exit * 480;
-  const scaleUi = width / 1920;
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        left: 56 * scaleUi,
-        top: height * 0.08,
-        transform: `translateX(${x * scaleUi}px)`,
-        opacity: Math.min(appear, 1 - exit),
-        display: 'flex',
-        alignItems: 'center',
-        gap: 16 * scaleUi,
-        fontFamily,
-      }}
-    >
-      <div
-        style={{
-          width: 10 * scaleUi,
-          height: 54 * scaleUi,
-          background: accent,
-          borderRadius: 3 * scaleUi,
-        }}
-      />
-      <div
-        style={{
-          color: 'white',
-          fontSize: 34 * scaleUi,
-          fontWeight: 700,
-          letterSpacing: 1.2,
-          textTransform: 'uppercase',
-          textShadow: '0 2px 12px rgba(0,0,0,0.75)',
-          background: 'rgba(8,10,18,0.45)',
-          padding: `${8 * scaleUi}px ${18 * scaleUi}px`,
-          borderRadius: 8 * scaleUi,
-        }}
-      >
-        {title}
+  const s = width / 1920;
+  const v = style.lowerThirdVariant;
+
+  const inner =
+    v === 'chip' ? (
+      <div style={{
+        background: style.accent, color: '#0A1428',
+        fontSize: 32 * s, fontWeight: 800, letterSpacing: 1,
+        textTransform: 'uppercase', padding: `${10 * s}px ${22 * s}px`,
+        borderRadius: 999,
+      }}>{title}</div>
+    ) : v === 'underline' ? (
+      <div style={{display: 'flex', flexDirection: 'column', gap: 6 * s}}>
+        <div style={{
+          color: BRAND.text, fontSize: 34 * s, fontWeight: 600,
+          letterSpacing: 2.5, textTransform: 'uppercase',
+          textShadow: '0 2px 14px rgba(0,0,0,0.8)',
+        }}>{title}</div>
+        <div style={{height: 3 * s, width: 120 * s, background: style.accent}} />
       </div>
-    </div>
+    ) : (
+      <div style={{display: 'flex', alignItems: 'center', gap: 16 * s}}>
+        <div style={{width: 10 * s, height: 54 * s, background: style.accent,
+          borderRadius: 3 * s}} />
+        <div style={{
+          color: 'white', fontSize: 34 * s, fontWeight: 700, letterSpacing: 1.2,
+          textTransform: 'uppercase', textShadow: '0 2px 12px rgba(0,0,0,0.75)',
+          background: 'rgba(8,10,18,0.45)', padding: `${8 * s}px ${18 * s}px`,
+          borderRadius: 8 * s,
+        }}>{title}</div>
+      </div>
+    );
+
+  return (
+    <div style={{
+      position: 'absolute', left: 56 * s, top: height * 0.08,
+      transform: `translateX(${x * s}px)`, opacity: Math.min(appear, 1 - exit),
+      fontFamily,
+    }}>{inner}</div>
   );
 };
 
-// ── Captions: word-chunks that pop with spring physics ────────────────
+// ── Captions (4 variants) ──────────────────────────────────────────────
 export const CaptionsLayer: React.FC<{
   captions: {start: number; end: number; text: string}[];
-  accent: string;
-}> = ({captions, accent}) => {
+  style: StylePack;
+}> = ({captions, style}) => {
   const {fps, height, width} = useVideoConfig();
-  const scaleUi = width / 1920;
+  const s = width / 1920;
   return (
     <AbsoluteFill>
       {captions.map((c, i) => {
@@ -205,7 +203,7 @@ export const CaptionsLayer: React.FC<{
         const dur = Math.max(Math.round((c.end - c.start) * fps), 2);
         return (
           <Sequence key={i} from={from} durationInFrames={dur}>
-            <CaptionChunk text={c.text} accent={accent} y={height * 0.78} scaleUi={scaleUi} />
+            <CaptionChunk text={c.text} style={style} y={height * 0.78} s={s} />
           </Sequence>
         );
       })}
@@ -215,55 +213,188 @@ export const CaptionsLayer: React.FC<{
 
 const CaptionChunk: React.FC<{
   text: string;
-  accent: string;
+  style: StylePack;
   y: number;
-  scaleUi: number;
-}> = ({text, accent, y, scaleUi}) => {
+  s: number;
+}> = ({text, style, y, s}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
   const pop = spring({frame, fps, config: {damping: 14, stiffness: 240, mass: 0.6}});
-  const scale = interpolate(pop, [0, 1], [0.82, 1]);
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        top: y,
-        width: '100%',
-        display: 'flex',
-        justifyContent: 'center',
-        fontFamily,
-      }}
-    >
-      <div
-        style={{
-          transform: `scale(${scale})`,
-          opacity: pop,
-          color: 'white',
-          fontSize: 58 * scaleUi,
-          fontWeight: 800,
-          textAlign: 'center',
-          maxWidth: '78%',
-          lineHeight: 1.25,
-          textShadow:
-            '0 3px 0 rgba(0,0,0,0.85), 0 -2px 0 rgba(0,0,0,0.85), 3px 0 0 rgba(0,0,0,0.85), -3px 0 0 rgba(0,0,0,0.85), 0 6px 24px rgba(0,0,0,0.6)',
-        }}
-      >
+  const scale = interpolate(pop, [0, 1], [0.84, 1]);
+  const v = style.captionVariant;
+  const stroke =
+    '0 3px 0 rgba(0,0,0,0.85), 0 -2px 0 rgba(0,0,0,0.85), 3px 0 0 rgba(0,0,0,0.85), -3px 0 0 rgba(0,0,0,0.85), 0 6px 24px rgba(0,0,0,0.6)';
+
+  const body =
+    v === 'boxed' ? (
+      <div style={{
+        background: 'rgba(8,13,26,0.88)', color: 'white', fontSize: 60 * s,
+        fontWeight: 800, textAlign: 'center', lineHeight: 1.22,
+        padding: `${10 * s}px ${26 * s}px`, borderRadius: 12 * s,
+        borderLeft: `${8 * s}px solid ${style.accent}`,
+      }}>{text}</div>
+    ) : v === 'minimal' ? (
+      <div style={{
+        color: BRAND.text, fontSize: 50 * s, fontWeight: 600, letterSpacing: 0.4,
+        textAlign: 'center', lineHeight: 1.3, textShadow: '0 3px 18px rgba(0,0,0,0.9)',
+        borderBottom: `${3 * s}px solid ${style.accent}`, paddingBottom: 6 * s,
+      }}>{text}</div>
+    ) : v === 'chip' ? (
+      <div style={{
+        background: style.accent, color: '#0A1428', fontSize: 54 * s,
+        fontWeight: 900, textAlign: 'center', lineHeight: 1.2,
+        padding: `${8 * s}px ${24 * s}px`, borderRadius: 8 * s,
+        boxShadow: '0 8px 30px rgba(0,0,0,0.55)',
+      }}>{text}</div>
+    ) : (
+      <div style={{
+        color: 'white', fontSize: 58 * s, fontWeight: 800, textAlign: 'center',
+        lineHeight: 1.25, textShadow: stroke,
+      }}>
         {text}
-        <div
-          style={{
-            height: 6 * scaleUi,
-            width: `${interpolate(pop, [0, 1], [0, 34])}%`,
-            background: accent,
-            borderRadius: 3,
-            margin: '6px auto 0',
-          }}
-        />
+        <div style={{
+          height: 6 * s, width: `${interpolate(pop, [0, 1], [0, 34])}%`,
+          background: style.accent, borderRadius: 3, margin: '6px auto 0',
+        }} />
+      </div>
+    );
+
+  return (
+    <div style={{position: 'absolute', top: y, width: '100%', display: 'flex',
+      justifyContent: 'center', fontFamily}}>
+      <div style={{transform: `scale(${scale})`, opacity: pop, maxWidth: '78%'}}>
+        {body}
       </div>
     </div>
   );
 };
 
-// ── Cinematic overlays: vignette + film grain + light leak ────────────
+// ── Kinetic typography scene overlay ───────────────────────────────────
+export const KineticText: React.FC<{text: string; style: StylePack}> = ({
+  text,
+  style,
+}) => {
+  const frame = useCurrentFrame();
+  const {fps, width} = useVideoConfig();
+  const s = width / 1920;
+  const words = text.split(/\s+/).filter(Boolean).slice(0, 8);
+  return (
+    <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center',
+      fontFamily, padding: `0 ${120 * s}px`}}>
+      <div style={{display: 'flex', flexWrap: 'wrap', gap: 22 * s,
+        justifyContent: 'center'}}>
+        {words.map((w, i) => {
+          const pop = spring({frame: frame - 6 - i * 5, fps,
+            config: {damping: 13, stiffness: 200, mass: 0.7}});
+          const highlight = i === words.length - 1 || /\d/.test(w);
+          return (
+            <span key={i} style={{
+              display: 'inline-block',
+              transform: `translateY(${interpolate(pop, [0, 1], [70, 0])}px) scale(${interpolate(pop, [0, 1], [0.8, 1])})`,
+              opacity: pop,
+              color: highlight ? style.accent : 'white',
+              fontSize: 128 * s, fontWeight: 900, letterSpacing: -2,
+              textTransform: 'uppercase', lineHeight: 1.02,
+              textShadow: '0 10px 44px rgba(0,0,0,0.75)',
+            }}>{w}</span>
+          );
+        })}
+      </div>
+    </AbsoluteFill>
+  );
+};
+
+// ── Animated stat / infographic card ───────────────────────────────────
+export const StatCard: React.FC<{
+  stat: {value?: number; suffix?: string; label?: string};
+  style: StylePack;
+}> = ({stat, style}) => {
+  const frame = useCurrentFrame();
+  const {fps, width} = useVideoConfig();
+  const s = width / 1920;
+  const value = Number(stat.value ?? 0);
+  const shown = interpolate(frame, [8, 8 + 1.6 * fps], [0, value],
+    {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  const display = Math.abs(value) >= 100 || Number.isInteger(value)
+    ? Math.round(shown).toLocaleString('en-US')
+    : shown.toFixed(1);
+  const rise = spring({frame: frame - 4, fps, config: {damping: 200, stiffness: 90}});
+  const barW = interpolate(frame, [10, 10 + 1.6 * fps], [0, 380],
+    {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  return (
+    <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center', fontFamily}}>
+      <div style={{
+        transform: `translateY(${interpolate(rise, [0, 1], [60, 0])}px)`,
+        opacity: rise, background: 'rgba(10,20,40,0.82)',
+        border: `${2 * s}px solid rgba(255,176,32,0.35)`,
+        borderRadius: 24 * s, padding: `${44 * s}px ${80 * s}px`,
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        gap: 14 * s, boxShadow: '0 30px 80px rgba(0,0,0,0.6)',
+      }}>
+        <div style={{fontSize: 170 * s, fontWeight: 900, color: style.accent,
+          letterSpacing: -3, lineHeight: 1}}>
+          {display}{stat.suffix ?? ''}
+        </div>
+        <div style={{height: 6 * s, width: barW * s, background: style.accent2,
+          borderRadius: 3}} />
+        <div style={{fontSize: 40 * s, fontWeight: 600, color: BRAND.text,
+          textAlign: 'center', maxWidth: 760 * s, lineHeight: 1.25}}>
+          {stat.label ?? ''}
+        </div>
+      </div>
+    </AbsoluteFill>
+  );
+};
+
+// ── Brand: corner watermark + outro end card ───────────────────────────
+export const Watermark: React.FC<{src: string; opacity: number}> = ({src, opacity}) => {
+  const {width} = useVideoConfig();
+  const s = width / 1920;
+  return (
+    <Img src={staticFile(src)} style={{
+      position: 'absolute', right: 40 * s, bottom: 36 * s,
+      width: 92 * s, height: 92 * s, opacity, pointerEvents: 'none',
+    }} />
+  );
+};
+
+export const Outro: React.FC<{
+  brandName: string;
+  tagline: string;
+  style: StylePack;
+  watermarkPath: string | null;
+}> = ({brandName, tagline, style, watermarkPath}) => {
+  const frame = useCurrentFrame();
+  const {fps, width} = useVideoConfig();
+  const s = width / 1920;
+  const inSpring = spring({frame: frame - 4, fps, config: {damping: 200, stiffness: 110}});
+  const sub = spring({frame: frame - 14, fps, config: {damping: 200, stiffness: 110}});
+  return (
+    <AbsoluteFill style={{
+      background: `radial-gradient(ellipse at 50% 35%, ${BRAND.panel} 0%, ${BRAND.navy} 70%)`,
+      justifyContent: 'center', alignItems: 'center', fontFamily,
+    }}>
+      <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center',
+        gap: 22 * s, transform: `scale(${interpolate(inSpring, [0, 1], [0.92, 1])})`,
+        opacity: inSpring}}>
+        {watermarkPath ? (
+          <Img src={staticFile(watermarkPath)}
+            style={{width: 130 * s, height: 130 * s, opacity: 0.95}} />
+        ) : null}
+        <div style={{fontSize: 92 * s, fontWeight: 900, letterSpacing: 10,
+          color: BRAND.text, textTransform: 'uppercase'}}>{brandName}</div>
+        <div style={{height: 4 * s, width: 220 * s, background: style.accent}} />
+        <div style={{fontSize: 34 * s, fontWeight: 500, color: 'rgba(244,247,251,0.8)',
+          opacity: sub}}>{tagline}</div>
+        <div style={{fontSize: 30 * s, fontWeight: 700, color: style.accent,
+          letterSpacing: 3, textTransform: 'uppercase', opacity: sub,
+          marginTop: 10 * s}}>New expeditions Mon · Wed · Fri</div>
+      </div>
+    </AbsoluteFill>
+  );
+};
+
+// ── Cinematic overlays (grain + vignette) + light leak + progress ──────
 const GRAIN =
   'data:image/svg+xml;utf8,' +
   encodeURIComponent(
@@ -272,20 +403,13 @@ const GRAIN =
 
 export const CinematicOverlay: React.FC = () => (
   <AbsoluteFill style={{pointerEvents: 'none'}}>
-    <AbsoluteFill
-      style={{
-        background:
-          'radial-gradient(ellipse at center, rgba(0,0,0,0) 58%, rgba(0,0,0,0.38) 100%)',
-      }}
-    />
-    <AbsoluteFill
-      style={{
-        backgroundImage: `url("${GRAIN}")`,
-        backgroundRepeat: 'repeat',
-        opacity: 0.05,
-        mixBlendMode: 'overlay',
-      }}
-    />
+    <AbsoluteFill style={{
+      background: 'radial-gradient(ellipse at center, rgba(0,0,0,0) 58%, rgba(0,0,0,0.38) 100%)',
+    }} />
+    <AbsoluteFill style={{
+      backgroundImage: `url("${GRAIN}")`, backgroundRepeat: 'repeat',
+      opacity: 0.05, mixBlendMode: 'overlay',
+    }} />
   </AbsoluteFill>
 );
 
@@ -299,20 +423,12 @@ export const LightLeak: React.FC<{seed: string}> = ({seed}) => {
   const opacity = interpolate(frame, [0, 6, sweepFrames], [0, 0.28, 0]);
   return (
     <AbsoluteFill style={{pointerEvents: 'none', overflow: 'hidden'}}>
-      <div
-        style={{
-          position: 'absolute',
-          top: '-20%',
-          left: x,
-          width: width * 0.45,
-          height: '140%',
-          transform: 'rotate(14deg)',
-          background:
-            'linear-gradient(90deg, rgba(255,190,90,0) 0%, rgba(255,200,110,0.9) 50%, rgba(255,190,90,0) 100%)',
-          filter: 'blur(28px)',
-          opacity,
-        }}
-      />
+      <div style={{
+        position: 'absolute', top: '-20%', left: x, width: width * 0.45,
+        height: '140%', transform: 'rotate(14deg)',
+        background: 'linear-gradient(90deg, rgba(255,190,90,0) 0%, rgba(255,200,110,0.9) 50%, rgba(255,190,90,0) 100%)',
+        filter: 'blur(28px)', opacity,
+      }} />
     </AbsoluteFill>
   );
 };
@@ -321,16 +437,10 @@ export const ProgressBar: React.FC<{accent: string}> = ({accent}) => {
   const frame = useCurrentFrame();
   const {durationInFrames} = useVideoConfig();
   return (
-    <div
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        height: 8,
-        width: `${(frame / Math.max(durationInFrames - 1, 1)) * 100}%`,
-        background: accent,
-        opacity: 0.9,
-      }}
-    />
+    <div style={{
+      position: 'absolute', top: 0, left: 0, height: 8,
+      width: `${(frame / Math.max(durationInFrames - 1, 1)) * 100}%`,
+      background: accent, opacity: 0.9,
+    }} />
   );
 };

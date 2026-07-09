@@ -9,9 +9,15 @@ const FALLBACK = {
   width: 1920,
   height: 1080,
   xfadeFrames: 12,
-  accent: '#FFD24A',
+  style: 'documentary',
+  accent: '#FFB020',
   progressBar: true,
-  title: 'Faceless Autopilot',
+  brandName: 'TERRA INCOGNITA',
+  brandTagline: "Mapping the world's hidden places",
+  watermarkPath: null as string | null,
+  watermarkOpacity: 0.08,
+  outroSeconds: 4,
+  title: 'Terra Incognita',
   thumbText: 'PREVIEW',
   musicPath: null as string | null,
   musicVolume: 0.12,
@@ -20,6 +26,9 @@ const FALLBACK = {
     {
       n: 1,
       title: 'Preview scene',
+      visualMode: 'broll',
+      kineticText: '',
+      stat: {} as {value?: number; suffix?: string; label?: string},
       audioPath: null as string | null,
       audioDuration: 5,
       assets: [] as {path: string; kind: string; duration?: number}[],
@@ -30,11 +39,14 @@ const FALLBACK = {
 export type Manifest = typeof FALLBACK;
 
 const mainDuration = (m: Manifest) => {
-  const total = m.scenes.reduce(
+  const sceneTotal = m.scenes.reduce(
     (acc, s) => acc + Math.round(s.audioDuration * m.fps),
     0
   );
-  return Math.max(m.fps, total - (m.scenes.length - 1) * m.xfadeFrames);
+  const outro = Math.max(Math.round((m.outroSeconds ?? 4) * m.fps), m.fps);
+  // one transition between each pair of scenes + one into the outro
+  const overlaps = m.scenes.length * m.xfadeFrames;
+  return Math.max(m.fps, sceneTotal + outro - overlaps);
 };
 
 export const Root: React.FC = () => {
