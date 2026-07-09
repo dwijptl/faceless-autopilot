@@ -1,0 +1,73 @@
+import React from 'react';
+import {Composition} from 'remotion';
+import {Main} from './Main';
+import {Thumb} from './Thumb';
+
+// A tiny placeholder manifest so the Studio can open without props.
+const FALLBACK = {
+  fps: 30,
+  width: 1920,
+  height: 1080,
+  xfadeFrames: 12,
+  accent: '#FFD24A',
+  progressBar: true,
+  title: 'Faceless Autopilot',
+  thumbText: 'PREVIEW',
+  musicPath: null as string | null,
+  musicVolume: 0.12,
+  captions: [] as {start: number; end: number; text: string}[],
+  scenes: [
+    {
+      n: 1,
+      title: 'Preview scene',
+      audioPath: null as string | null,
+      audioDuration: 5,
+      assets: [] as {path: string; kind: string; duration?: number}[],
+    },
+  ],
+};
+
+export type Manifest = typeof FALLBACK;
+
+const mainDuration = (m: Manifest) => {
+  const total = m.scenes.reduce(
+    (acc, s) => acc + Math.round(s.audioDuration * m.fps),
+    0
+  );
+  return Math.max(m.fps, total - (m.scenes.length - 1) * m.xfadeFrames);
+};
+
+export const Root: React.FC = () => {
+  return (
+    <>
+      <Composition
+        id="Main"
+        component={Main}
+        durationInFrames={300}
+        fps={30}
+        width={1920}
+        height={1080}
+        defaultProps={{manifest: FALLBACK}}
+        calculateMetadata={async ({props}) => {
+          const m = (props.manifest ?? FALLBACK) as Manifest;
+          return {
+            durationInFrames: mainDuration(m),
+            fps: m.fps,
+            width: m.width,
+            height: m.height,
+            props,
+          };
+        }}
+      />
+      <Composition
+        id="Thumb"
+        component={Thumb}
+        durationInFrames={1}
+        fps={30}
+        width={1280}
+        height={720}
+        defaultProps={{manifest: FALLBACK}}
+      />
+    </>
+  );
+};
