@@ -32,6 +32,12 @@ llm:
   fallback_models: ["gemini-3-flash", "gemini-flash-latest", "gemini-2.0-flash"]
   temperature: 0.9
 
+render:
+  engine: "remotion"       # "remotion" (motion design) or "moviepy" (simple);
+                           # remotion auto-falls back to moviepy on any error
+  accent: "#FFD24A"        # brand color: captions underline, lower thirds, progress bar
+  progress_bar: true       # thin accent bar along the top edge
+
 music:
   volume: 0.12             # 0 disables music even if files exist
   fade: 1.5
