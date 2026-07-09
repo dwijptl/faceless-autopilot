@@ -67,6 +67,22 @@ Each release `video-YYYY-MM-DD_HHMM` contains:
 - `script.json` — full script (title, description, tags, scenes)
 - Release notes — paste-ready YouTube description + pre-upload checklist
 
+## The intelligence layer
+
+- **Visual originality** — scenes are scripted with a `visual_mode`: stock
+  b-roll, AI-generated stills (Gemini image API, ~500/day free), kinetic
+  typography, or animated stat cards. `assets_used.json` guarantees no clip,
+  photo, or AI prompt ever repeats across videos. Four visual style packs
+  (documentary / kinetic / editorial / noir) rotate per video.
+- **Self-learning loop** — drop YouTube Studio CSV exports into `analytics/`
+  (see its README); the weekly **Update Learnings** workflow digests them into
+  `learnings.md`, which steers topic choice, hooks, pacing, length and
+  thumbnail text on every subsequent video.
+- **Terra Incognita brand kit** — `brand/` has the banner, avatar, and
+  YouTube watermark to upload once in YouTube Studio → Customization; every
+  video automatically carries the corner watermark, branded captions/lower
+  thirds, and outro card. See `brand/BRAND.md`.
+
 ## Customizing
 
 Everything lives in `config.yaml` (edit on GitHub, takes effect next run): niche, tone,

@@ -21,6 +21,7 @@ video:
   bitrate: "6000k"
   crossfade: 0.4           # seconds between scenes
   max_shot_seconds: 8      # cut to a new shot at least this often
+  outro_seconds: 4         # branded end card appended to every video
 
 tts:
   voice: "am_michael"      # good male doc voice; try af_sarah, af_bella, bm_george
@@ -32,11 +33,24 @@ llm:
   fallback_models: ["gemini-3-flash", "gemini-flash-latest", "gemini-2.0-flash"]
   temperature: 0.9
 
+brand:
+  name: "TERRA INCOGNITA"
+  tagline: "Mapping the world's hidden places"
+  watermark_opacity: 0.08  # corner logo watermark on every frame
+
 render:
   engine: "remotion"       # "remotion" (motion design) or "moviepy" (simple);
                            # remotion auto-falls back to moviepy on any error
-  accent: "#FFD24A"        # brand color: captions underline, lower thirds, progress bar
+  accent: "#FFB020"        # brand amber: captions, lower thirds, progress bar
   progress_bar: true       # thin accent bar along the top edge
+  # visual styles rotate automatically per video: documentary -> kinetic
+  # -> editorial -> noir -> repeat (see remotion/src/styles.ts)
+
+ai_images:
+  enabled: true            # AI-generated stills for scenes stock can't cover
+  max_per_video: 2         # free tier allows ~500/day; 2/video is plenty
+  model: "gemini-2.5-flash-image"
+  fallback_models: ["gemini-3-flash-image", "gemini-2.0-flash-preview-image-generation"]
 
 music:
   volume: 0.12             # 0 disables music even if files exist
