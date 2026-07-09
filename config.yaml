@@ -52,6 +52,19 @@ ai_images:
   model: "gemini-2.5-flash-image"
   fallback_models: ["gemini-3-flash-image", "gemini-2.0-flash-preview-image-generation"]
 
+short:                     # vertical Shorts/Reels (Make Short workflow, Tue/Thu/Sat)
+  target_seconds: 40       # 30-59s is the sweet spot
+  scenes_min: 5
+  scenes_max: 7
+  crossfade: 0.25          # faster cuts than long-form
+  max_shot_seconds: 3.5
+  captions_max_chars: 16   # 2-3 word caption pops
+  caption_y: 0.62          # centered-low, inside the Shorts UI safe zone
+  music_volume: 0.18       # music matters more in shorts
+  tts_speed: 1.0
+  ai_images_max: 1
+  progress_bar: false      # Shorts player has its own progress bar
+
 music:
   volume: 0.12             # 0 disables music even if files exist
   fade: 1.5
