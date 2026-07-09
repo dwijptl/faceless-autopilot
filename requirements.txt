@@ -1,0 +1,7 @@
+requests>=2.31
+pyyaml>=6.0
+numpy>=1.26
+soundfile>=0.12
+pillow>=10.0
+moviepy>=2.1.1
+kokoro-onnx>=0.4.5

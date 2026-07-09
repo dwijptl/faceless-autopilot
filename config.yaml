@@ -1,0 +1,42 @@
+# ── Faceless Autopilot configuration ─────────────────────────────
+# Edit this file on GitHub (pencil icon) — no other setup needed.
+
+channel:
+  # The seed for ALL auto-generated topics. Change this to pivot the channel.
+  niche: >
+    Geography, nature and Earth's most extreme places — cinematic
+    documentary explainers about how the physical world works
+    (islands, deserts, megacities, oceans, borders, climate oddities)
+  tone: "curious, cinematic, documentary — like a calm narrator revealing something surprising"
+  audience: "curious adults who love maps, travel and science"
+  language: "en-us"
+
+video:
+  target_minutes: 6        # narration length target (150 wpm)
+  scenes_min: 8
+  scenes_max: 12
+  width: 1920
+  height: 1080
+  fps: 30
+  bitrate: "6000k"
+  crossfade: 0.4           # seconds between scenes
+  max_shot_seconds: 8      # cut to a new shot at least this often
+
+tts:
+  voice: "am_michael"      # good male doc voice; try af_sarah, af_bella, bm_george
+  speed: 0.95              # slightly slower = more authoritative
+
+llm:
+  model: "gemini-2.5-flash"
+  # tried in order if the model above is retired/404s:
+  fallback_models: ["gemini-3-flash", "gemini-flash-latest", "gemini-2.0-flash"]
+  temperature: 0.9
+
+music:
+  volume: 0.12             # 0 disables music even if files exist
+  fade: 1.5
+
+captions:
+  enabled: true
+  max_chars: 38            # per caption line
+  font_size: 58
