@@ -1,0 +1,93 @@
+name: Make Short
+
+on:
+  schedule:
+    # Tue / Thu / Sat at 06:30 UTC — alternates with long-form Mon/Wed/Fri
+    - cron: "30 6 * * 2,4,6"
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: "Optional: force a specific topic (leave empty for auto)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: make-short
+  cancel-in-progress: false
+
+jobs:
+  make-short:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: System dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg espeak-ng fonts-dejavu-core
+
+      - name: Cache Kokoro TTS model
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/kokoro
+          key: kokoro-model-v1.0
+
+      - name: Set up Node (Remotion)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Cache Remotion node_modules
+        uses: actions/cache@v4
+        with:
+          path: remotion/node_modules
+          key: remotion-${{ hashFiles('remotion/package.json') }}
+
+      - name: Node dependencies (Remotion)
+        working-directory: remotion
+        run: npm install --no-audit --no-fund
+
+      - name: Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run shorts pipeline
+        id: pipeline
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          FORCED_TOPIC: ${{ github.event.inputs.topic }}
+        run: python pipeline/run_short.py
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STAMP: ${{ steps.pipeline.outputs.stamp }}
+          OUTDIR: ${{ steps.pipeline.outputs.dir }}
+          VTITLE: ${{ steps.pipeline.outputs.title }}
+        run: |
+          gh release create "short-$STAMP" \
+            "$OUTDIR/final.mp4" \
+            "$OUTDIR/captions.srt" \
+            "$OUTDIR/script.json" \
+            --title "SHORT $STAMP — $VTITLE" \
+            --notes-file "$OUTDIR/metadata.md"
+
+      - name: Save topic history + asset usage log
+        run: |
+          git config user.name "faceless-autopilot"
+          git config user.email "actions@users.noreply.github.com"
+          git add topics_done_shorts.txt assets_used.json
+          git commit -m "log short (${{ steps.pipeline.outputs.stamp }})" || echo "nothing to commit"
+          git pull --rebase origin ${{ github.ref_name }} || true
+          git push
