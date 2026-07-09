@@ -147,7 +147,7 @@ export const LowerThird: React.FC<{title: string; style: StylePack}> = ({
   const exit = interpolate(frame, [hold, hold + 12], [0, 1],
     {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const x = interpolate(appear, [0, 1], [-420, 0]) - exit * 480;
-  const s = width / 1920;
+  const s = Math.max(width, height) / 1920;
   const v = style.lowerThirdVariant;
 
   const inner =
@@ -193,9 +193,10 @@ export const LowerThird: React.FC<{title: string; style: StylePack}> = ({
 export const CaptionsLayer: React.FC<{
   captions: {start: number; end: number; text: string}[];
   style: StylePack;
-}> = ({captions, style}) => {
+  yFrac?: number;
+}> = ({captions, style, yFrac}) => {
   const {fps, height, width} = useVideoConfig();
-  const s = width / 1920;
+  const s = Math.max(width, height) / 1920;
   return (
     <AbsoluteFill>
       {captions.map((c, i) => {
@@ -203,7 +204,8 @@ export const CaptionsLayer: React.FC<{
         const dur = Math.max(Math.round((c.end - c.start) * fps), 2);
         return (
           <Sequence key={i} from={from} durationInFrames={dur}>
-            <CaptionChunk text={c.text} style={style} y={height * 0.78} s={s} />
+            <CaptionChunk text={c.text} style={style}
+              y={height * (yFrac ?? 0.78)} s={s} />
           </Sequence>
         );
       })}
@@ -275,8 +277,8 @@ export const KineticText: React.FC<{text: string; style: StylePack}> = ({
   style,
 }) => {
   const frame = useCurrentFrame();
-  const {fps, width} = useVideoConfig();
-  const s = width / 1920;
+  const {fps, width, height} = useVideoConfig();
+  const s = Math.max(width, height) / 1920;
   const words = text.split(/\s+/).filter(Boolean).slice(0, 8);
   return (
     <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center',
@@ -310,8 +312,8 @@ export const StatCard: React.FC<{
   style: StylePack;
 }> = ({stat, style}) => {
   const frame = useCurrentFrame();
-  const {fps, width} = useVideoConfig();
-  const s = width / 1920;
+  const {fps, width, height} = useVideoConfig();
+  const s = Math.max(width, height) / 1920;
   const value = Number(stat.value ?? 0);
   const shown = interpolate(frame, [8, 8 + 1.6 * fps], [0, value],
     {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
@@ -347,12 +349,20 @@ export const StatCard: React.FC<{
 };
 
 // ── Brand: corner watermark + outro end card ───────────────────────────
-export const Watermark: React.FC<{src: string; opacity: number}> = ({src, opacity}) => {
-  const {width} = useVideoConfig();
-  const s = width / 1920;
+export const Watermark: React.FC<{
+  src: string;
+  opacity: number;
+  corner?: 'br' | 'tl';
+}> = ({src, opacity, corner}) => {
+  const {width, height} = useVideoConfig();
+  const s = Math.max(width, height) / 1920;
+  const place =
+    corner === 'tl'
+      ? {left: 36 * s, top: 36 * s}
+      : {right: 40 * s, bottom: 36 * s};
   return (
     <Img src={staticFile(src)} style={{
-      position: 'absolute', right: 40 * s, bottom: 36 * s,
+      position: 'absolute', ...place,
       width: 92 * s, height: 92 * s, opacity, pointerEvents: 'none',
     }} />
   );
@@ -366,7 +376,7 @@ export const Outro: React.FC<{
 }> = ({brandName, tagline, style, watermarkPath}) => {
   const frame = useCurrentFrame();
   const {fps, width} = useVideoConfig();
-  const s = width / 1920;
+  const s = Math.max(width, height) / 1920;
   const inSpring = spring({frame: frame - 4, fps, config: {damping: 200, stiffness: 110}});
   const sub = spring({frame: frame - 14, fps, config: {damping: 200, stiffness: 110}});
   return (

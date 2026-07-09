@@ -1,6 +1,7 @@
 import React from 'react';
 import {Composition} from 'remotion';
 import {Main} from './Main';
+import {ShortMain} from './ShortMain';
 import {Thumb} from './Thumb';
 
 // A tiny placeholder manifest so the Studio can open without props.
@@ -17,6 +18,7 @@ const FALLBACK = {
   watermarkPath: null as string | null,
   watermarkOpacity: 0.08,
   outroSeconds: 4,
+  captionY: 0.78,
   title: 'Terra Incognita',
   thumbText: 'PREVIEW',
   musicPath: null as string | null,
@@ -49,6 +51,15 @@ const mainDuration = (m: Manifest) => {
   return Math.max(m.fps, sceneTotal + outro - overlaps);
 };
 
+const shortDuration = (m: Manifest) => {
+  const sceneTotal = m.scenes.reduce(
+    (acc, s) => acc + Math.round(s.audioDuration * m.fps),
+    0
+  );
+  const overlaps = (m.scenes.length - 1) * m.xfadeFrames; // no outro
+  return Math.max(m.fps, sceneTotal - overlaps);
+};
+
 export const Root: React.FC = () => {
   return (
     <>
@@ -67,6 +78,25 @@ export const Root: React.FC = () => {
             fps: m.fps,
             width: m.width,
             height: m.height,
+            props,
+          };
+        }}
+      />
+      <Composition
+        id="Short"
+        component={ShortMain}
+        durationInFrames={300}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={{manifest: FALLBACK}}
+        calculateMetadata={async ({props}) => {
+          const m = (props.manifest ?? FALLBACK) as Manifest;
+          return {
+            durationInFrames: shortDuration(m),
+            fps: m.fps,
+            width: 1080,
+            height: 1920,
             props,
           };
         }}
