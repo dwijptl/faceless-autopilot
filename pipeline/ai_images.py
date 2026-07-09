@@ -15,19 +15,21 @@ API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
 STYLE_SUFFIX = (
     " Cinematic documentary still, photorealistic, dramatic natural light, "
-    "16:9 wide composition, high detail, no text, no watermarks, no borders."
+    "{aspect} composition, high detail, no text, no watermarks, no borders."
 )
 
 
-def generate(prompt: str, out_path: str, api_key: str, cfg: dict) -> bool:
+def generate(prompt: str, out_path: str, api_key: str, cfg: dict,
+             aspect: str = "16:9 wide") -> bool:
     aicfg = cfg.get("ai_images", {})
     if not aicfg.get("enabled", True):
         return False
     models = [aicfg.get("model", "gemini-2.5-flash-image")] + list(
         aicfg.get("fallback_models", []))
 
+    suffix = STYLE_SUFFIX.format(aspect=aspect)
     body = {
-        "contents": [{"parts": [{"text": prompt.strip() + STYLE_SUFFIX}]}],
+        "contents": [{"parts": [{"text": prompt.strip() + suffix}]}],
         "generationConfig": {"responseModalities": ["TEXT", "IMAGE"]},
     }
     for model in models:

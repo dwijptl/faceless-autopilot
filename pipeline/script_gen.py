@@ -172,6 +172,76 @@ Script rules:
     raise RuntimeError("Could not obtain a valid script after 3 attempts")
 
 
+def generate_short_script(cfg: dict, topic: str, api_key: str,
+                          learnings: str = "") -> dict:
+    """Script for a vertical Short/Reel: one idea, ~40s, loop-friendly."""
+    scfg = cfg.get("short", {})
+    seconds = int(scfg.get("target_seconds", 40))
+    words = int(seconds / 60 * 155)
+    learn_block = (f"\nCHANNEL LEARNINGS — apply to hook and pacing:\n{learnings}\n"
+                   if learnings else "")
+    prompt = f"""You are writing a YouTube SHORT / Instagram REEL script for a
+faceless channel (vertical video: voiceover + b-roll + big captions).
+
+TOPIC: {topic}
+TARGET: ~{words} spoken words TOTAL (~{seconds} seconds — shorts are ruthless)
+TONE: {cfg['channel']['tone']}, but faster and punchier than long-form
+{learn_block}
+Return ONLY valid JSON:
+{{
+  "title": "<= 80 chars, curiosity gap, no clickbait lies",
+  "thumb_text": "2-4 punch words",
+  "description": "1-2 lines, end with hashtags including #shorts",
+  "tags": ["6-10 tags"],
+  "scenes": [
+    {{
+      "n": 1,
+      "title": "2-4 word label",
+      "narration": "8-30 words",
+      "visual_mode": "broll | ai_image | kinetic | stat",
+      "search_terms": ["concrete visual term", "alternative", "broader fallback"],
+      "ai_prompt": "text-to-image prompt (only for ai_image, else empty)",
+      "kinetic_text": "3-6 word punch phrase (only for kinetic, else empty)",
+      "stat": {{"value": 0, "suffix": "", "label": ""}}
+    }}
+  ]
+}}
+
+Shorts rules:
+- {scfg.get('scenes_min', 5)}-{scfg.get('scenes_max', 7)} micro-scenes. ONE idea total.
+- Scene 1 = the hook: <= 12 words, the single most jolting fact/question.
+  No greetings, no context, no "did you know".
+- LOOP ENDING: the final scene's last line must connect back to the opening
+  line so the video replays seamlessly.
+- Exactly 1-2 "kinetic" scenes, 0-1 "stat", 0-1 "ai_image", rest "broll".
+- search_terms describe VERTICAL-friendly visuals (subjects that work tall:
+  waterfalls, towers, canyons, streets, people-free closeups).
+- Every sentence must earn its half-second. Cut every filler word."""
+
+    for attempt in range(3):
+        try:
+            script = _parse_json(_gemini(prompt, cfg, api_key))
+            assert isinstance(script["scenes"], list) and len(script["scenes"]) >= 3
+            for s in script["scenes"]:
+                assert s["narration"].strip()
+                s.setdefault("visual_mode", "broll")
+                if s["visual_mode"] not in ("broll", "ai_image", "kinetic", "stat"):
+                    s["visual_mode"] = "broll"
+                s.setdefault("search_terms", [])
+                s.setdefault("ai_prompt", "")
+                s.setdefault("kinetic_text", "")
+                s.setdefault("stat", {})
+            assert script["title"].strip()
+            script.setdefault("thumb_text", script["title"][:20])
+            script["topic"] = topic
+            print(f"[script] SHORT '{script['title']}' — "
+                  f"{[s['visual_mode'] for s in script['scenes']]}")
+            return script
+        except (KeyError, AssertionError, json.JSONDecodeError) as e:
+            print(f"[script] invalid short JSON (attempt {attempt + 1}): {e}")
+    raise RuntimeError("Could not obtain a valid short script after 3 attempts")
+
+
 def log_topic_done(topic: str, done_file: str = "topics_done.txt") -> None:
     with open(done_file, "a", encoding="utf-8") as f:
         f.write(topic + "\n")

@@ -83,6 +83,10 @@ def _gradient_card(path: str, w: int, h: int, seed: int) -> str:
     return path
 
 
+def _orientation(cfg) -> str:
+    return "portrait" if cfg["video"]["height"] > cfg["video"]["width"] else "landscape"
+
+
 def _stock_videos(scene, need_seconds, outdir, cfg, api_key, used, max_clips):
     w = cfg["video"]["width"]
     assets, covered = [], 0.0
@@ -91,7 +95,7 @@ def _stock_videos(scene, need_seconds, outdir, cfg, api_key, used, max_clips):
             break
         try:
             data = _get(VIDEO_API, {"query": term, "per_page": 15,
-                                    "orientation": "landscape"}, api_key)
+                                    "orientation": _orientation(cfg)}, api_key)
         except Exception as e:
             print(f"[assets] video search failed for '{term}': {e}")
             continue
@@ -117,11 +121,11 @@ def _stock_videos(scene, need_seconds, outdir, cfg, api_key, used, max_clips):
     return assets, covered
 
 
-def _stock_photo(scene, outdir, api_key, used):
+def _stock_photo(scene, outdir, api_key, used, orientation="landscape"):
     for term in scene.get("search_terms", []):
         try:
             data = _get(PHOTO_API, {"query": term, "per_page": 8,
-                                    "orientation": "landscape", "size": "large"}, api_key)
+                                    "orientation": orientation, "size": "large"}, api_key)
         except Exception:
             continue
         for ph in data.get("photos", []):
@@ -156,7 +160,9 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
         ph = hashlib.sha1(prompt.lower().encode()).hexdigest()[:16]
         if ph not in used_prompts:
             path = os.path.join(outdir, f"s{scene['n']:02d}_ai.png")
-            if ai_images.generate(prompt, path, gemini_key, cfg):
+            aspect = ("9:16 tall vertical" if _orientation(cfg) == "portrait"
+                      else "16:9 wide")
+            if ai_images.generate(prompt, path, gemini_key, cfg, aspect):
                 used_prompts.add(ph)
                 ai_budget[0] -= 1
                 assets.append({"path": path, "kind": "image", "ai": True})
@@ -168,7 +174,7 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
                                      pexels_key, used, max_clips=1)
             assets.extend(stock)
         if not assets:
-            photo = _stock_photo(scene, outdir, pexels_key, used)
+            photo = _stock_photo(scene, outdir, pexels_key, used, _orientation(cfg))
             if photo:
                 assets.append(photo)
     else:
@@ -179,7 +185,7 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
         assets.extend(stock)
         covered += c
         if covered < need_seconds and len(assets) < 2:
-            photo = _stock_photo(scene, outdir, pexels_key, used)
+            photo = _stock_photo(scene, outdir, pexels_key, used, _orientation(cfg))
             if photo:
                 assets.append(photo)
 
