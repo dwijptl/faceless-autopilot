@@ -1,16 +1,45 @@
-"""Stage 2 — per-scene asset sourcing from Pexels (free API, commercial-safe).
+"""Per-scene asset sourcing with visual originality rules.
 
-Order per scene: HD stock video -> stock photo (Ken Burns later) -> generated
-gradient card. The pipeline can therefore never fail for lack of footage.
+Priority per scene (by visual_mode from the script):
+  ai_image  -> Gemini image gen (free tier) -> stock fallback
+  kinetic / stat -> one background asset (stock or AI) — overlays drawn in Remotion
+  broll     -> Pexels video -> Pexels photo -> gradient card
+
+A persistent usage log (assets_used.json, committed back to the repo) makes
+sure no Pexels clip/photo or AI prompt ever repeats across videos.
 """
+import hashlib
+import json
 import os
 import time
 
 import requests
 from PIL import Image, ImageDraw
 
+import ai_images
+
 VIDEO_API = "https://api.pexels.com/videos/search"
 PHOTO_API = "https://api.pexels.com/v1/search"
+
+
+# ── persistent usage log ───────────────────────────────────────────────
+def load_usage_log(path: str) -> dict:
+    try:
+        with open(path, encoding="utf-8") as f:
+            log = json.load(f)
+        log.setdefault("pexels", [])
+        log.setdefault("prompts", [])
+        return log
+    except Exception:
+        return {"pexels": [], "prompts": []}
+
+
+def save_usage_log(path: str, log: dict) -> None:
+    # keep the file bounded (~4000 most recent entries each)
+    log["pexels"] = log["pexels"][-4000:]
+    log["prompts"] = log["prompts"][-4000:]
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(log, f, indent=0)
 
 
 def _get(url: str, params: dict, api_key: str) -> dict:
@@ -34,7 +63,6 @@ def _download(url: str, path: str) -> str:
 
 
 def _best_video_file(video: dict, want_w: int) -> dict | None:
-    """Pick the smallest file that is still >= target width (bandwidth-friendly)."""
     files = [f for f in video.get("video_files", []) if f.get("width")]
     if not files:
         return None
@@ -43,9 +71,8 @@ def _best_video_file(video: dict, want_w: int) -> dict | None:
 
 
 def _gradient_card(path: str, w: int, h: int, seed: int) -> str:
-    """Last-resort visual: a dark cinematic gradient (never fails, always licensed)."""
-    palettes = [((12, 18, 34), (36, 62, 110)), ((20, 12, 30), (88, 44, 108)),
-                ((8, 24, 24), (24, 84, 78)), ((26, 16, 8), (110, 66, 26))]
+    palettes = [((10, 20, 40), (18, 35, 63)), ((16, 12, 34), (70, 44, 108)),
+                ((8, 26, 26), (22, 78, 74)), ((28, 18, 8), (104, 64, 26))]
     top, bottom = palettes[seed % len(palettes)]
     img = Image.new("RGB", (w, h))
     d = ImageDraw.Draw(img)
@@ -56,19 +83,14 @@ def _gradient_card(path: str, w: int, h: int, seed: int) -> str:
     return path
 
 
-def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
-                       api_key: str, used_ids: set) -> list[dict]:
-    """Return [{path, kind: video|image, duration(optional)}] covering need_seconds."""
-    os.makedirs(outdir, exist_ok=True)
+def _stock_videos(scene, need_seconds, outdir, cfg, api_key, used, max_clips):
     w = cfg["video"]["width"]
     assets, covered = [], 0.0
-    max_clips = max(2, int(need_seconds // cfg["video"]["max_shot_seconds"]) + 1)
-
-    for term in scene["search_terms"]:
+    for term in scene.get("search_terms", []):
         if covered >= need_seconds or len(assets) >= max_clips:
             break
         try:
-            data = _get(VIDEO_API, {"query": term, "per_page": 10,
+            data = _get(VIDEO_API, {"query": term, "per_page": 15,
                                     "orientation": "landscape"}, api_key)
         except Exception as e:
             print(f"[assets] video search failed for '{term}': {e}")
@@ -76,7 +98,8 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
         for vid in data.get("videos", []):
             if covered >= need_seconds or len(assets) >= max_clips:
                 break
-            if vid["id"] in used_ids or vid.get("duration", 0) < 4:
+            vid_key = f"v{vid['id']}"
+            if vid_key in used or vid.get("duration", 0) < 4:
                 continue
             vf = _best_video_file(vid, w)
             if not vf:
@@ -87,40 +110,82 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
             except Exception as e:
                 print(f"[assets] download failed ({vid['id']}): {e}")
                 continue
-            used_ids.add(vid["id"])
-            dur = min(vid.get("duration", 8), cfg["video"]["max_shot_seconds"] * 2)
+            used.add(vid_key)
+            covered += min(vid.get("duration", 8), cfg["video"]["max_shot_seconds"] * 2)
             assets.append({"path": path, "kind": "video"})
-            covered += dur
-            print(f"[assets] scene {scene['n']}: video {vid['id']} ({term})")
+            print(f"[assets] scene {scene['n']}: stock video {vid['id']} ({term})")
+    return assets, covered
 
-    if covered < need_seconds:  # photo fallback -> Ken Burns in render
-        for term in scene["search_terms"]:
-            if covered >= need_seconds:
-                break
-            try:
-                data = _get(PHOTO_API, {"query": term, "per_page": 5,
-                                        "orientation": "landscape", "size": "large"}, api_key)
-            except Exception as e:
-                print(f"[assets] photo search failed for '{term}': {e}")
+
+def _stock_photo(scene, outdir, api_key, used):
+    for term in scene.get("search_terms", []):
+        try:
+            data = _get(PHOTO_API, {"query": term, "per_page": 8,
+                                    "orientation": "landscape", "size": "large"}, api_key)
+        except Exception:
+            continue
+        for ph in data.get("photos", []):
+            key = f"p{ph['id']}"
+            if key in used:
                 continue
-            for ph in data.get("photos", []):
-                key = f"p{ph['id']}"
-                if key in used_ids:
-                    continue
-                path = os.path.join(outdir, f"s{scene['n']:02d}_{key}.jpg")
-                try:
-                    _download(ph["src"]["large2x"], path)
-                except Exception:
-                    continue
-                used_ids.add(key)
-                assets.append({"path": path, "kind": "image"})
-                covered += 6
-                print(f"[assets] scene {scene['n']}: photo {ph['id']} ({term})")
-                break
+            path = os.path.join(outdir, f"s{scene['n']:02d}_{key}.jpg")
+            try:
+                _download(ph["src"]["large2x"], path)
+            except Exception:
+                continue
+            used.add(key)
+            print(f"[assets] scene {scene['n']}: stock photo {ph['id']} ({term})")
+            return {"path": path, "kind": "image"}
+    return None
 
-    if not assets:  # absolute fallback
+
+def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
+                       pexels_key: str, gemini_key: str, used: set,
+                       used_prompts: set, ai_budget: list) -> list[dict]:
+    """Returns [{path, kind, ai(optional)}]. `used`/`used_prompts` are mutated;
+    ai_budget is a single-element list acting as a mutable counter."""
+    os.makedirs(outdir, exist_ok=True)
+    mode = scene.get("visual_mode", "broll")
+    assets: list[dict] = []
+
+    # AI-generated hero image (for ai_image scenes, or as bg for kinetic/stat)
+    wants_ai = mode == "ai_image" or (
+        mode in ("kinetic", "stat") and not scene.get("search_terms"))
+    prompt = (scene.get("ai_prompt") or "").strip()
+    if wants_ai and prompt and ai_budget[0] > 0:
+        ph = hashlib.sha1(prompt.lower().encode()).hexdigest()[:16]
+        if ph not in used_prompts:
+            path = os.path.join(outdir, f"s{scene['n']:02d}_ai.png")
+            if ai_images.generate(prompt, path, gemini_key, cfg):
+                used_prompts.add(ph)
+                ai_budget[0] -= 1
+                assets.append({"path": path, "kind": "image", "ai": True})
+
+    # kinetic/stat scenes need just 1-2 background assets (overlay carries them)
+    if mode in ("kinetic", "stat"):
+        if not assets:
+            stock, _ = _stock_videos(scene, min(need_seconds, 10), outdir, cfg,
+                                     pexels_key, used, max_clips=1)
+            assets.extend(stock)
+        if not assets:
+            photo = _stock_photo(scene, outdir, pexels_key, used)
+            if photo:
+                assets.append(photo)
+    else:
+        covered = 6.0 * len(assets)
+        max_clips = max(2, int(need_seconds // cfg["video"]["max_shot_seconds"]) + 1)
+        stock, c = _stock_videos(scene, need_seconds - covered, outdir, cfg,
+                                 pexels_key, used, max_clips)
+        assets.extend(stock)
+        covered += c
+        if covered < need_seconds and len(assets) < 2:
+            photo = _stock_photo(scene, outdir, pexels_key, used)
+            if photo:
+                assets.append(photo)
+
+    if not assets:  # absolute fallback — never fail
         path = os.path.join(outdir, f"s{scene['n']:02d}_card.jpg")
-        _gradient_card(path, w, cfg["video"]["height"], scene["n"])
+        _gradient_card(path, cfg["video"]["width"], cfg["video"]["height"], scene["n"])
         assets.append({"path": path, "kind": "image"})
         print(f"[assets] scene {scene['n']}: gradient card fallback")
     return assets

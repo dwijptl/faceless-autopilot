@@ -1,4 +1,8 @@
-"""Stage 1 — topic selection + scene-segmented script via Gemini API (free tier)."""
+"""Stage 1 — topic selection + scene-segmented script via Gemini API (free tier).
+
+Reads learnings.md (written by the analytics loop) so topic choice, hook
+style, pacing and thumbnail text adapt to what has performed on the channel.
+"""
 import json
 import os
 import re
@@ -10,7 +14,6 @@ API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
 
 def _gemini(prompt: str, cfg: dict, api_key: str) -> str:
-    """Call Gemini, walking the fallback model list on 404/400 model errors."""
     models = [cfg["llm"]["model"]] + list(cfg["llm"].get("fallback_models", []))
     last_err = None
     for model in models:
@@ -28,15 +31,14 @@ def _gemini(prompt: str, cfg: dict, api_key: str) -> str:
                 if r.status_code == 404 or (r.status_code == 400 and "model" in r.text.lower()):
                     print(f"[script] model {model} unavailable, trying next")
                     last_err = r.text
-                    break  # next model
+                    break
                 if r.status_code == 429:
                     wait = 20 * (attempt + 1)
                     print(f"[script] rate limited, sleeping {wait}s")
                     time.sleep(wait)
                     continue
                 r.raise_for_status()
-                data = r.json()
-                return data["candidates"][0]["content"]["parts"][0]["text"]
+                return r.json()["candidates"][0]["content"]["parts"][0]["text"]
             except requests.RequestException as e:
                 last_err = str(e)
                 time.sleep(5 * (attempt + 1))
@@ -44,12 +46,22 @@ def _gemini(prompt: str, cfg: dict, api_key: str) -> str:
 
 
 def _parse_json(text: str) -> dict:
-    """Parse model output as JSON, tolerating stray code fences."""
     text = re.sub(r"^```(json)?|```$", "", text.strip(), flags=re.MULTILINE).strip()
     return json.loads(text)
 
 
-def pick_topic(cfg: dict, api_key: str, done_file: str = "topics_done.txt") -> str:
+def load_learnings(repo_root: str) -> str:
+    path = os.path.join(repo_root, "learnings.md")
+    try:
+        with open(path, encoding="utf-8") as f:
+            text = f.read().strip()
+        return text[:6000]
+    except Exception:
+        return ""
+
+
+def pick_topic(cfg: dict, api_key: str, done_file: str = "topics_done.txt",
+               learnings: str = "") -> str:
     forced = os.environ.get("FORCED_TOPIC", "").strip()
     if forced:
         print(f"[script] using forced topic: {forced}")
@@ -60,37 +72,42 @@ def pick_topic(cfg: dict, api_key: str, done_file: str = "topics_done.txt") -> s
         with open(done_file, encoding="utf-8") as f:
             done = [ln.strip() for ln in f if ln.strip() and not ln.startswith("#")]
 
+    learn_block = (f"\nWHAT HAS WORKED ON THIS CHANNEL (analytics digest):\n{learnings}\n"
+                   if learnings else "")
     prompt = f"""You are the content strategist for a faceless YouTube channel.
 
 NICHE: {cfg['channel']['niche']}
 AUDIENCE: {cfg['channel']['audience']}
-
+{learn_block}
 Already-covered topics (NEVER repeat or closely paraphrase these):
 {json.dumps(done[-100:], indent=0)}
 
 Invent ONE new video topic with strong curiosity-gap appeal that can be
-illustrated almost entirely with stock footage of landscapes, cities,
-nature, aerials and oceans (no specific people, no events needing news
-footage, nothing requiring licensed material).
+illustrated with stock footage of landscapes, cities, nature, aerials and
+oceans plus occasional AI-generated stills (no specific people, no events
+needing news footage, nothing requiring licensed material). If the analytics
+digest above shows a topic family performing well, lean into that family
+without repeating covered topics.
 
 Return JSON exactly: {{"topic": "<the topic as a working title>"}}"""
-    result = _parse_json(_gemini(prompt, cfg, api_key))
-    topic = result["topic"].strip()
+    topic = _parse_json(_gemini(prompt, cfg, api_key))["topic"].strip()
     print(f"[script] auto-picked topic: {topic}")
     return topic
 
 
-def generate_script(cfg: dict, topic: str, api_key: str) -> dict:
+def generate_script(cfg: dict, topic: str, api_key: str, learnings: str = "") -> dict:
     v = cfg["video"]
-    words = int(cfg["video"]["target_minutes"] * 150)
+    words = int(v["target_minutes"] * 150)
+    learn_block = (f"\nCHANNEL LEARNINGS — apply these to hook style, pacing, and "
+                   f"thumbnail text:\n{learnings}\n" if learnings else "")
     prompt = f"""You are a scriptwriter for a faceless YouTube channel
-(voiceover + stock b-roll + captions, no on-camera host).
+(voiceover + b-roll + motion graphics + captions, no on-camera host).
 
 TOPIC: {topic}
 TARGET: ~{words} spoken words total (about {v['target_minutes']} minutes at 150 wpm)
 TONE: {cfg['channel']['tone']}
 AUDIENCE: {cfg['channel']['audience']}
-
+{learn_block}
 Write a scene-segmented script and return ONLY valid JSON with this exact shape:
 {{
   "title": "click-worthy but honest YouTube title, <= 70 chars",
@@ -102,33 +119,53 @@ Write a scene-segmented script and return ONLY valid JSON with this exact shape:
       "n": 1,
       "title": "3-6 word scene title",
       "narration": "60-150 words of spoken narration",
-      "search_terms": ["stock video search term", "alternative term", "broader fallback term"]
+      "visual_mode": "broll | ai_image | kinetic | stat",
+      "search_terms": ["stock video search term", "alternative term", "broader fallback term"],
+      "ai_prompt": "detailed text-to-image prompt (only when visual_mode is ai_image, else empty string)",
+      "kinetic_text": "3-6 word punch phrase (only when visual_mode is kinetic, else empty string)",
+      "stat": {{"value": 0, "suffix": "", "label": ""}}
     }}
   ]
 }}
 
-Rules:
-- {v['scenes_min']} to {v['scenes_max']} scenes. Scene 1 is a 30-second HOOK that opens a
-  curiosity gap immediately. A re-hook (tease what's coming) around the middle scene.
-  Final scene is a 20-second payoff/outro with a next-video tease. No "like and subscribe".
-- Narration is written for the EAR: short sentences, no lists, no headers read aloud,
-  no "in this video", makes sense with eyes closed.
-- search_terms must describe VISUALS that exist in stock libraries (e.g. "aerial desert
-  highway", not "the concept of isolation"). Concrete nouns. 1-3 words each.
-- Every scene advances exactly one idea. No filler.
-- Facts must be well-established and verifiable; when uncertain, phrase carefully
-  ("researchers estimate", "roughly") rather than inventing precise numbers."""
+Visual mode rules (variety is the goal — videos must not feel stock-only):
+- Most scenes are "broll" (stock footage exists for them).
+- EXACTLY 1-2 scenes are "ai_image": visuals stock can't provide (ancient/extinct
+  scenes, cutaway views, imagined perspectives). Write a rich ai_prompt.
+- EXACTLY 1-2 scenes are "kinetic": a bold typography moment for the strongest
+  line (often the hook or re-hook). kinetic_text = the phrase, punchy.
+- 0-2 scenes are "stat": when narration centers on ONE striking number.
+  Fill stat.value (number only), stat.suffix ("%", "km", "×"...), stat.label
+  (what the number is). Narration must actually say that number.
+- Every scene still needs search_terms as fallback. Concrete visual nouns only.
+
+Script rules:
+- {v['scenes_min']} to {v['scenes_max']} scenes. Scene 1 is a 30-second HOOK opening a
+  curiosity gap immediately. A re-hook mid-video. Final scene is a 20-second
+  payoff with a next-video tease. No "like and subscribe" begging.
+- Narration is written for the EAR: short sentences, makes sense with eyes closed.
+- Facts must be well-established; when uncertain, phrase carefully rather than
+  inventing precise numbers.
+- Every scene advances exactly one idea."""
 
     for attempt in range(3):
         try:
             script = _parse_json(_gemini(prompt, cfg, api_key))
             assert isinstance(script["scenes"], list) and len(script["scenes"]) >= 4
             for s in script["scenes"]:
-                assert s["narration"].strip() and s["search_terms"]
+                assert s["narration"].strip()
+                s.setdefault("visual_mode", "broll")
+                if s["visual_mode"] not in ("broll", "ai_image", "kinetic", "stat"):
+                    s["visual_mode"] = "broll"
+                s.setdefault("search_terms", [])
+                s.setdefault("ai_prompt", "")
+                s.setdefault("kinetic_text", "")
+                s.setdefault("stat", {})
             assert script["title"].strip()
             script.setdefault("thumb_text", script["title"][:30])
             script["topic"] = topic
-            print(f"[script] generated: '{script['title']}' with {len(script['scenes'])} scenes")
+            modes = [s["visual_mode"] for s in script["scenes"]]
+            print(f"[script] '{script['title']}' — {len(modes)} scenes, modes: {modes}")
             return script
         except (KeyError, AssertionError, json.JSONDecodeError) as e:
             print(f"[script] invalid script JSON (attempt {attempt + 1}): {e}")
