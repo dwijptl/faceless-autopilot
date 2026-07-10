@@ -1,8 +1,14 @@
-"""AI image generation via Gemini image models (free tier: ~500 req/day).
+"""AI image generation — the channel's "signature shot" engine.
 
-Used for scenes where stock footage can't express the visual. Any failure
-returns False and the caller falls back to stock — the pipeline never blocks
-on this module.
+Priority:
+  1. FLUX via fal.ai   (FAL_KEY secret set)  — pay-per-image, premium look
+  2. Gemini image API  (free tier ~500/day)  — fallback / zero-cost mode
+Any failure returns False and the caller falls back to stock — the pipeline
+never blocks on this module.
+
+Every prompt gets a STYLE WRAPPER matched to the video's rotating style pack
+(documentary / kinetic / editorial / noir) so AI shots feel like one
+photographer shot the whole video instead of random AI output.
 """
 import base64
 import json
@@ -12,22 +18,90 @@ import time
 import requests
 
 API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
+FAL_RUN = "https://fal.run/{model}"
 
-STYLE_SUFFIX = (
-    " Cinematic documentary still, photorealistic, dramatic natural light, "
-    "{aspect} composition, high detail, no text, no watermarks, no borders."
-)
+# Per-style-pack photographic grammar (matches remotion/src/styles.ts packs)
+STYLE_WRAPPERS = {
+    "documentary": ("cinematic documentary photography, dramatic natural "
+                    "light, atmospheric haze, shot on 35mm film, subtle film "
+                    "grain, muted earth tones"),
+    "kinetic": ("high-contrast editorial photography, deep shadows, one "
+                "strong directional light, bold graphic composition, dark "
+                "background, saturated accent colors"),
+    "editorial": ("muted editorial palette, soft diffused overcast light, "
+                  "minimalist composition with negative space, premium "
+                  "printed-magazine look"),
+    "noir": ("black and white fine-art photography, hard chiaroscuro "
+             "lighting, fog, deep blacks, visible grain, brooding mood"),
+}
+COMMON_SUFFIX = ", photorealistic, high detail, no text, no watermark, no borders"
 
 
-def generate(prompt: str, out_path: str, api_key: str, cfg: dict,
-             aspect: str = "16:9 wide") -> bool:
-    aicfg = cfg.get("ai_images", {})
-    if not aicfg.get("enabled", True):
+def _style_wrapper(cfg: dict) -> str:
+    pack = str(cfg.get("render", {}).get("style_pack", "documentary"))
+    return STYLE_WRAPPERS.get(pack, STYLE_WRAPPERS["documentary"])
+
+
+def _download(url: str, out_path: str) -> bool:
+    with requests.get(url, stream=True, timeout=300) as r:
+        r.raise_for_status()
+        with open(out_path, "wb") as f:
+            for chunk in r.iter_content(chunk_size=1 << 20):
+                f.write(chunk)
+    return os.path.getsize(out_path) > 20_000
+
+
+# ── FLUX via fal.ai ──────────────────────────────────────────────────────
+def _flux(prompt: str, out_path: str, cfg: dict, aspect: str) -> bool:
+    key = os.environ.get("FAL_KEY", "").strip()
+    if not key:
         return False
+    aicfg = cfg.get("ai_images", {})
+    portrait = "9:16" in aspect or "vertical" in aspect or "tall" in aspect
+    sizes = [
+        {"width": 1080, "height": 1920} if portrait
+        else {"width": 1920, "height": 1080},
+        "portrait_16_9" if portrait else "landscape_16_9",  # enum fallback
+    ]
+    models = [aicfg.get("flux_model", "fal-ai/flux/dev"),
+              aicfg.get("flux_fallback", "fal-ai/flux/schnell")]
+    full_prompt = f"{prompt.strip()}. {_style_wrapper(cfg)}{COMMON_SUFFIX}"
+    headers = {"Authorization": f"Key {key}", "Content-Type": "application/json"}
+
+    for model in models:
+        for size in sizes:
+            body = {"prompt": full_prompt, "image_size": size, "num_images": 1,
+                    "output_format": "jpeg", "enable_safety_checker": True}
+            try:
+                r = requests.post(FAL_RUN.format(model=model), json=body,
+                                  headers=headers, timeout=300)
+                if r.status_code == 422:
+                    continue  # size rejected -> try enum size
+                if r.status_code in (401, 403):
+                    print(f"[ai-img] fal auth failed — check FAL_KEY: {r.text[:200]}")
+                    return False
+                if r.status_code == 429:
+                    time.sleep(20)
+                    continue
+                r.raise_for_status()
+                images = r.json().get("images") or []
+                if images and images[0].get("url"):
+                    if _download(images[0]["url"], out_path):
+                        print(f"[ai-img] FLUX ({model}): {prompt[:60]}...")
+                        return True
+            except (requests.RequestException, KeyError, ValueError) as e:
+                print(f"[ai-img] fal {model} failed: {e}")
+                break  # network/model issue -> next model
+    return False
+
+
+# ── Gemini image API (free fallback) ─────────────────────────────────────
+def _gemini_image(prompt: str, out_path: str, api_key: str, cfg: dict,
+                  aspect: str) -> bool:
+    aicfg = cfg.get("ai_images", {})
     models = [aicfg.get("model", "gemini-2.5-flash-image")] + list(
         aicfg.get("fallback_models", []))
-
-    suffix = STYLE_SUFFIX.format(aspect=aspect)
+    suffix = (f". {_style_wrapper(cfg)}, {aspect} composition{COMMON_SUFFIX}")
     body = {
         "contents": [{"parts": [{"text": prompt.strip() + suffix}]}],
         "generationConfig": {"responseModalities": ["TEXT", "IMAGE"]},
@@ -51,12 +125,25 @@ def generate(prompt: str, out_path: str, api_key: str, cfg: dict,
                         with open(out_path, "wb") as f:
                             f.write(base64.b64decode(inline["data"]))
                         if os.path.getsize(out_path) > 20_000:
-                            print(f"[ai-img] generated via {model}: {prompt[:60]}...")
+                            print(f"[ai-img] gemini ({model}): {prompt[:60]}...")
                             return True
                 break  # no image part -> next model
             except (requests.RequestException, KeyError, IndexError,
                     json.JSONDecodeError) as e:
                 print(f"[ai-img] {model} attempt {attempt + 1} failed: {e}")
                 time.sleep(5)
-    print("[ai-img] all models failed — falling back to stock")
+    return False
+
+
+# ── public API (signature unchanged — assets.py keeps working) ──────────
+def generate(prompt: str, out_path: str, api_key: str, cfg: dict,
+             aspect: str = "16:9 wide") -> bool:
+    aicfg = cfg.get("ai_images", {})
+    if not aicfg.get("enabled", True):
+        return False
+    if _flux(prompt, out_path, cfg, aspect):
+        return True
+    if _gemini_image(prompt, out_path, api_key, cfg, aspect):
+        return True
+    print("[ai-img] all providers failed — falling back to stock")
     return False

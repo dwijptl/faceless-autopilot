@@ -1,9 +1,14 @@
 """Per-scene asset sourcing with visual originality rules.
 
 Priority per scene (by visual_mode from the script):
-  ai_image  -> Gemini image gen (free tier) -> stock fallback
+  ai_image  -> FLUX (fal.ai) or Gemini image gen -> stock fallback
   kinetic / stat -> one background asset (stock or AI) — overlays drawn in Remotion
   broll     -> Pexels video -> Pexels photo -> gradient card
+
+CINEMATIC QUERY SHAPING: raw search terms pull generic vacation-stock. Every
+term is first searched with a rotating cinematic modifier ("aerial", "macro",
+"drone"…) so results skew toward the moody, professional b-roll buried in
+Pexels; the raw term follows as a recall fallback.
 
 A persistent usage log (assets_used.json, committed back to the repo) makes
 sure no Pexels clip/photo or AI prompt ever repeats across videos.
@@ -20,6 +25,22 @@ import ai_images
 
 VIDEO_API = "https://api.pexels.com/videos/search"
 PHOTO_API = "https://api.pexels.com/v1/search"
+
+# rotating cinematic modifiers — deterministic per scene, so variety across
+# scenes but reproducible runs
+CINEMATIC_MODIFIERS = ["aerial", "cinematic", "drone", "macro close up",
+                       "dramatic", "slow motion"]
+
+
+def _shaped_queries(terms: list, scene_n: int) -> list[str]:
+    """['volcano'] -> ['volcano aerial', 'volcano', ...] — shaped first,
+    raw second so we still find footage for rare subjects."""
+    out = []
+    for i, term in enumerate(terms):
+        mod = CINEMATIC_MODIFIERS[(scene_n + i) % len(CINEMATIC_MODIFIERS)]
+        out.append(f"{term} {mod}")
+        out.append(term)
+    return out
 
 
 # ── persistent usage log ───────────────────────────────────────────────
@@ -90,7 +111,7 @@ def _orientation(cfg) -> str:
 def _stock_videos(scene, need_seconds, outdir, cfg, api_key, used, max_clips):
     w = cfg["video"]["width"]
     assets, covered = [], 0.0
-    for term in scene.get("search_terms", []):
+    for term in _shaped_queries(scene.get("search_terms", []), scene["n"]):
         if covered >= need_seconds or len(assets) >= max_clips:
             break
         try:
@@ -122,7 +143,7 @@ def _stock_videos(scene, need_seconds, outdir, cfg, api_key, used, max_clips):
 
 
 def _stock_photo(scene, outdir, api_key, used, orientation="landscape"):
-    for term in scene.get("search_terms", []):
+    for term in _shaped_queries(scene.get("search_terms", []), scene["n"]):
         try:
             data = _get(PHOTO_API, {"query": term, "per_page": 8,
                                     "orientation": orientation, "size": "large"}, api_key)

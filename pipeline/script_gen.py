@@ -15,6 +15,56 @@ import time
 import requests
 
 API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
+ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
+
+
+def _anthropic(prompt: str, cfg: dict, api_key: str) -> str:
+    """Claude for script writing — used when ANTHROPIC_API_KEY is set."""
+    models = [cfg["llm"].get("anthropic_model", "claude-sonnet-5")] + list(
+        cfg["llm"].get("anthropic_fallback_models", ["claude-haiku-4-5-20251001"]))
+    headers = {"x-api-key": api_key, "anthropic-version": "2023-06-01",
+               "content-type": "application/json"}
+    last_err = None
+    for model in models:
+        body = {
+            "model": model,
+            "max_tokens": 8000,
+            "temperature": min(float(cfg["llm"].get("temperature", 0.9)), 1.0),
+            "messages": [{"role": "user", "content": prompt}],
+        }
+        for attempt in range(3):
+            try:
+                r = requests.post(ANTHROPIC_URL, json=body, headers=headers,
+                                  timeout=180)
+                if r.status_code == 404 or (r.status_code == 400
+                                            and "model" in r.text.lower()):
+                    print(f"[script] anthropic model {model} unavailable, next")
+                    last_err = r.text[:200]
+                    break
+                if r.status_code in (429, 529):
+                    wait = 20 * (attempt + 1)
+                    print(f"[script] anthropic busy, sleeping {wait}s")
+                    time.sleep(wait)
+                    continue
+                r.raise_for_status()
+                return r.json()["content"][0]["text"]
+            except requests.RequestException as e:
+                last_err = str(e)
+                time.sleep(5 * (attempt + 1))
+    raise RuntimeError(f"Anthropic call failed on all models: {last_err}")
+
+
+def _llm(prompt: str, cfg: dict, gemini_key: str) -> str:
+    """Route to Claude when a key exists (better scripts), else Gemini.
+    Any Claude failure silently falls back to Gemini — runs never block."""
+    ak = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    provider = str(cfg["llm"].get("provider", "auto")).lower()
+    if ak and provider in ("auto", "anthropic"):
+        try:
+            return _anthropic(prompt, cfg, ak)
+        except Exception as e:
+            print(f"[script] anthropic failed ({e}) -> gemini fallback")
+    return _gemini(prompt, cfg, gemini_key)
 
 
 def _gemini(prompt: str, cfg: dict, api_key: str) -> str:
@@ -81,6 +131,31 @@ LANGUAGE — this channel speaks HINDI:
 """
 
 
+def _style_rules() -> str:
+    return """
+WRITING STYLE — the script must feel human-written, never AI-generated:
+- BANNED openers/phrases (any language): "have you ever wondered", "did you
+  know", "imagine a world", "let's dive in", "in conclusion", "क्या आप जानते
+  हैं", "आइए जानते हैं", "कल्पना कीजिए" as a stock opener, "निष्कर्ष".
+- Rhythm: alternate short punch sentences (3-6 words) with medium ones.
+  Every scene ends on a concrete image, place or number — never an
+  abstraction or a summary.
+- Specificity beats breadth: one vivid, named fact per scene (a place, a
+  number, a comparison a viewer can picture) instead of three vague claims.
+- Voice: a person telling a friend a secret — confident, a little amused,
+  zero lecture tone.
+"""
+
+
+def _ai_max(cfg: dict) -> int:
+    """AI-image budget per video — richer when a FLUX (fal.ai) key is set."""
+    aicfg = cfg.get("ai_images", {})
+    if os.environ.get("FAL_KEY", "").strip():
+        return int(aicfg.get("max_per_video_flux",
+                             max(int(aicfg.get("max_per_video", 2)), 4)))
+    return int(aicfg.get("max_per_video", 2))
+
+
 def load_learnings(repo_root: str) -> str:
     path = os.path.join(repo_root, "learnings.md")
     try:
@@ -124,7 +199,7 @@ digest above shows a topic family performing well, lean into that family
 without repeating covered topics.
 {lang_note}
 Return JSON exactly: {{"topic": "<the topic as a working title>"}}"""
-    topic = _parse_json(_gemini(prompt, cfg, api_key))["topic"].strip()
+    topic = _parse_json(_llm(prompt, cfg, api_key))["topic"].strip()
     print(f"[script] auto-picked topic: {topic}")
     return topic
 
@@ -133,6 +208,7 @@ def generate_script(cfg: dict, topic: str, api_key: str, learnings: str = "") ->
     v = cfg["video"]
     wpm = _wpm(cfg)
     words = int(v["target_minutes"] * wpm)
+    ai_max = _ai_max(cfg)
     learn_block = (f"\nCHANNEL LEARNINGS — apply these to hook style, pacing, and "
                    f"thumbnail text:\n{learnings}\n" if learnings else "")
     prompt = f"""You are a scriptwriter for a faceless YouTube channel
@@ -142,7 +218,7 @@ TOPIC: {topic}
 TARGET: ~{words} spoken words total (about {v['target_minutes']} minutes at {wpm} wpm)
 TONE: {cfg['channel']['tone']}
 AUDIENCE: {cfg['channel']['audience']}
-{learn_block}{_lang_rules(cfg)}
+{learn_block}{_lang_rules(cfg)}{_style_rules()}
 Write a scene-segmented script and return ONLY valid JSON with this exact shape:
 {{
   "title": "click-worthy but honest YouTube title, <= 70 chars",
@@ -165,8 +241,11 @@ Write a scene-segmented script and return ONLY valid JSON with this exact shape:
 
 Visual mode rules (variety is the goal — videos must not feel stock-only):
 - Most scenes are "broll" (stock footage exists for them).
-- EXACTLY 1-2 scenes are "ai_image": visuals stock can't provide (ancient/extinct
-  scenes, cutaway views, imagined perspectives). Write a rich ai_prompt.
+- EXACTLY 1-{ai_max} scenes are "ai_image": visuals stock can't provide
+  (ancient/extinct scenes, cutaway views, imagined perspectives, precise
+  historical moments). Write a rich, specific ai_prompt: subject + setting +
+  light + camera angle. These become the video's signature shots — use them
+  on the hook, the re-hook and the payoff where possible.
 - EXACTLY 1-2 scenes are "kinetic": a bold typography moment for the strongest
   line (often the hook or re-hook). kinetic_text = the phrase, punchy.
 - 0-2 scenes are "stat": when narration centers on ONE striking number.
@@ -189,7 +268,7 @@ Script rules:
 
     for attempt in range(3):
         try:
-            script = _parse_json(_gemini(prompt, cfg, api_key))
+            script = _parse_json(_llm(prompt, cfg, api_key))
             assert isinstance(script["scenes"], list) and len(script["scenes"]) >= 4
             for s in script["scenes"]:
                 assert s["narration"].strip()
@@ -218,6 +297,7 @@ def generate_short_script(cfg: dict, topic: str, api_key: str,
     seconds = int(scfg.get("target_seconds", 25))
     wpm = _wpm(cfg)
     words = int(seconds / 60 * wpm)
+    short_ai_max = min(_ai_max(cfg), 2)
     learn_block = (f"\nCHANNEL LEARNINGS — apply to hook and pacing:\n{learnings}\n"
                    if learnings else "")
     prompt = f"""You are writing a YouTube SHORT / Instagram REEL script for a
@@ -226,7 +306,7 @@ faceless channel (vertical video: voiceover + b-roll + big captions).
 TOPIC: {topic}
 TARGET: ~{words} spoken words TOTAL (~{seconds} seconds — shorts are ruthless)
 TONE: {cfg['channel']['tone']}, but faster and punchier than long-form
-{learn_block}{_lang_rules(cfg)}
+{learn_block}{_lang_rules(cfg)}{_style_rules()}
 Return ONLY valid JSON:
 {{
   "title": "<= 80 chars, curiosity gap, no clickbait lies",
@@ -258,7 +338,9 @@ Shorts rules:
   why" (and their Hindi equivalents: "...साबित करते हैं", "तो अगली बार",
   "इसीलिए"). Instead end on a question or unresolved tension whose answer
   is the opening line, so an instant replay reads as one continuous thought.
-- Exactly 1-2 "kinetic" scenes, 0-1 "stat", 0-1 "ai_image", rest "broll".
+- Exactly 1-2 "kinetic" scenes, 0-1 "stat", 0-{short_ai_max} "ai_image"
+  (put an ai_image on the hook when the topic's strongest visual doesn't
+  exist as stock), rest "broll".
 - SEARCH TERM DISCIPLINE (footage relevance depends on this):
   * Every term must belong to the TOPIC'S OWN VISUAL WORLD. If the topic is
     polar, terms are "glacier calving aerial", "arctic tundra", "ice sheet
@@ -273,7 +355,7 @@ Shorts rules:
 
     for attempt in range(3):
         try:
-            script = _parse_json(_gemini(prompt, cfg, api_key))
+            script = _parse_json(_llm(prompt, cfg, api_key))
             assert isinstance(script["scenes"], list) and len(script["scenes"]) >= 3
             for s in script["scenes"]:
                 assert s["narration"].strip()

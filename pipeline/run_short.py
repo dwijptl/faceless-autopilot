@@ -57,7 +57,10 @@ def short_cfg(cfg: dict) -> dict:
     c["music"]["volume"] = s.get("music_volume", 0.18)
     c["tts"]["speed"] = s.get("tts_speed", 1.0)
     c["render"]["progress_bar"] = bool(s.get("progress_bar", False))
-    c["ai_images"]["max_per_video"] = s.get("ai_images_max", 1)
+    if os.environ.get("FAL_KEY", "").strip():  # FLUX on -> richer AI visuals
+        c["ai_images"]["max_per_video"] = s.get("ai_images_max_flux", 2)
+    else:
+        c["ai_images"]["max_per_video"] = s.get("ai_images_max", 1)
     return c
 
 
@@ -90,6 +93,7 @@ def main() -> None:
     except Exception:
         pass
     style = STYLES[done_count % len(STYLES)]
+    cfg.setdefault("render", {})["style_pack"] = style  # steers AI-image look
     print(f"=== Shorts run {stamp} · style: {style} ===")
 
     # 1) topic + short script ------------------------------------------------

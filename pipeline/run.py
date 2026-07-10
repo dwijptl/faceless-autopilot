@@ -123,6 +123,7 @@ def main() -> None:
     except Exception:
         pass
     style = STYLES[done_count % len(STYLES)]
+    cfg.setdefault("render", {})["style_pack"] = style  # steers AI-image look
     print(f"=== Faceless Autopilot run {stamp} · style: {style} ===")
 
     # 1) topic + script ------------------------------------------------------
@@ -152,7 +153,11 @@ def main() -> None:
     usage_log = assets_mod.load_usage_log(log_path)
     used: set = set(usage_log["pexels"])
     used_prompts: set = set(usage_log["prompts"])
-    ai_budget = [int(cfg.get("ai_images", {}).get("max_per_video", 2))]
+    aicfg = cfg.get("ai_images", {})
+    if os.environ.get("FAL_KEY", "").strip():  # FLUX on -> richer AI visuals
+        ai_budget = [int(aicfg.get("max_per_video_flux", 4))]
+    else:
+        ai_budget = [int(aicfg.get("max_per_video", 2))]
     for sc in scenes:
         sc["assets"] = assets_mod.fetch_scene_assets(
             sc, sc["audio_duration"], workdir, cfg, pexels_key, gemini_key,
