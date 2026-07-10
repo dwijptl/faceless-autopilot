@@ -18,18 +18,48 @@ API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 
 
+_anthropic_available: list | None = None
+
+
+def _anthropic_discover(headers: dict) -> list[str]:
+    """Ask the API which models this key can actually use (newest first).
+    Cached per run; failure just returns [] and we rely on config names."""
+    global _anthropic_available
+    if _anthropic_available is None:
+        try:
+            r = requests.get("https://api.anthropic.com/v1/models?limit=100",
+                             headers=headers, timeout=30)
+            r.raise_for_status()
+            _anthropic_available = [m["id"] for m in r.json().get("data", [])]
+            print(f"[script] anthropic models available: "
+                  f"{_anthropic_available[:6]}")
+        except Exception:
+            _anthropic_available = []
+    return _anthropic_available
+
+
 def _anthropic(prompt: str, cfg: dict, api_key: str) -> str:
     """Claude for script writing — used when ANTHROPIC_API_KEY is set."""
-    models = [cfg["llm"].get("anthropic_model", "claude-sonnet-5")] + list(
-        cfg["llm"].get("anthropic_fallback_models", ["claude-haiku-4-5-20251001"]))
     headers = {"x-api-key": api_key, "anthropic-version": "2023-06-01",
                "content-type": "application/json"}
+    models = [cfg["llm"].get("anthropic_model", "claude-sonnet-5")] + list(
+        cfg["llm"].get("anthropic_fallback_models", ["claude-haiku-4-5-20251001"]))
+    # self-heal: append whatever sonnet/haiku this key really has access to
+    discovered = _anthropic_discover(headers)
+    models += [m for m in discovered if "sonnet" in m]
+    models += [m for m in discovered if "haiku" in m]
+    seen: set = set()
+    models = [m for m in models if not (m in seen or seen.add(m))]
+
     last_err = None
     for model in models:
         body = {
             "model": model,
             "max_tokens": 8000,
             "temperature": min(float(cfg["llm"].get("temperature", 0.9)), 1.0),
+            "system": ("You are a JSON API. Respond with ONLY the requested "
+                       "JSON object — no preamble, no markdown fences, no "
+                       "commentary after the closing brace."),
             "messages": [{"role": "user", "content": prompt}],
         }
         for attempt in range(3):
@@ -101,7 +131,33 @@ def _gemini(prompt: str, cfg: dict, api_key: str) -> str:
 
 def _parse_json(text: str) -> dict:
     text = re.sub(r"^```(json)?|```$", "", text.strip(), flags=re.MULTILINE).strip()
-    return json.loads(text)
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        # LLMs sometimes add prose around the JSON — extract the first
+        # balanced object (string-aware brace scan) and parse that.
+        start = text.find("{")
+        if start == -1:
+            raise
+        depth, in_str, esc = 0, False, False
+        for i in range(start, len(text)):
+            ch = text[i]
+            if in_str:
+                if esc:
+                    esc = False
+                elif ch == "\\":
+                    esc = True
+                elif ch == '"':
+                    in_str = False
+            elif ch == '"':
+                in_str = True
+            elif ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    return json.loads(text[start:i + 1])
+        raise
 
 
 def _is_hindi(cfg: dict) -> bool:
@@ -202,9 +258,16 @@ digest above shows a topic family performing well, lean into that family
 without repeating covered topics.
 {lang_note}
 Return JSON exactly: {{"topic": "<the topic as a working title>"}}"""
-    topic = _parse_json(_llm(prompt, cfg, api_key))["topic"].strip()
-    print(f"[script] auto-picked topic: {topic}")
-    return topic
+    last_err = None
+    for attempt in range(3):
+        try:
+            topic = _parse_json(_llm(prompt, cfg, api_key))["topic"].strip()
+            print(f"[script] auto-picked topic: {topic}")
+            return topic
+        except (json.JSONDecodeError, KeyError) as e:
+            last_err = e
+            print(f"[script] bad topic JSON (attempt {attempt + 1}): {e}")
+    raise RuntimeError(f"Could not pick a topic after 3 attempts: {last_err}")
 
 
 def generate_script(cfg: dict, topic: str, api_key: str, learnings: str = "") -> dict:
