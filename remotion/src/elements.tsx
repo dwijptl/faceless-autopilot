@@ -14,13 +14,25 @@ import {
 } from 'remotion';
 import {BRAND, StylePack} from './styles';
 
-// ── Font (Google Fonts Inter, loaded at render time; safe fallback) ────
-let FONT = 'Inter, -apple-system, "DejaVu Sans", sans-serif';
+// ── Fonts: Inter (Latin) + Noto Sans Devanagari (Hindi) ────────────────
+// Loaded from Google Fonts at render time; the workflow also installs
+// fonts-noto-core so headless Chrome has a system-level Devanagari fallback.
+let FONT =
+  '"Inter", "Noto Sans Devanagari", -apple-system, "DejaVu Sans", sans-serif';
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const {loadFont} = require('@remotion/google-fonts/Inter');
-  const loaded = loadFont();
-  FONT = `${loaded.fontFamily}, sans-serif`;
+  const inter = loadFont();
+  let stack = `"${inter.fontFamily}"`;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const {loadFont: loadDeva} = require('@remotion/google-fonts/NotoSansDevanagari');
+    const deva = loadDeva();
+    stack += `, "${deva.fontFamily}"`;
+  } catch {
+    stack += ', "Noto Sans Devanagari"';
+  }
+  FONT = `${stack}, sans-serif`;
 } catch {
   // keep system fallback
 }
@@ -154,15 +166,15 @@ export const LowerThird: React.FC<{title: string; style: StylePack}> = ({
     v === 'chip' ? (
       <div style={{
         background: style.accent, color: '#0A1428',
-        fontSize: 32 * s, fontWeight: 800, letterSpacing: 1,
-        textTransform: 'uppercase', padding: `${10 * s}px ${22 * s}px`,
-        borderRadius: 999,
+        fontSize: 32 * s, fontWeight: 800, letterSpacing: 0.5,
+        padding: `${10 * s}px ${22 * s}px`,
+        borderRadius: 999, lineHeight: 1.45,
       }}>{title}</div>
     ) : v === 'underline' ? (
       <div style={{display: 'flex', flexDirection: 'column', gap: 6 * s}}>
         <div style={{
           color: BRAND.text, fontSize: 34 * s, fontWeight: 600,
-          letterSpacing: 2.5, textTransform: 'uppercase',
+          letterSpacing: 1, lineHeight: 1.45,
           textShadow: '0 2px 14px rgba(0,0,0,0.8)',
         }}>{title}</div>
         <div style={{height: 3 * s, width: 120 * s, background: style.accent}} />
@@ -172,8 +184,8 @@ export const LowerThird: React.FC<{title: string; style: StylePack}> = ({
         <div style={{width: 10 * s, height: 54 * s, background: style.accent,
           borderRadius: 3 * s}} />
         <div style={{
-          color: 'white', fontSize: 34 * s, fontWeight: 700, letterSpacing: 1.2,
-          textTransform: 'uppercase', textShadow: '0 2px 12px rgba(0,0,0,0.75)',
+          color: 'white', fontSize: 34 * s, fontWeight: 700, letterSpacing: 0.5,
+          lineHeight: 1.45, textShadow: '0 2px 12px rgba(0,0,0,0.75)',
           background: 'rgba(8,10,18,0.45)', padding: `${8 * s}px ${18 * s}px`,
           borderRadius: 8 * s,
         }}>{title}</div>
@@ -231,27 +243,27 @@ const CaptionChunk: React.FC<{
     v === 'boxed' ? (
       <div style={{
         background: 'rgba(8,13,26,0.88)', color: 'white', fontSize: 60 * s,
-        fontWeight: 800, textAlign: 'center', lineHeight: 1.22,
+        fontWeight: 800, textAlign: 'center', lineHeight: 1.35,
         padding: `${10 * s}px ${26 * s}px`, borderRadius: 12 * s,
         borderLeft: `${8 * s}px solid ${style.accent}`,
       }}>{text}</div>
     ) : v === 'minimal' ? (
       <div style={{
         color: BRAND.text, fontSize: 50 * s, fontWeight: 600, letterSpacing: 0.4,
-        textAlign: 'center', lineHeight: 1.3, textShadow: '0 3px 18px rgba(0,0,0,0.9)',
-        borderBottom: `${3 * s}px solid ${style.accent}`, paddingBottom: 6 * s,
+        textAlign: 'center', lineHeight: 1.4, textShadow: '0 3px 18px rgba(0,0,0,0.9)',
+        borderBottom: `${3 * s}px solid ${style.accent}`, paddingBottom: 8 * s,
       }}>{text}</div>
     ) : v === 'chip' ? (
       <div style={{
         background: style.accent, color: '#0A1428', fontSize: 54 * s,
-        fontWeight: 900, textAlign: 'center', lineHeight: 1.2,
+        fontWeight: 900, textAlign: 'center', lineHeight: 1.35,
         padding: `${8 * s}px ${24 * s}px`, borderRadius: 8 * s,
         boxShadow: '0 8px 30px rgba(0,0,0,0.55)',
       }}>{text}</div>
     ) : (
       <div style={{
         color: 'white', fontSize: 58 * s, fontWeight: 800, textAlign: 'center',
-        lineHeight: 1.25, textShadow: stroke,
+        lineHeight: 1.35, textShadow: stroke,
       }}>
         {text}
         <div style={{
@@ -272,6 +284,8 @@ const CaptionChunk: React.FC<{
 };
 
 // ── Kinetic typography scene overlay ───────────────────────────────────
+// letterSpacing 0 + roomier lineHeight: negative tracking and tight leading
+// break Devanagari matras/conjuncts.
 export const KineticText: React.FC<{text: string; style: StylePack}> = ({
   text,
   style,
@@ -295,8 +309,8 @@ export const KineticText: React.FC<{text: string; style: StylePack}> = ({
               transform: `translateY(${interpolate(pop, [0, 1], [70, 0])}px) scale(${interpolate(pop, [0, 1], [0.8, 1])})`,
               opacity: pop,
               color: highlight ? style.accent : 'white',
-              fontSize: 128 * s, fontWeight: 900, letterSpacing: -2,
-              textTransform: 'uppercase', lineHeight: 1.02,
+              fontSize: 118 * s, fontWeight: 900, letterSpacing: 0,
+              lineHeight: 1.25,
               textShadow: '0 10px 44px rgba(0,0,0,0.75)',
             }}>{w}</span>
           );
@@ -318,7 +332,7 @@ export const StatCard: React.FC<{
   const shown = interpolate(frame, [8, 8 + 1.6 * fps], [0, value],
     {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const display = Math.abs(value) >= 100 || Number.isInteger(value)
-    ? Math.round(shown).toLocaleString('en-US')
+    ? Math.round(shown).toLocaleString('en-IN')
     : shown.toFixed(1);
   const rise = spring({frame: frame - 4, fps, config: {damping: 200, stiffness: 90}});
   const barW = interpolate(frame, [10, 10 + 1.6 * fps], [0, 380],
@@ -340,7 +354,7 @@ export const StatCard: React.FC<{
         <div style={{height: 6 * s, width: barW * s, background: style.accent2,
           borderRadius: 3}} />
         <div style={{fontSize: 40 * s, fontWeight: 600, color: BRAND.text,
-          textAlign: 'center', maxWidth: 760 * s, lineHeight: 1.25}}>
+          textAlign: 'center', maxWidth: 760 * s, lineHeight: 1.4}}>
           {stat.label ?? ''}
         </div>
       </div>
@@ -375,7 +389,7 @@ export const Outro: React.FC<{
   watermarkPath: string | null;
 }> = ({brandName, tagline, style, watermarkPath}) => {
   const frame = useCurrentFrame();
-  const {fps, width} = useVideoConfig();
+  const {fps, width, height} = useVideoConfig();
   const s = Math.max(width, height) / 1920;
   const inSpring = spring({frame: frame - 4, fps, config: {damping: 200, stiffness: 110}});
   const sub = spring({frame: frame - 14, fps, config: {damping: 200, stiffness: 110}});
@@ -395,10 +409,10 @@ export const Outro: React.FC<{
           color: BRAND.text, textTransform: 'uppercase'}}>{brandName}</div>
         <div style={{height: 4 * s, width: 220 * s, background: style.accent}} />
         <div style={{fontSize: 34 * s, fontWeight: 500, color: 'rgba(244,247,251,0.8)',
-          opacity: sub}}>{tagline}</div>
+          opacity: sub, lineHeight: 1.4}}>{tagline}</div>
         <div style={{fontSize: 30 * s, fontWeight: 700, color: style.accent,
-          letterSpacing: 3, textTransform: 'uppercase', opacity: sub,
-          marginTop: 10 * s}}>New expeditions Mon · Wed · Fri</div>
+          letterSpacing: 1, opacity: sub, lineHeight: 1.4,
+          marginTop: 10 * s}}>नई खोज — हर सोम · बुध · शुक्र</div>
       </div>
     </AbsoluteFill>
   );

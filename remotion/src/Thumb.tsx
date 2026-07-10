@@ -4,7 +4,8 @@ import type {Manifest} from './Root';
 import {fontFamily} from './elements';
 import {BRAND, getStyle} from './styles';
 
-/** Branded 1280x720 thumbnail template — consistent across style packs. */
+/** Branded 1280x720 thumbnail template — consistent across style packs.
+ * lineHeight/letterSpacing tuned so Devanagari matras never clip. */
 export const Thumb: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
   const style = getStyle(m.style);
   const hero =
@@ -46,8 +47,8 @@ export const Thumb: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
       {/* title */}
       <div style={{
         position: 'absolute', left: 48, right: 48, bottom: 48,
-        color: style.accent, fontSize: 116, lineHeight: 1.02, fontWeight: 900,
-        letterSpacing: -2,
+        color: style.accent, fontSize: 108, lineHeight: 1.22, fontWeight: 900,
+        letterSpacing: 0,
         textShadow:
           '0 6px 0 rgba(0,0,0,0.9), 6px 0 0 rgba(0,0,0,0.9), -6px 0 0 rgba(0,0,0,0.9), 0 -4px 0 rgba(0,0,0,0.9), 0 14px 44px rgba(0,0,0,0.8)',
       }}>{words}</div>
