@@ -1,9 +1,16 @@
-"""Stage 5 — thumbnail: best hook-scene frame + big stroked title text (PIL)."""
+"""Stage 5 — thumbnail: best hook-scene frame + big stroked title text (PIL).
+
+Fonts: Noto Sans Devanagari first (Hindi titles; installed by the workflow
+via fonts-noto-core), DejaVu as the Latin-only fallback. Pillow's bundled
+libraqm handles Devanagari shaping (conjuncts + matras).
+"""
 import os
 
 from PIL import Image, ImageDraw, ImageEnhance, ImageFont
 
 FONT_CANDIDATES = [
+    "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Bold.ttf",
+    "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Regular.ttf",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
 ]
@@ -40,7 +47,7 @@ def make_thumbnail(first_scene_assets: list[dict], thumb_text: str, out_path: st
     img = ImageEnhance.Contrast(ImageEnhance.Brightness(img).enhance(0.75)).enhance(1.15)
 
     d = ImageDraw.Draw(img)
-    words = thumb_text.upper().split()
+    words = thumb_text.upper().split()  # .upper() is a no-op for Devanagari
     lines, cur = [], ""
     for w_ in words:
         trial = f"{cur} {w_}".strip()
@@ -55,7 +62,7 @@ def make_thumbnail(first_scene_assets: list[dict], thumb_text: str, out_path: st
 
     size = 150 if len(lines) <= 2 else 118
     font = _font(size)
-    line_h = size + 14
+    line_h = int(size * 1.28)  # Devanagari matras need vertical headroom
     y = H - 60 - line_h * len(lines)
     for line in lines:
         tw = d.textlength(line, font=font)

@@ -1,7 +1,8 @@
 """Stage 4b/5 — assembly: b-roll conformed to voiceover, Ken Burns on stills,
 scene crossfades, burned captions, ducked music, 1080p H.264 export.
 
-Uses MoviePy 2.x API.
+Uses MoviePy 2.x API. Captions render with Noto Sans Devanagari first (Hindi;
+installed by the workflow via fonts-noto-core), DejaVu as Latin fallback.
 """
 import glob
 import os
@@ -12,6 +13,8 @@ from moviepy import (AudioFileClip, CompositeAudioClip, CompositeVideoClip,
                      concatenate_videoclips, vfx)
 
 FONT_CANDIDATES = [
+    "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Bold.ttf",
+    "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Regular.ttf",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
 ]
@@ -21,7 +24,7 @@ def _font() -> str:
     for f in FONT_CANDIDATES:
         if os.path.exists(f):
             return f
-    raise RuntimeError("No usable font found (install fonts-dejavu-core)")
+    raise RuntimeError("No usable font found (install fonts-noto-core / fonts-dejavu-core)")
 
 
 def _fit(clip, w: int, h: int):

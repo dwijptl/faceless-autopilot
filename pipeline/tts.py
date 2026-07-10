@@ -1,21 +1,128 @@
-"""Stage 3 — voiceover via Kokoro-82M (Apache 2.0, commercial-safe, CPU, $0).
+"""Stage 3 — voiceover.
 
-Model files (~340 MB) are fetched once and cached by the workflow between runs.
+PRIMARY: Sarvam AI bulbul:v3 (api.sarvam.ai) — the channel's CLONED Hindi
+voice. The speaker comes from the SARVAM_SPEAKER secret (your cloned voice ID
+from dashboard.sarvam.ai; any preset name like "amit" also works).
+
+FALLBACK: Kokoro-82M (Apache 2.0, runs free on the runner) with its Hindi
+voices — a Sarvam outage or empty credits never kills a scheduled run.
+Set TTS_NO_FALLBACK=1 to fail hard instead (the Test Voice workflow does).
 """
+import base64
+import io
 import os
 import re
+import time
 
 import numpy as np
 import requests
 import soundfile as sf
 
+SARVAM_URL = "https://api.sarvam.ai/text-to-speech"
+SARVAM_CHAR_LIMIT = 1800   # API allows 2500 for bulbul:v3 — stay comfortably under
 MODEL_BASE = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0"
 MODEL_FILES = ["kokoro-v1.0.onnx", "voices-v1.0.bin"]
 SAMPLE_RATE = 24000
 
+ENGINE_USED = "none"       # run.py reports this in the release notes
+_engines: set = set()
+_sarvam_chars = 0          # cost telemetry (₹ estimate in usage_summary)
 _kokoro = None
 
 
+# ── sentence-aware chunking (Hindi danda । + Latin punctuation) ──────────
+def _sentences(text: str) -> list[str]:
+    parts = re.split(r"(?<=[।.!?])\s+", text.strip())
+    return [p.strip() for p in parts if p.strip()]
+
+
+def _chunks(text: str, limit: int = SARVAM_CHAR_LIMIT) -> list[str]:
+    """Greedy multi-sentence chunks under `limit` chars (better prosody than
+    per-sentence requests, fewer API calls)."""
+    out, cur = [], ""
+    for sent in _sentences(text):
+        while len(sent) > limit:  # pathological unbroken sentence
+            out.append(sent[:limit].strip())
+            sent = sent[limit:]
+        if cur and len(cur) + 1 + len(sent) > limit:
+            out.append(cur)
+            cur = sent
+        else:
+            cur = f"{cur} {sent}".strip()
+    if cur:
+        out.append(cur)
+    return out
+
+
+# ── Sarvam bulbul:v3 ─────────────────────────────────────────────────────
+def _sarvam_request(chunk: str, cfg: dict, api_key: str, speaker: str) -> np.ndarray:
+    t = cfg["tts"]
+    pace = min(max(float(t.get("speed", 1.0)), 0.5), 2.0)  # bulbul:v3 range
+    body = {
+        "text": chunk,
+        "target_language_code": cfg["channel"].get("language", "hi-IN"),
+        "model": t.get("sarvam_model", "bulbul:v3"),
+        "speaker": speaker,
+        "pace": pace,
+        "temperature": float(t.get("temperature", 0.6)),
+        "speech_sample_rate": SAMPLE_RATE,
+    }
+    headers = {"api-subscription-key": api_key, "Content-Type": "application/json"}
+    last = ""
+    for attempt in range(4):
+        try:
+            r = requests.post(SARVAM_URL, json=body, headers=headers, timeout=180)
+        except requests.RequestException as e:
+            last = str(e)
+            time.sleep(5 * (attempt + 1))
+            continue
+        if r.status_code == 200:
+            b64 = r.json()["audios"][0]
+            data, sr = sf.read(io.BytesIO(base64.b64decode(b64)), dtype="float32")
+            if data.ndim > 1:
+                data = data.mean(axis=1)
+            if sr != SAMPLE_RATE:  # defensive — we request 24000
+                idx = np.linspace(0, len(data) - 1,
+                                  int(len(data) * SAMPLE_RATE / sr))
+                data = data[idx.astype(int)]
+            return np.asarray(data, dtype=np.float32)
+        if r.status_code == 429:
+            wait = 15 * (attempt + 1)
+            print(f"[tts] sarvam rate-limited, sleeping {wait}s")
+            last = r.text[:300]
+            time.sleep(wait)
+            continue
+        if r.status_code == 403:
+            raise RuntimeError(
+                "Sarvam 403 — check the SARVAM_API_KEY secret and remaining "
+                f"credits at dashboard.sarvam.ai. Body: {r.text[:300]}")
+        if r.status_code == 422:
+            raise RuntimeError(
+                "Sarvam 422 — invalid request; usually SARVAM_SPEAKER doesn't "
+                f"match bulbul:v3. Body: {r.text[:300]}")
+        last = f"HTTP {r.status_code}: {r.text[:300]}"
+        time.sleep(5 * (attempt + 1))
+    raise RuntimeError(f"Sarvam TTS failed after retries — {last}")
+
+
+def _synth_sarvam(text: str, cfg: dict) -> np.ndarray:
+    global _sarvam_chars
+    api_key = os.environ.get("SARVAM_API_KEY", "").strip()
+    if not api_key:
+        raise RuntimeError("SARVAM_API_KEY not set (add it as a repo secret)")
+    speaker = (os.environ.get("SARVAM_SPEAKER", "").strip()
+               or cfg["tts"].get("sarvam_speaker", "amit"))
+    pieces = []
+    for chunk in _chunks(text):
+        pieces.append(_sarvam_request(chunk, cfg, api_key, speaker))
+        _sarvam_chars += len(chunk)
+        time.sleep(0.3)  # gentle on rate limits
+    if not pieces:
+        pieces = [np.zeros(SAMPLE_RATE, dtype=np.float32)]
+    return np.concatenate(pieces)
+
+
+# ── Kokoro-82M fallback (Hindi voices: hf_alpha/hf_beta/hm_omega/hm_psi) ─
 def _cache_dir() -> str:
     d = os.path.join(os.path.expanduser("~"), ".cache", "kokoro")
     os.makedirs(d, exist_ok=True)
@@ -46,26 +153,26 @@ def _engine():
     return _kokoro
 
 
-def _sentences(text: str) -> list[str]:
-    parts = re.split(r"(?<=[.!?])\s+", text.strip())
-    return [p.strip() for p in parts if p.strip()]
+def _kokoro_lang(cfg: dict) -> str:
+    lang = str(cfg["channel"].get("language", "en-us")).lower()
+    return "hi" if lang.startswith("hi") else lang
 
 
-def synth_scene(text: str, wav_path: str, cfg: dict) -> float:
-    """Synthesize one scene's narration to wav_path. Returns duration in seconds."""
+def _synth_kokoro(text: str, cfg: dict) -> np.ndarray:
     k = _engine()
-    voice = cfg["tts"]["voice"]
+    voice = cfg["tts"].get("voice", "hm_omega")
     try:
         available = set(k.get_voices())
         if voice not in available:
-            fallback = sorted(available)[0]
+            hindi = sorted(v for v in available if v.startswith(("hf_", "hm_")))
+            fallback = hindi[0] if hindi else sorted(available)[0]
             print(f"[tts] voice '{voice}' not found, using '{fallback}'")
             voice = fallback
     except Exception:
         pass
 
     speed = float(cfg["tts"].get("speed", 1.0))
-    lang = cfg["channel"].get("language", "en-us")
+    lang = _kokoro_lang(cfg)
     gap = np.zeros(int(0.25 * SAMPLE_RATE), dtype=np.float32)
     chunks = []
     for sent in _sentences(text):
@@ -74,11 +181,40 @@ def synth_scene(text: str, wav_path: str, cfg: dict) -> float:
         chunks.append(gap)
     if not chunks:
         chunks = [np.zeros(SAMPLE_RATE, dtype=np.float32)]
-    # trailing breath before the next scene
-    chunks.append(np.zeros(int(0.35 * SAMPLE_RATE), dtype=np.float32))
-    audio = np.concatenate(chunks)
+    return np.concatenate(chunks)
 
+
+# ── public API ───────────────────────────────────────────────────────────
+def synth_scene(text: str, wav_path: str, cfg: dict) -> float:
+    """Synthesize one scene's narration to wav_path. Returns duration (s)."""
+    global ENGINE_USED
+    engine = str(cfg.get("tts", {}).get("engine", "sarvam")).lower()
+    audio = None
+    if engine == "sarvam":
+        try:
+            audio = _synth_sarvam(text, cfg)
+            _engines.add("sarvam:" + cfg["tts"].get("sarvam_model", "bulbul:v3"))
+        except Exception as e:
+            if os.environ.get("TTS_NO_FALLBACK", "").strip() == "1":
+                raise
+            print(f"[tts] SARVAM FAILED -> Kokoro fallback. Reason: {e}")
+    if audio is None:
+        audio = _synth_kokoro(text, cfg)
+        _engines.add("kokoro-82m")
+    ENGINE_USED = " + ".join(sorted(_engines))
+
+    # trailing breath before the next scene
+    audio = np.concatenate(
+        [audio, np.zeros(int(0.35 * SAMPLE_RATE), dtype=np.float32)])
     peak = float(np.max(np.abs(audio))) or 1.0  # normalize to healthy loudness
     audio = audio * (0.89 / peak)
     sf.write(wav_path, audio, SAMPLE_RATE)
     return len(audio) / SAMPLE_RATE
+
+
+def usage_summary() -> str:
+    if _sarvam_chars <= 0:
+        return f"engines: {ENGINE_USED} · sarvam chars: 0 (₹0)"
+    rupees = _sarvam_chars / 10_000 * 30  # ₹30 / 10k chars (check dashboard)
+    return (f"engines: {ENGINE_USED} · sarvam chars: {_sarvam_chars:,} "
+            f"(≈ ₹{rupees:.1f})")

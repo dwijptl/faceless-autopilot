@@ -1,4 +1,4 @@
-"""Faceless Autopilot — SHORTS orchestrator (vertical 1080x1920, ~40s).
+"""Faceless Autopilot — SHORTS orchestrator (vertical 1080x1920, ~25s, Hindi).
 
 Same machinery as run.py, tuned for Shorts/Reels: portrait assets, micro-scene
 pacing, big centered captions, loop-friendly ending, no outro card. Shares the
@@ -46,14 +46,14 @@ def short_cfg(cfg: dict) -> dict:
     c = copy.deepcopy(cfg)
     c["video"].update({
         "width": 1080, "height": 1920,
-        "target_minutes": s.get("target_seconds", 40) / 60,
+        "target_minutes": s.get("target_seconds", 25) / 60,
         "scenes_min": s.get("scenes_min", 5),
         "scenes_max": s.get("scenes_max", 7),
         "crossfade": s.get("crossfade", 0.25),
         "max_shot_seconds": s.get("max_shot_seconds", 3.5),
         "outro_seconds": 0,
     })
-    c["captions"]["max_chars"] = s.get("captions_max_chars", 16)
+    c["captions"]["max_chars"] = s.get("captions_max_chars", 14)
     c["music"]["volume"] = s.get("music_volume", 0.18)
     c["tts"]["speed"] = s.get("tts_speed", 1.0)
     c["render"]["progress_bar"] = bool(s.get("progress_bar", False))
@@ -71,6 +71,10 @@ def main() -> None:
     pexels_key = os.environ.get("PEXELS_API_KEY", "").strip()
     if not gemini_key or not pexels_key:
         sys.exit("Missing GEMINI_API_KEY or PEXELS_API_KEY")
+    if (cfg.get("tts", {}).get("engine") == "sarvam"
+            and not os.environ.get("SARVAM_API_KEY", "").strip()):
+        print("[warn] SARVAM_API_KEY not set — narration will use the Kokoro "
+              "fallback voice, not your cloned voice")
 
     learnings = script_gen.load_learnings(REPO_ROOT)
 
@@ -106,6 +110,7 @@ def main() -> None:
         offset += dur - xfade
         print(f"[tts] scene {sc['n']}: {dur:.1f}s ({sc.get('visual_mode')})")
     scenes[0]["start"] = 0.0
+    print(f"[tts] {tts_mod.usage_summary()}")
 
     # 3) portrait assets (shared never-repeat log) -----------------------------
     log_path = os.path.join(REPO_ROOT, "assets_used.json")
@@ -177,7 +182,7 @@ def main() -> None:
     }}
     manifest_path = os.path.join(workdir, "props.json")
     with open(manifest_path, "w", encoding="utf-8") as f:
-        json.dump(manifest, f, indent=2)
+        json.dump(manifest, f, indent=2, ensure_ascii=False)
 
     # 6) render the "Short" composition ---------------------------------------
     final_path = os.path.join(outdir, "final.mp4")
@@ -193,9 +198,11 @@ def main() -> None:
     duration = probe_duration(final_path)
 
     # 7) metadata ---------------------------------------------------------------
+    voice_line = tts_mod.ENGINE_USED or "unknown"
     meta = f"""## {script['title']}
 
-**SHORT** · {duration:.0f}s · {len(scenes)} scenes · style: {style} · run {stamp}
+**SHORT** · {duration:.0f}s · {len(scenes)} scenes · style: {style} ·
+voice: {voice_line} · run {stamp}
 
 ### Description (paste into YouTube/Instagram)
 
@@ -209,10 +216,11 @@ def main() -> None:
 
 - [ ] Watch it once (it's {duration:.0f} seconds)
 - [ ] YouTube: upload as a regular video — vertical + <3 min = Short automatically
+- [ ] Set the video language to **Hindi** in YouTube Studio
 - [ ] Instagram: same MP4 works as a Reel
 - [ ] Confirm the loop: does the ending feed the opening?
 
-*Vertical b-roll: Pexels. Voice: Kokoro-82M. Motion: Remotion. $0.*
+*Vertical b-roll: Pexels. Voice: {voice_line}. Motion: Remotion.*
 """
     with open(os.path.join(outdir, "metadata.md"), "w", encoding="utf-8") as f:
         f.write(meta)

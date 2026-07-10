@@ -1,8 +1,9 @@
-"""Faceless Autopilot — orchestrator (Terra Incognita edition).
+"""Faceless Autopilot — orchestrator (Terra Incognita edition, Hindi).
 
-topic -> script -> voiceover -> assets (AI + stock, never-repeat log)
--> captions -> Remotion render (rotating style packs, brand kit, outro,
-watermark) with MoviePy fallback -> release files.
+topic -> script (Hindi) -> voiceover (Sarvam cloned voice, Kokoro fallback)
+-> assets (AI + stock, never-repeat log) -> captions -> Remotion render
+(rotating style packs, brand kit, outro, watermark) with MoviePy fallback
+-> release files.
 
 Reads learnings.md (analytics loop) to adapt length/pacing within bounds.
 """
@@ -92,6 +93,10 @@ def main() -> None:
     pexels_key = os.environ.get("PEXELS_API_KEY", "").strip()
     if not gemini_key or not pexels_key:
         sys.exit("Missing GEMINI_API_KEY or PEXELS_API_KEY (add them as repo secrets)")
+    if (cfg.get("tts", {}).get("engine") == "sarvam"
+            and not os.environ.get("SARVAM_API_KEY", "").strip()):
+        print("[warn] SARVAM_API_KEY not set — narration will use the Kokoro "
+              "fallback voice, not your cloned voice")
 
     # learnings -> prompt context + bounded overrides -----------------------
     learnings = script_gen.load_learnings(REPO_ROOT)
@@ -140,6 +145,7 @@ def main() -> None:
         offset += dur - xfade
         print(f"[tts] scene {sc['n']}: {dur:.1f}s ({sc.get('visual_mode', 'broll')})")
     scenes[0]["start"] = 0.0
+    print(f"[tts] {tts_mod.usage_summary()}")
 
     # 3) assets — AI first where scripted, stock fallback, never repeat -----
     log_path = os.path.join(REPO_ROOT, "assets_used.json")
@@ -202,7 +208,7 @@ def main() -> None:
     }}
     manifest_path = os.path.join(workdir, "props.json")
     with open(manifest_path, "w", encoding="utf-8") as f:
-        json.dump(manifest, f, indent=2)
+        json.dump(manifest, f, indent=2, ensure_ascii=False)
 
     # 6) render ----------------------------------------------------------------
     final_path = os.path.join(outdir, "final.mp4")
@@ -234,10 +240,12 @@ def main() -> None:
 
     # 8) metadata ----------------------------------------------------------------
     n_ai = sum(1 for sc in scenes for a in sc["assets"] if a.get("ai"))
+    voice_line = tts_mod.ENGINE_USED or "unknown"
     meta = f"""## {script['title']}
 
 **Duration:** {duration / 60:.1f} min · **Scenes:** {len(scenes)} · **Style:** {style} ·
-**AI visuals:** {n_ai} · **Run:** {stamp} · **Renderer:** {used_engine}
+**AI visuals:** {n_ai} · **Run:** {stamp} · **Renderer:** {used_engine} ·
+**Voice:** {voice_line}
 
 ### Description (paste into YouTube)
 
@@ -251,13 +259,15 @@ def main() -> None:
 
 - [ ] Watch the video once — you are the editor of record
 - [ ] Spot-check any specific numbers/claims in the narration
+- [ ] Set the video language to **Hindi** in YouTube Studio (Details → Video language)
 - [ ] If your music track is CC-BY, add the artist credit to the description
-- [ ] Upload `captions.srt` in YouTube Studio → Subtitles
+- [ ] Upload `captions.srt` in YouTube Studio → Subtitles (language: Hindi)
 - [ ] Occasionally drop fresh Studio analytics CSVs into analytics/ so the
       channel keeps learning
 
-*Assets: Pexels + Gemini AI images (commercial-safe). Voice: Kokoro-82M
-(Apache 2.0). Motion design: Remotion. Brand: Terra Incognita. Made for $0.*
+*Assets: Pexels + Gemini AI images (commercial-safe). Voice: {voice_line}
+(your cloned Sarvam voice; Kokoro Apache-2.0 fallback). Motion design:
+Remotion. Brand: Terra Incognita.*
 """
     with open(os.path.join(outdir, "metadata.md"), "w", encoding="utf-8") as f:
         f.write(meta)

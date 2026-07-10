@@ -2,6 +2,10 @@
 
 Reads learnings.md (written by the analytics loop) so topic choice, hook
 style, pacing and thumbnail text adapt to what has performed on the channel.
+
+Language: driven by channel.language in config.yaml. For Hindi (hi-*) all
+viewer-facing text is written in Devanagari, while stock search terms and
+AI image prompts stay in English (libraries are indexed in English).
 """
 import json
 import os
@@ -50,6 +54,33 @@ def _parse_json(text: str) -> dict:
     return json.loads(text)
 
 
+def _is_hindi(cfg: dict) -> bool:
+    return str(cfg["channel"].get("language", "en-us")).lower().startswith("hi")
+
+
+def _wpm(cfg: dict) -> int:
+    # Hindi documentary narration runs slower than English (~130 vs 150 wpm)
+    return int(cfg["channel"].get("wpm", 130 if _is_hindi(cfg) else 150))
+
+
+def _lang_rules(cfg: dict) -> str:
+    if not _is_hindi(cfg):
+        return ""
+    return """
+LANGUAGE — this channel speaks HINDI:
+- narration, title, thumb_text, description, tags, scene titles, kinetic_text
+  and stat.label are ALL in natural spoken Hindi (Devanagari script).
+- Register: the Hindi of a good documentary narrator — clear, warm,
+  conversational. Common loanwords are fine in Devanagari (डॉक्यूमेंट्री,
+  किलोमीटर), but never write full English sentences.
+- NUMBERS in narration: Arabic numerals; anything longer than 4 digits gets
+  commas (10,000 not 10000) so the voice reads it as one number.
+- HARD RULE: search_terms and ai_prompt stay in ENGLISH — stock libraries
+  and image models are indexed in English.
+- tags: mostly Hindi, plus 2-4 English tags for search reach.
+"""
+
+
 def load_learnings(repo_root: str) -> str:
     path = os.path.join(repo_root, "learnings.md")
     try:
@@ -74,13 +105,16 @@ def pick_topic(cfg: dict, api_key: str, done_file: str = "topics_done.txt",
 
     learn_block = (f"\nWHAT HAS WORKED ON THIS CHANNEL (analytics digest):\n{learnings}\n"
                    if learnings else "")
+    lang_note = ("\nWrite the topic itself in Hindi (Devanagari script).\n"
+                 if _is_hindi(cfg) else "")
     prompt = f"""You are the content strategist for a faceless YouTube channel.
 
 NICHE: {cfg['channel']['niche']}
 AUDIENCE: {cfg['channel']['audience']}
 {learn_block}
-Already-covered topics (NEVER repeat or closely paraphrase these):
-{json.dumps(done[-100:], indent=0)}
+Already-covered topics (NEVER repeat or closely paraphrase these, in any
+language):
+{json.dumps(done[-100:], indent=0, ensure_ascii=False)}
 
 Invent ONE new video topic with strong curiosity-gap appeal that can be
 illustrated with stock footage of landscapes, cities, nature, aerials and
@@ -88,7 +122,7 @@ oceans plus occasional AI-generated stills (no specific people, no events
 needing news footage, nothing requiring licensed material). If the analytics
 digest above shows a topic family performing well, lean into that family
 without repeating covered topics.
-
+{lang_note}
 Return JSON exactly: {{"topic": "<the topic as a working title>"}}"""
     topic = _parse_json(_gemini(prompt, cfg, api_key))["topic"].strip()
     print(f"[script] auto-picked topic: {topic}")
@@ -97,17 +131,18 @@ Return JSON exactly: {{"topic": "<the topic as a working title>"}}"""
 
 def generate_script(cfg: dict, topic: str, api_key: str, learnings: str = "") -> dict:
     v = cfg["video"]
-    words = int(v["target_minutes"] * 150)
+    wpm = _wpm(cfg)
+    words = int(v["target_minutes"] * wpm)
     learn_block = (f"\nCHANNEL LEARNINGS — apply these to hook style, pacing, and "
                    f"thumbnail text:\n{learnings}\n" if learnings else "")
     prompt = f"""You are a scriptwriter for a faceless YouTube channel
 (voiceover + b-roll + motion graphics + captions, no on-camera host).
 
 TOPIC: {topic}
-TARGET: ~{words} spoken words total (about {v['target_minutes']} minutes at 150 wpm)
+TARGET: ~{words} spoken words total (about {v['target_minutes']} minutes at {wpm} wpm)
 TONE: {cfg['channel']['tone']}
 AUDIENCE: {cfg['channel']['audience']}
-{learn_block}
+{learn_block}{_lang_rules(cfg)}
 Write a scene-segmented script and return ONLY valid JSON with this exact shape:
 {{
   "title": "click-worthy but honest YouTube title, <= 70 chars",
@@ -178,10 +213,11 @@ Script rules:
 
 def generate_short_script(cfg: dict, topic: str, api_key: str,
                           learnings: str = "") -> dict:
-    """Script for a vertical Short/Reel: one idea, ~40s, loop-friendly."""
+    """Script for a vertical Short/Reel: one idea, ~25s, loop-friendly."""
     scfg = cfg.get("short", {})
-    seconds = int(scfg.get("target_seconds", 40))
-    words = int(seconds / 60 * 155)
+    seconds = int(scfg.get("target_seconds", 25))
+    wpm = _wpm(cfg)
+    words = int(seconds / 60 * wpm)
     learn_block = (f"\nCHANNEL LEARNINGS — apply to hook and pacing:\n{learnings}\n"
                    if learnings else "")
     prompt = f"""You are writing a YouTube SHORT / Instagram REEL script for a
@@ -190,7 +226,7 @@ faceless channel (vertical video: voiceover + b-roll + big captions).
 TOPIC: {topic}
 TARGET: ~{words} spoken words TOTAL (~{seconds} seconds — shorts are ruthless)
 TONE: {cfg['channel']['tone']}, but faster and punchier than long-form
-{learn_block}
+{learn_block}{_lang_rules(cfg)}
 Return ONLY valid JSON:
 {{
   "title": "<= 80 chars, curiosity gap, no clickbait lies",
@@ -219,8 +255,9 @@ Shorts rules:
   No greetings, no context, no "did you know".
 - LOOP ENDING (critical): the final scene is 8-15 words and must NOT
   summarize or conclude. Banned: "...prove that", "so next time", "that's
-  why". Instead end on a question or unresolved tension whose answer is the
-  opening line, so an instant replay reads as one continuous thought.
+  why" (and their Hindi equivalents: "...साबित करते हैं", "तो अगली बार",
+  "इसीलिए"). Instead end on a question or unresolved tension whose answer
+  is the opening line, so an instant replay reads as one continuous thought.
 - Exactly 1-2 "kinetic" scenes, 0-1 "stat", 0-1 "ai_image", rest "broll".
 - SEARCH TERM DISCIPLINE (footage relevance depends on this):
   * Every term must belong to the TOPIC'S OWN VISUAL WORLD. If the topic is
