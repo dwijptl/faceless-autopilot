@@ -32,12 +32,12 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - name: System dependencies
+      - name: System dependencies (incl. Devanagari fonts for Hindi text)
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg espeak-ng fonts-dejavu-core
+          sudo apt-get install -y -qq ffmpeg espeak-ng fonts-dejavu-core fonts-noto-core
 
-      - name: Cache Kokoro TTS model (~340 MB, downloaded once)
+      - name: Cache Kokoro TTS model (fallback voice, downloaded only if used)
         uses: actions/cache@v4
         with:
           path: ~/.cache/kokoro
@@ -66,6 +66,8 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          SARVAM_API_KEY: ${{ secrets.SARVAM_API_KEY }}
+          SARVAM_SPEAKER: ${{ secrets.SARVAM_SPEAKER }}
           FORCED_TOPIC: ${{ github.event.inputs.topic }}
         run: python pipeline/run.py
 

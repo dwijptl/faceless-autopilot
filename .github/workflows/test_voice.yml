@@ -1,0 +1,44 @@
+name: Test Voice
+
+# Quick check of your cloned Sarvam voice (~1 minute, a fraction of a rupee).
+# Actions tab → Test Voice → Run workflow. Download the "voice-test" artifact
+# from the run page and listen. Fails loudly if the key/speaker is wrong —
+# no silent Kokoro fallback here.
+
+on:
+  workflow_dispatch:
+    inputs:
+      text:
+        description: "Hindi line to speak (leave empty for the standard check)"
+        required: false
+        default: ""
+
+jobs:
+  test-voice:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Minimal dependencies
+        run: pip install requests pyyaml numpy soundfile
+
+      - name: Synthesize test line
+        env:
+          SARVAM_API_KEY: ${{ secrets.SARVAM_API_KEY }}
+          SARVAM_SPEAKER: ${{ secrets.SARVAM_SPEAKER }}
+          TEST_TEXT: ${{ github.event.inputs.text }}
+          TTS_NO_FALLBACK: "1"
+        run: python pipeline/test_voice.py
+
+      - name: Upload audio artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: voice-test
+          path: out/voice_test/*.wav
