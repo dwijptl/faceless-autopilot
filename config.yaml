@@ -48,8 +48,10 @@ llm:
                            # secret exists (crisper writing, ~₹4/script),
                            # otherwise Gemini free tier. Claude failures
                            # auto-fall back to Gemini.
-  anthropic_model: "claude-sonnet-5"
-  anthropic_fallback_models: ["claude-haiku-4-5-20251001"]
+  anthropic_model: "claude-sonnet-5"   # if a name 404s, the pipeline asks the
+                                       # API what models YOUR key has and
+                                       # self-heals to the newest sonnet/haiku
+  anthropic_fallback_models: ["claude-sonnet-4-5", "claude-haiku-4-5-20251001"]
   model: "gemini-2.5-flash"
   # tried in order if the model above is retired/404s:
   fallback_models: ["gemini-3-flash", "gemini-flash-latest", "gemini-2.0-flash"]
