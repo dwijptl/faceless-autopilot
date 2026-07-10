@@ -137,7 +137,11 @@ Visual mode rules (variety is the goal — videos must not feel stock-only):
 - 0-2 scenes are "stat": when narration centers on ONE striking number.
   Fill stat.value (number only), stat.suffix ("%", "km", "×"...), stat.label
   (what the number is). Narration must actually say that number.
-- Every scene still needs search_terms as fallback. Concrete visual nouns only.
+- Every scene still needs search_terms as fallback. Concrete visual nouns only,
+  and every term must belong to the topic's own visual world — never
+  metaphorical/studio/commercial imagery (no drinks, food, offices, product
+  shots), and wildlife must look wild ("aerial", "natural habitat" — never
+  zoo/enclosure footage).
 
 Script rules:
 - {v['scenes_min']} to {v['scenes_max']} scenes. Scene 1 is a 30-second HOOK opening a
@@ -208,14 +212,26 @@ Return ONLY valid JSON:
 }}
 
 Shorts rules:
-- {scfg.get('scenes_min', 5)}-{scfg.get('scenes_max', 7)} micro-scenes. ONE idea total.
+- {scfg.get('scenes_min', 4)}-{scfg.get('scenes_max', 6)} micro-scenes. ONE idea total.
+  HARD CAP: ~{words} spoken words across the whole script — if over, cut
+  adjectives and merge scenes. Shorter beats complete.
 - Scene 1 = the hook: <= 12 words, the single most jolting fact/question.
   No greetings, no context, no "did you know".
-- LOOP ENDING: the final scene's last line must connect back to the opening
-  line so the video replays seamlessly.
+- LOOP ENDING (critical): the final scene is 8-15 words and must NOT
+  summarize or conclude. Banned: "...prove that", "so next time", "that's
+  why". Instead end on a question or unresolved tension whose answer is the
+  opening line, so an instant replay reads as one continuous thought.
 - Exactly 1-2 "kinetic" scenes, 0-1 "stat", 0-1 "ai_image", rest "broll".
-- search_terms describe VERTICAL-friendly visuals (subjects that work tall:
-  waterfalls, towers, canyons, streets, people-free closeups).
+- SEARCH TERM DISCIPLINE (footage relevance depends on this):
+  * Every term must belong to the TOPIC'S OWN VISUAL WORLD. If the topic is
+    polar, terms are "glacier calving aerial", "arctic tundra", "ice sheet
+    drone" — never generic ice cubes or drinks.
+  * NEVER metaphorical, studio, or commercial-looking imagery: no beverages,
+    food, offices, hands, product shots.
+  * Wildlife must look WILD: add "wild"/"aerial"/"natural habitat" to animal
+    terms; zoo or enclosure footage is forbidden.
+  * Prefer vertical-friendly subjects (waterfalls, cliffs, towers, canyons,
+    aurora, drone descents).
 - Every sentence must earn its half-second. Cut every filler word."""
 
     for attempt in range(3):
