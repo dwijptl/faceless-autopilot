@@ -83,7 +83,8 @@ ai_images:
   fallback_models: ["gemini-3-flash-image", "gemini-2.0-flash-preview-image-generation"]
 
 short:                     # vertical Shorts/Reels (Make Short workflow, Tue/Thu/Sat)
-  target_seconds: 25       # 15-30s maximizes completion rate + loops
+  target_seconds: 28       # sweet spot: long enough to feel complete,
+                           # short enough to keep completion rate + loops
   scenes_min: 4
   scenes_max: 6
   crossfade: 0.25          # faster cuts than long-form
