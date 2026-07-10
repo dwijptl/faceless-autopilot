@@ -1,59 +1,63 @@
-# 🎬 Faceless Autopilot
+# 🎬 Faceless Autopilot — हिन्दी edition
 
-A fully automated, **$0-per-video** faceless YouTube pipeline that runs entirely on GitHub's
-cloud (nothing on your machine). Three times a week it invents a topic, writes a script,
-narrates it, downloads matching HD b-roll, burns in synced captions, mixes music, renders
-a 1080p MP4 — and publishes everything to a **date-and-time-stamped GitHub Release**.
+A fully automated faceless YouTube pipeline that runs entirely on GitHub's
+cloud (nothing on your machine). Three times a week it invents a topic, writes
+a **Hindi** script, narrates it in **your own cloned voice** (Sarvam AI),
+downloads matching HD b-roll, burns in synced Devanagari captions, mixes
+music, renders a 1080p MP4 — and publishes everything to a
+**date-and-time-stamped GitHub Release**. Shorts run on the alternate days.
 
 ```
-topic (Gemini, auto) ─→ script (Gemini) ─→ voiceover (Kokoro TTS, Apache 2.0)
-        ─→ b-roll (Pexels API) ─→ captions (auto-synced) ─→ render (FFmpeg/MoviePy)
-        ─→ Release "video-2026-07-09_0630" { final.mp4 · captions.srt · thumbnail.jpg · script.json · metadata }
+topic (Gemini, auto) ─→ Hindi script (Gemini) ─→ voiceover (Sarvam bulbul:v3, YOUR cloned voice;
+        auto-fallback: Kokoro-82M Hindi, $0) ─→ b-roll (Pexels API) ─→ captions (auto-synced, Devanagari)
+        ─→ render (Remotion / FFmpeg) ─→ Release "video-2026-07-10_0630" { final.mp4 · captions.srt · thumbnail.jpg · script.json }
 ```
 
-**Every run costs $0**: Gemini API free tier (script), Pexels API (free commercial-license
-footage), Kokoro-82M (open-source Apache-2.0 voice, runs on the free runner itself),
-GitHub Actions (free unlimited minutes on public repos).
+**Cost per video:** everything is $0 (Gemini free tier, Pexels, GitHub Actions,
+Kokoro) **except the voice**: Sarvam gives ₹100 free credit on signup, then TTS
+is ~₹30 per 10,000 characters — roughly **₹15–20 per long video, ~₹2 per
+short**. If Sarvam is unreachable or out of credits, the pipeline automatically
+falls back to the free Kokoro Hindi voice so scheduled runs never fail.
 
 ---
 
-## One-time setup (~10 minutes, all in the browser)
+## One-time setup (~15 minutes, all in the browser)
 
 ### 1. Create the repo
 
-1. Sign in at github.com → **New repository** → name it (e.g. `faceless-autopilot`) →
-   **Public** (public = unlimited free Actions minutes; private = 2,000 min/month ≈ 4–6 videos)
-   → Create.
-2. Unzip the delivered `faceless-autopilot.zip`, then on your repo page: **Add file →
-   Upload files** → drag **the contents** of the folder in (keep the folder structure)
-   → Commit.
-3. ⚠️ If the `.github/workflows/make_video.yml` file didn't upload (browsers sometimes skip
-   hidden dot-folders): **Add file → Create new file**, type
-   `.github/workflows/make_video.yml` as the name, paste the file's contents, commit.
+Already done if you're reading this on your own repo.
 
-### 2. Get your two free API keys (no credit card)
+### 2. API keys (repo secrets)
 
-| Key | Where | Notes |
+| Secret | Where | Notes |
 |---|---|---|
-| `GEMINI_API_KEY` | aistudio.google.com → **Get API key** | Free tier: ~1,500 requests/day — a video uses ~3 |
-| `PEXELS_API_KEY` | pexels.com/api → **Get started** | Free: 200 req/hour, 20k/month — a video uses ~30 |
+| `GEMINI_API_KEY` | aistudio.google.com → **Get API key** | Free: ~1,500 req/day — a video uses ~3 |
+| `PEXELS_API_KEY` | pexels.com/api → **Get started** | Free: 200 req/hour — a video uses ~30 |
+| `SARVAM_API_KEY` | dashboard.sarvam.ai → API Keys | ₹100 free credit; then ~₹30/10k chars |
+| `SARVAM_SPEAKER` | dashboard.sarvam.ai → your **cloned voice ID** | Clone needs a 30–60s consented sample. Any preset (`amit`, `kavya`…) also works |
 
-Add both in your repo: **Settings → Secrets and variables → Actions → New repository
-secret** (exact names above).
+Add each: **Settings → Secrets and variables → Actions → New repository secret**
+(exact names above).
 
-### 3. (Recommended) Add music
+### 3. Test your voice (recommended before the first video)
 
-Follow `music/README.md` — one 5-minute batch of YouTube Audio Library tracks lasts months.
-Skipping this is fine; videos just render without music.
+**Actions → Test Voice → Run workflow.** ~1 minute later, download the
+`voice-test` artifact from the run page and listen. If it fails, the log says
+exactly what's wrong (key, credits, or speaker ID).
 
-### 4. First run
+### 4. (Recommended) Add music
 
-**Actions** tab → enable workflows if prompted → **Make Video → Run workflow** (optionally
-type a topic; leave empty for auto). Watch the log. In ~30–60 min a release named
-`video-<date>_<time>` appears under **Releases** with your finished video.
+Follow `music/README.md` — one 5-minute batch of YouTube Audio Library tracks
+lasts months. Skipping is fine; videos just render without music.
 
-From then on it runs itself **Mon/Wed/Fri 06:30 UTC** (edit the cron line in
-`.github/workflows/make_video.yml` to change).
+### 5. First run
+
+**Actions → Make Video → Run workflow** (optionally force a topic — Hindi or
+English both work; leave empty for auto). In ~30–60 min a release named
+`video-<date>_<time>` appears under **Releases**.
+
+Schedules: long-form **Mon/Wed/Fri 06:30 UTC**, Shorts **Tue/Thu/Sat**
+(edit the cron lines in `.github/workflows/`).
 
 ---
 
@@ -61,11 +65,24 @@ From then on it runs itself **Mon/Wed/Fri 06:30 UTC** (edit the cron line in
 
 Each release `video-YYYY-MM-DD_HHMM` contains:
 
-- `final.mp4` — 1080p30, H.264, captions burned in, music ducked under narration
-- `captions.srt` — upload in YouTube Studio → Subtitles for proper CCs
-- `thumbnail.jpg` — 1280×720, auto-generated from the hook scene + title text
-- `script.json` — full script (title, description, tags, scenes)
+- `final.mp4` — 1080p30, H.264, Hindi narration in your voice, Devanagari
+  captions burned in, music ducked under narration
+- `captions.srt` — Hindi; upload in YouTube Studio → Subtitles (language: Hindi)
+- `thumbnail.jpg` — 1280×720, hook-scene frame + Hindi title text
+- `script.json` — full script (title, description, tags, scenes — all Hindi)
 - Release notes — paste-ready YouTube description + pre-upload checklist
+
+## The language layer
+
+- `config.yaml → channel.language: "hi-IN"` drives everything: Gemini writes
+  Devanagari scripts/titles/descriptions, Sarvam speaks Hindi, captions and
+  thumbnails render with Noto Sans Devanagari.
+- Stock **search terms and AI image prompts stay in English** (libraries are
+  indexed in English) — enforced in the prompt.
+- Word budgets use `channel.wpm: 130` (Hindi documentary pace) instead of the
+  English 150.
+- Switch the whole channel back to English anytime: `language: "en-us"`,
+  `tts.engine: "kokoro"`, `voice: "am_michael"`.
 
 ## The intelligence layer
 
@@ -85,14 +102,17 @@ Each release `video-YYYY-MM-DD_HHMM` contains:
 
 ## Customizing
 
-Everything lives in `config.yaml` (edit on GitHub, takes effect next run): niche, tone,
-video length, voice (`af_sarah`, `am_michael`, `bm_george`…), speaking speed, caption
-style, music volume, crossfade timing. Schedule lives in the workflow file.
+Everything lives in `config.yaml` (edit on GitHub, takes effect next run):
+niche, tone, video length, voice settings (`tts.speed`, `temperature`,
+fallback `voice`), caption style, music volume, crossfade timing. Schedule
+lives in the workflow files.
 
 ## Licensing & monetization notes (important)
 
 - **Pexels** footage/photos: free for commercial use, no attribution — monetization-safe.
-- **Kokoro-82M** voice: Apache 2.0 — commercial use explicitly allowed.
+- **Sarvam cloned voice**: it's your own consented voice — usable in monetized
+  content under Sarvam's terms (you cloned it from your own sample).
+- **Kokoro-82M** fallback voice: Apache 2.0 — commercial use explicitly allowed.
 - **YouTube Audio Library** music: monetization-safe; credit CC-BY tracks in the description.
 - **YouTube's "inauthentic content" policy (since July 2025)** prohibits monetizing
   mass-produced, low-effort AI content. Protect yourself: watch each video before uploading,
@@ -100,23 +120,24 @@ style, music volume, crossfade timing. Schedule lives in the workflow file.
   uploads sensibly. The per-run checklist in the release notes exists for this reason.
   This tool is an execution engine — the editorial judgment that makes content monetizable
   is still yours.
-- Deliberately **not included**: auto-upload to YouTube. It's technically possible
-  (YouTube Data API) but uploading unreviewed AI video is exactly what gets channels
-  demonetized. Review, then upload — it's 2 minutes.
+- Deliberately **not included**: auto-upload to YouTube. Review, then upload — it's 2 minutes.
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| Run fails at "Run pipeline" with missing key | Check both secrets exist with exact names |
-| `Gemini call failed on all models` | Model names rotate: update `llm.model` in config.yaml to a current free-tier Flash model from ai.google.dev |
+| Run fails at "Run pipeline" with missing key | Check all secrets exist with exact names |
+| Narration is NOT your voice | `SARVAM_API_KEY`/`SARVAM_SPEAKER` missing or out of credits — run **Test Voice** to see the exact error; check dashboard.sarvam.ai balance |
+| Sarvam 422 in the log | `SARVAM_SPEAKER` doesn't match bulbul:v3 — re-copy the cloned voice ID from the dashboard |
+| `Gemini call failed on all models` | Update `llm.model` in config.yaml to a current free-tier Flash model from ai.google.dev |
+| Hindi text shows as boxes (tofu) | Workflow installs `fonts-noto-core` — check that apt step succeeded |
 | Video too short / scenes feel empty | Raise `video.target_minutes`, or add more specific `niche` wording |
-| Robotic-sounding voice | Try other Kokoro voices; or see "$5 upgrade" below |
 | No captions visible | `captions.enabled: true` in config.yaml |
 | Scheduled run didn't start | GitHub pauses cron on repos inactive for 60 days — push any commit, or use manual runs |
 
-## Optional quality upgrades (only paid things worth it)
+## Cost control
 
-- **ElevenLabs Starter, $5/mo** (~$0.40/video at 3/week): swap `tts.py` for their API —
-  the single biggest perceived-quality jump. The modular design makes this a one-file change.
-- Everything else stays $0.
+- The run log prints `sarvam chars: N (≈ ₹X)` per video — actual spend, no surprises.
+- Hard-stop option: keep only a small balance on the Sarvam account; the
+  pipeline falls back to Kokoro (free) the moment credits run out.
+- Force free voice anytime: `tts.engine: "kokoro"` in config.yaml.

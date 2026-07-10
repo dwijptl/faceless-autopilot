@@ -8,11 +8,13 @@ channel:
     documentary explainers about how the physical world works
     (islands, deserts, megacities, oceans, borders, climate oddities)
   tone: "curious, cinematic, documentary — like a calm narrator revealing something surprising"
-  audience: "curious adults who love maps, travel and science"
-  language: "en-us"
+  audience: "curious Hindi-speaking adults who love maps, travel and science"
+  language: "hi-IN"        # BCP-47; drives script language + Sarvam TTS.
+                           # Switch back to "en-us" for English.
+  wpm: 130                 # spoken words/minute (Hindi narration ~130; English 150)
 
 video:
-  target_minutes: 6        # narration length target (150 wpm)
+  target_minutes: 6        # narration length target (see channel.wpm)
   scenes_min: 8
   scenes_max: 12
   width: 1920
@@ -24,8 +26,16 @@ video:
   outro_seconds: 4         # branded end card appended to every video
 
 tts:
-  voice: "am_michael"      # good male doc voice; try af_sarah, af_bella, bm_george
-  speed: 0.95              # slightly slower = more authoritative
+  engine: "sarvam"         # "sarvam" = your cloned Hindi voice (bulbul:v3).
+                           # Auto-falls back to Kokoro if the API fails.
+                           # Set to "kokoro" to force the free offline voice.
+  sarvam_model: "bulbul:v3"
+  sarvam_speaker: "amit"   # used ONLY if the SARVAM_SPEAKER secret is missing.
+                           # Your cloned voice ID belongs in the secret.
+  temperature: 0.6         # bulbul:v3 expressiveness (0.01-2.0)
+  speed: 0.95              # pace for BOTH engines (Sarvam pace / Kokoro speed)
+  voice: "hm_omega"        # Kokoro fallback voice (Hindi): hf_alpha, hf_beta,
+                           # hm_omega, hm_psi
 
 llm:
   model: "gemini-2.5-flash"
@@ -35,7 +45,7 @@ llm:
 
 brand:
   name: "TERRA INCOGNITA"
-  tagline: "Mapping the world's hidden places"
+  tagline: "दुनिया की छुपी जगहों की खोज"
   watermark_opacity: 0.08  # corner logo watermark on every frame
 
 render:
@@ -58,7 +68,7 @@ short:                     # vertical Shorts/Reels (Make Short workflow, Tue/Thu
   scenes_max: 6
   crossfade: 0.25          # faster cuts than long-form
   max_shot_seconds: 3.5
-  captions_max_chars: 16   # 2-3 word caption pops
+  captions_max_chars: 14   # 2-3 word caption pops (Devanagari runs wider)
   caption_y: 0.62          # centered-low, inside the Shorts UI safe zone
   music_volume: 0.18       # music matters more in shorts
   tts_speed: 1.0
@@ -71,5 +81,5 @@ music:
 
 captions:
   enabled: true
-  max_chars: 38            # per caption line
+  max_chars: 30            # per caption line (Devanagari glyphs run wider)
   font_size: 58
