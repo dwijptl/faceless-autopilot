@@ -217,7 +217,7 @@ export const CaptionsLayer: React.FC<{
         return (
           <Sequence key={i} from={from} durationInFrames={dur}>
             <CaptionChunk text={c.text} style={style}
-              y={height * (yFrac ?? 0.78)} s={s} />
+              y={height * (yFrac ?? 0.78)} s={s} durFrames={dur} />
           </Sequence>
         );
       })}
@@ -230,7 +230,8 @@ const CaptionChunk: React.FC<{
   style: StylePack;
   y: number;
   s: number;
-}> = ({text, style, y, s}) => {
+  durFrames: number;
+}> = ({text, style, y, s, durFrames}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
   const pop = spring({frame, fps, config: {damping: 14, stiffness: 240, mass: 0.6}});
@@ -239,14 +240,48 @@ const CaptionChunk: React.FC<{
   const stroke =
     '0 3px 0 rgba(0,0,0,0.85), 0 -2px 0 rgba(0,0,0,0.85), 3px 0 0 rgba(0,0,0,0.85), -3px 0 0 rgba(0,0,0,0.85), 0 6px 24px rgba(0,0,0,0.6)';
 
+  // ── karaoke timing: words appear as spoken, active word in accent ──
+  const words = text.split(/\s+/).filter(Boolean);
+  const lens = words.map((w) => w.length + 1);
+  const totalLen = lens.reduce((a, b) => a + b, 0) || 1;
+  let acc = 0;
+  const starts = lens.map((l) => {
+    const st = (acc / totalLen) * Math.max(durFrames - 3, 1);
+    acc += l;
+    return st;
+  });
+  let active = 0;
+  for (let i = 0; i < starts.length; i++) {
+    if (frame >= starts[i]) active = i;
+  }
+  const kineticWords = (fontSize: number, doneColor: string, shadow?: string) => (
+    <div style={{display: 'flex', flexWrap: 'wrap', justifyContent: 'center',
+      columnGap: 13 * s, rowGap: 4 * s, lineHeight: 1.35, textAlign: 'center'}}>
+      {words.map((w, i) => {
+        const wpop = spring({frame: frame - starts[i], fps,
+          config: {damping: 15, stiffness: 260, mass: 0.5}});
+        const isActive = i === active;
+        return (
+          <span key={i} style={{
+            display: 'inline-block',
+            fontSize: fontSize * s, fontWeight: 800,
+            color: isActive ? style.accent : doneColor,
+            transform: `translateY(${interpolate(wpop, [0, 1], [16, 0])}px) scale(${isActive ? 1.06 : 1})`,
+            opacity: wpop,
+            textShadow: shadow,
+          }}>{w}</span>
+        );
+      })}
+    </div>
+  );
+
   const body =
     v === 'boxed' ? (
       <div style={{
-        background: 'rgba(8,13,26,0.88)', color: 'white', fontSize: 60 * s,
-        fontWeight: 800, textAlign: 'center', lineHeight: 1.35,
-        padding: `${10 * s}px ${26 * s}px`, borderRadius: 12 * s,
+        background: 'rgba(8,13,26,0.88)', textAlign: 'center',
+        padding: `${12 * s}px ${28 * s}px`, borderRadius: 12 * s,
         borderLeft: `${8 * s}px solid ${style.accent}`,
-      }}>{text}</div>
+      }}>{kineticWords(60, 'white')}</div>
     ) : v === 'minimal' ? (
       <div style={{
         color: BRAND.text, fontSize: 50 * s, fontWeight: 600, letterSpacing: 0.4,
@@ -261,14 +296,11 @@ const CaptionChunk: React.FC<{
         boxShadow: '0 8px 30px rgba(0,0,0,0.55)',
       }}>{text}</div>
     ) : (
-      <div style={{
-        color: 'white', fontSize: 58 * s, fontWeight: 800, textAlign: 'center',
-        lineHeight: 1.35, textShadow: stroke,
-      }}>
-        {text}
+      <div style={{textAlign: 'center'}}>
+        {kineticWords(58, 'white', stroke)}
         <div style={{
           height: 6 * s, width: `${interpolate(pop, [0, 1], [0, 34])}%`,
-          background: style.accent, borderRadius: 3, margin: '6px auto 0',
+          background: style.accent, borderRadius: 3, margin: '8px auto 0',
         }} />
       </div>
     );
@@ -384,35 +416,29 @@ export const Watermark: React.FC<{
 
 export const Outro: React.FC<{
   brandName: string;
-  tagline: string;
+  tagline: string; // accepted for manifest compatibility, intentionally not shown
   style: StylePack;
   watermarkPath: string | null;
-}> = ({brandName, tagline, style, watermarkPath}) => {
+}> = ({brandName, style, watermarkPath}) => {
   const frame = useCurrentFrame();
   const {fps, width, height} = useVideoConfig();
   const s = Math.max(width, height) / 1920;
   const inSpring = spring({frame: frame - 4, fps, config: {damping: 200, stiffness: 110}});
-  const sub = spring({frame: frame - 14, fps, config: {damping: 200, stiffness: 110}});
   return (
     <AbsoluteFill style={{
       background: `radial-gradient(ellipse at 50% 35%, ${BRAND.panel} 0%, ${BRAND.navy} 70%)`,
       justifyContent: 'center', alignItems: 'center', fontFamily,
     }}>
       <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center',
-        gap: 22 * s, transform: `scale(${interpolate(inSpring, [0, 1], [0.92, 1])})`,
+        gap: 26 * s, transform: `scale(${interpolate(inSpring, [0, 1], [0.92, 1])})`,
         opacity: inSpring}}>
         {watermarkPath ? (
           <Img src={staticFile(watermarkPath)}
-            style={{width: 130 * s, height: 130 * s, opacity: 0.95}} />
+            style={{width: 170 * s, height: 170 * s, opacity: 0.97}} />
         ) : null}
-        <div style={{fontSize: 92 * s, fontWeight: 900, letterSpacing: 10,
+        <div style={{fontSize: 96 * s, fontWeight: 900, letterSpacing: 10,
           color: BRAND.text, textTransform: 'uppercase'}}>{brandName}</div>
         <div style={{height: 4 * s, width: 220 * s, background: style.accent}} />
-        <div style={{fontSize: 34 * s, fontWeight: 500, color: 'rgba(244,247,251,0.8)',
-          opacity: sub, lineHeight: 1.4}}>{tagline}</div>
-        <div style={{fontSize: 30 * s, fontWeight: 700, color: style.accent,
-          letterSpacing: 1, opacity: sub, lineHeight: 1.4,
-          marginTop: 10 * s}}>नई खोज — हर सोम · बुध · शुक्र</div>
       </div>
     </AbsoluteFill>
   );
