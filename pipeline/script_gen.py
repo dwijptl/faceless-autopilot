@@ -118,8 +118,11 @@ def _lang_rules(cfg: dict) -> str:
         return ""
     return """
 LANGUAGE — this channel speaks HINDI:
-- narration, title, thumb_text, description, tags, scene titles, kinetic_text
-  and stat.label are ALL in natural spoken Hindi (Devanagari script).
+- narration, title, description, tags, scene titles, kinetic_text and
+  stat.label are ALL in natural spoken Hindi (Devanagari script).
+- EXCEPTION — thumb_text: bold ENGLISH/Hinglish keywords in Latin script
+  ("DEADLY PLANET", "MYSTERY SOLVED", "AAKHIR KYUN?") — English thumbnail
+  keywords outperform Devanagari in the Hindi market.
 - Register: the Hindi of a good documentary narrator — clear, warm,
   conversational. Common loanwords are fine in Devanagari (डॉक्यूमेंट्री,
   किलोमीटर), but never write full English sentences.
@@ -222,7 +225,7 @@ AUDIENCE: {cfg['channel']['audience']}
 Write a scene-segmented script and return ONLY valid JSON with this exact shape:
 {{
   "title": "click-worthy but honest YouTube title, <= 70 chars",
-  "thumb_text": "3-5 punchy words for the thumbnail",
+  "thumb_text": "3-5 bold ENGLISH/Hinglish keywords for the thumbnail (Latin script)",
   "description": "2-3 sentence YouTube description ending with 3 relevant hashtags",
   "tags": ["8-12 YouTube tags"],
   "scenes": [
@@ -310,7 +313,7 @@ TONE: {cfg['channel']['tone']}, but faster and punchier than long-form
 Return ONLY valid JSON:
 {{
   "title": "<= 80 chars, curiosity gap, no clickbait lies",
-  "thumb_text": "2-4 punch words",
+  "thumb_text": "2-4 bold ENGLISH/Hinglish punch words (Latin script)",
   "description": "1-2 lines, end with hashtags including #shorts",
   "tags": ["6-10 tags"],
   "scenes": [
