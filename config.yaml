@@ -4,11 +4,17 @@
 channel:
   # The seed for ALL auto-generated topics. Change this to pivot the channel.
   niche: >
-    Geography, nature and Earth's most extreme places — cinematic
-    documentary explainers about how the physical world works
-    (islands, deserts, megacities, oceans, borders, climate oddities)
+    Hidden places and mind-bending realities of Earth and the universe —
+    cinematic documentary explainers across three families:
+    (1) EARTH'S EXTREMES & MYSTERIES: deserts, deep ocean, poles, forbidden
+    islands, strange geology; (2) SPACE & THE COSMOS: black holes, planets,
+    deep-space probes, cosmic scale, the fate of stars; (3) WHAT-IF
+    SCENARIOS grounded in real physics: Earth stops spinning, humans vanish,
+    oceans drain. Hard rules: every topic must be illustrable with
+    nature/space stock footage plus AI stills — no news events, no real or
+    named people, no religion or mythology, no politics or conspiracies.
   tone: "curious, cinematic, documentary — like a calm narrator revealing something surprising"
-  audience: "curious Hindi-speaking adults who love maps, travel and science"
+  audience: "curious Hindi-speaking adults who love maps, space and science"
   language: "hi-IN"        # BCP-47; drives script language + Sarvam TTS.
                            # Switch back to "en-us" for English.
   wpm: 130                 # spoken words/minute (Hindi narration ~130; English 150)
