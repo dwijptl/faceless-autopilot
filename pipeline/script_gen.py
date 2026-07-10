@@ -371,6 +371,9 @@ faceless channel (vertical video: voiceover + b-roll + big captions).
 
 TOPIC: {topic}
 TARGET: ~{words} spoken words TOTAL (~{seconds} seconds — shorts are ruthless)
+HARD RANGE: {int(words * 0.9)}-{int(words * 1.15)} words. Under {int(words * 0.9)}
+feels incomplete and cheap; over {int(words * 1.15)} kills completion rate.
+Count your words before returning.
 TONE: {cfg['channel']['tone']}, but faster and punchier than long-form
 {learn_block}{_lang_rules(cfg)}{_style_rules()}
 Return ONLY valid JSON:
@@ -399,11 +402,16 @@ Shorts rules:
   adjectives and merge scenes. Shorter beats complete.
 - Scene 1 = the hook: <= 12 words, the single most jolting fact/question.
   No greetings, no context, no "did you know".
-- LOOP ENDING (critical): the final scene is 8-15 words and must NOT
-  summarize or conclude. Banned: "...prove that", "so next time", "that's
-  why" (and their Hindi equivalents: "...साबित करते हैं", "तो अगली बार",
-  "इसीलिए"). Instead end on a question or unresolved tension whose answer
-  is the opening line, so an instant replay reads as one continuous thought.
+- PAYOFF + LOOP (critical): the middle scenes must FULLY deliver what the
+  hook promises — never withhold the core answer; a viewer who watches once
+  must feel they got the complete story. THEN the final scene (8-15 words)
+  opens a NEW, related tension instead of concluding. Banned: "...prove
+  that", "so next time", "that's why" (and their Hindi equivalents:
+  "...साबित करते हैं", "तो अगली बार", "इसीलिए"). Best version: the last line
+  is a complete thought that ALSO ends on a connective ("जानने के लिए...",
+  "और अगर...") which grammatically flows into the hook line on replay, so
+  the loop reads as one continuous sentence — but it must never feel like
+  the video was cut off mid-sentence.
 - Exactly 1-2 "kinetic" scenes, 0-1 "stat", 0-{short_ai_max} "ai_image"
   (put an ai_image on the hook when the topic's strongest visual doesn't
   exist as stock), rest "broll".
