@@ -35,6 +35,8 @@ Already done if you're reading this on your own repo.
 | `PEXELS_API_KEY` | pexels.com/api → **Get started** | Free: 200 req/hour — a video uses ~30 |
 | `SARVAM_API_KEY` | dashboard.sarvam.ai → API Keys | ₹100 free credit; then ~₹30/10k chars |
 | `SARVAM_SPEAKER` | dashboard.sarvam.ai → your **cloned voice ID** | Clone needs a 30–60s consented sample. Any preset (`amit`, `kavya`…) also works |
+| `FAL_KEY` *(optional)* | fal.ai → Keys | Turns on **FLUX signature shots** (~$0.05/img, ~$0.20/video). Without it: free Gemini images |
+| `ANTHROPIC_API_KEY` *(optional)* | console.anthropic.com | Claude writes the scripts (crisper hooks, ~$0.05/script). Without it: free Gemini |
 
 Add each: **Settings → Secrets and variables → Actions → New repository secret**
 (exact names above).
@@ -83,6 +85,23 @@ Each release `video-YYYY-MM-DD_HHMM` contains:
   English 150.
 - Switch the whole channel back to English anytime: `language: "en-us"`,
   `tts.engine: "kokoro"`, `voice: "am_michael"`.
+
+## The originality layer (anti-"generic AI channel")
+
+- **FLUX signature shots** — with `FAL_KEY` set, each video gets up to 4
+  custom AI stills (2 per short) generated to match the video's rotating
+  style pack: every prompt is wrapped in that pack's photographic grammar
+  (documentary 35mm / high-contrast kinetic / muted editorial / noir), so
+  the AI shots look like one photographer shot the whole video.
+- **Cinematic stock shaping** — every Pexels search runs first with a
+  rotating modifier (`aerial`, `macro close up`, `drone`, `dramatic`…), so
+  the pipeline pulls the moody professional b-roll buried in Pexels instead
+  of front-page vacation clips. Raw terms remain as recall fallback.
+- **Karaoke captions** — words appear as they're spoken, active word in
+  brand amber, spring pop per word (documentary + kinetic packs).
+- **Human-writing rules** — banned stock phrases ("did you know", "क्या आप
+  जानते हैं"…), enforced sentence rhythm, one vivid named fact per scene;
+  optional Claude script engine via `ANTHROPIC_API_KEY`.
 
 ## The intelligence layer
 

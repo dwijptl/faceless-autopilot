@@ -38,6 +38,12 @@ tts:
                            # hm_omega, hm_psi
 
 llm:
+  provider: "auto"         # "auto" = Claude for scripts when ANTHROPIC_API_KEY
+                           # secret exists (crisper writing, ~₹4/script),
+                           # otherwise Gemini free tier. Claude failures
+                           # auto-fall back to Gemini.
+  anthropic_model: "claude-sonnet-5"
+  anthropic_fallback_models: ["claude-haiku-4-5-20251001"]
   model: "gemini-2.5-flash"
   # tried in order if the model above is retired/404s:
   fallback_models: ["gemini-3-flash", "gemini-flash-latest", "gemini-2.0-flash"]
@@ -45,7 +51,7 @@ llm:
 
 brand:
   name: "TERRA INCOGNITA"
-  tagline: "दुनिया की छुपी जगहों की खोज"
+  tagline: "दुनिया की छुपी जगहों की खोज"   # metadata only — not shown on outro
   watermark_opacity: 0.08  # corner logo watermark on every frame
 
 render:
@@ -58,7 +64,13 @@ render:
 
 ai_images:
   enabled: true            # AI-generated stills for scenes stock can't cover
-  max_per_video: 2         # free tier allows ~500/day; 2/video is plenty
+  # FLUX via fal.ai — used automatically when the FAL_KEY secret is set.
+  # Signature-shot quality; ~$0.05/image (dev) — a video costs ~$0.20.
+  flux_model: "fal-ai/flux/dev"
+  flux_fallback: "fal-ai/flux/schnell"   # ~10x cheaper, slightly softer
+  max_per_video_flux: 4    # richer AI visuals when FLUX is on
+  # Gemini image API — free fallback (~500/day) when no FAL_KEY:
+  max_per_video: 2
   model: "gemini-2.5-flash-image"
   fallback_models: ["gemini-3-flash-image", "gemini-2.0-flash-preview-image-generation"]
 
@@ -73,6 +85,7 @@ short:                     # vertical Shorts/Reels (Make Short workflow, Tue/Thu
   music_volume: 0.18       # music matters more in shorts
   tts_speed: 1.0
   ai_images_max: 1
+  ai_images_max_flux: 2    # when FAL_KEY is set
   progress_bar: false      # Shorts player has its own progress bar
 
 music:
