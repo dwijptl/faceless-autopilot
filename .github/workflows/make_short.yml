@@ -76,31 +76,20 @@ jobs:
         run: python pipeline/run_short.py
 
       - name: Publish release
-        if: ${{ always() && steps.pipeline.outputs.stamp != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
           STAMP: ${{ steps.pipeline.outputs.stamp }}
           OUTDIR: ${{ steps.pipeline.outputs.dir }}
           VTITLE: ${{ steps.pipeline.outputs.title }}
-          DRAFT_RELEASE: ${{ steps.pipeline.outputs.draft_release }}
         run: |
-          draft=()
-          title="SHORT $STAMP — $VTITLE"
-          if [ "$DRAFT_RELEASE" = "true" ]; then
-            draft=(--draft)
-            title="⚠️ REVIEW — $title"
-          fi
           gh release create "short-$STAMP" \
             "$OUTDIR/final.mp4" \
             "$OUTDIR/captions.srt" \
             "$OUTDIR/script.json" \
-            "$OUTDIR/run_summary.json" \
-            --title "$title" \
-            --notes-file "$OUTDIR/metadata.md" \
-            "${draft[@]}"
+            --title "SHORT $STAMP — $VTITLE" \
+            --notes-file "$OUTDIR/metadata.md"
 
       - name: Save topic history + asset usage log
-        if: ${{ always() && steps.pipeline.outputs.stamp != '' }}
         run: |
           git config user.name "faceless-autopilot"
           git config user.email "actions@users.noreply.github.com"
