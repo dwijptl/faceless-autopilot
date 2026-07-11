@@ -20,7 +20,9 @@ sys.path.insert(0, os.path.dirname(__file__))
 import analytics as analytics_mod   # noqa: E402
 import assets as assets_mod         # noqa: E402
 import captions as captions_mod     # noqa: E402
+import mapgen                       # noqa: E402
 import script_gen                   # noqa: E402
+import sfx as sfx_mod               # noqa: E402
 import tts as tts_mod               # noqa: E402
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -108,13 +110,34 @@ def main() -> None:
     scenes, offset = [], 0.0
     for sc in script["scenes"]:
         wav = os.path.join(workdir, f"vo_s{sc['n']:02d}.wav")
-        dur = tts_mod.synth_scene(sc["narration"], wav, cfg)
+        dur = tts_mod.synth_scene(sc["narration"], wav, cfg,
+                                  sc.get("delivery", "calm"))
         scenes.append({**sc, "audio_path": wav, "audio_duration": dur,
                        "start": max(offset, 0.0)})
         offset += dur - xfade
-        print(f"[tts] scene {sc['n']}: {dur:.1f}s ({sc.get('visual_mode')})")
+        print(f"[tts] scene {sc['n']}: {dur:.1f}s ({sc.get('visual_mode')}"
+              f"/{sc.get('delivery', 'calm')})")
     scenes[0]["start"] = 0.0
     print(f"[tts] {tts_mod.usage_summary()}")
+
+    # 2b) map scenes (portrait) — fail -> b-roll
+    if cfg.get("maps", {}).get("enabled", True):
+        for sc in scenes:
+            if sc.get("visual_mode") == "map":
+                mp = sc.get("map") or {}
+                render = None
+                if mp.get("lat") is not None and mp.get("lon") is not None:
+                    render = mapgen.render_scene_maps(
+                        mp["lat"], mp["lon"], workdir, sc["n"], portrait=True)
+                if render:
+                    render["label"] = str(mp.get("label", ""))[:40]
+                    sc["map_render"] = render
+                else:
+                    sc["visual_mode"] = "broll"
+    else:
+        for sc in scenes:
+            if sc.get("visual_mode") == "map":
+                sc["visual_mode"] = "broll"
 
     # 3) portrait assets (shared never-repeat log) -----------------------------
     log_path = os.path.join(REPO_ROOT, "assets_used.json")
@@ -167,6 +190,7 @@ def main() -> None:
         "captionY": float(cfg.get("short", {}).get("caption_y", 0.62)),
         "title": script["title"],
         "thumbText": script.get("thumb_text", ""),
+        "sfx": sfx_mod.plan_events(scenes, cfg, workdir),
         "musicPath": music_rel,
         "musicVolume": float(cfg["music"]["volume"]),
         "captions": [{"start": round(s, 3), "end": round(e, 3), "text": t}
@@ -176,6 +200,7 @@ def main() -> None:
             "visualMode": sc.get("visual_mode", "broll"),
             "kineticText": sc.get("kinetic_text", ""),
             "stat": sc.get("stat", {}) or {},
+            "map": sc.get("map_render") or {},
             "audioPath": os.path.basename(sc["audio_path"]),
             "audioDuration": round(sc["audio_duration"], 3),
             "assets": [{

@@ -215,6 +215,64 @@ def _ai_max(cfg: dict) -> int:
     return int(aicfg.get("max_per_video", 2))
 
 
+VALID_MODES = ("broll", "ai_image", "kinetic", "stat", "map")
+
+
+def _normalize(script: dict, min_scenes: int) -> dict:
+    """Validate + default-fill a script dict. Raises on structural problems."""
+    assert isinstance(script["scenes"], list) and len(script["scenes"]) >= min_scenes
+    for s in script["scenes"]:
+        assert s["narration"].strip()
+        s.setdefault("visual_mode", "broll")
+        if s["visual_mode"] not in VALID_MODES:
+            s["visual_mode"] = "broll"
+        s.setdefault("search_terms", [])
+        s.setdefault("ai_prompt", "")
+        s.setdefault("kinetic_text", "")
+        s.setdefault("stat", {})
+        s.setdefault("map", {})
+        d = str(s.get("delivery", "calm")).lower().strip()
+        s["delivery"] = d if d in ("hook", "calm", "reveal", "urgent") else "calm"
+    script["scenes"][0]["delivery"] = "hook"
+    assert script["title"].strip()
+    script.setdefault("thumb_text", script["title"][:30])
+    script.setdefault("thumb_prompt", "")
+    return script
+
+
+def _critique(script: dict, cfg: dict, api_key: str, kind: str,
+              min_scenes: int) -> dict:
+    """Second pass — a ruthless retention editor rewrites weak scenes.
+    Fail-open: any problem returns the original draft."""
+    if not cfg["llm"].get("critique", True):
+        return script
+    fmt = ("a ~28-second vertical Short (hook <= 12 words; full PAYOFF, then "
+           "a loop-friendly final line)" if kind == "short"
+           else "a 6-minute documentary (30s hook, mid-video re-hook, payoff ending)")
+    prompt = f"""You are a ruthless retention editor for a Hindi faceless
+YouTube channel. Below is a draft script for {fmt}.
+
+Grade every scene 1-10 on: hook strength, specificity (named places and
+numbers a viewer can picture), curiosity pull into the NEXT scene, and
+sentence rhythm. Then REWRITE any scene scoring below 8 — sharper verbs,
+more concrete nouns, tighter sentences, zero filler. Keep the same JSON
+schema, scene count, visual_mode and search_terms (you may improve
+narration, titles, kinetic_text, delivery and thumb_text).
+{_lang_rules(cfg)}
+Return ONLY the full revised JSON — no scores, no commentary.
+
+DRAFT:
+{json.dumps(script, ensure_ascii=False)}"""
+    try:
+        revised = _normalize(_parse_json(_llm(prompt, cfg, api_key)), min_scenes)
+        revised["topic"] = script.get("topic", "")
+        print("[script] critique pass applied")
+        return revised
+    except Exception as e:
+        print(f"[script] critique pass skipped ({e}) — keeping draft")
+        return script
+
+
 def load_learnings(repo_root: str) -> str:
     path = os.path.join(repo_root, "learnings.md")
     try:
@@ -289,6 +347,7 @@ Write a scene-segmented script and return ONLY valid JSON with this exact shape:
 {{
   "title": "click-worthy but honest YouTube title, <= 70 chars",
   "thumb_text": "3-5 bold ENGLISH/Hinglish keywords for the thumbnail (Latin script)",
+  "thumb_prompt": "ENGLISH text-to-image prompt for the thumbnail: ONE dramatic subject, extreme close-up or epic scale, strong rim light, dark moody background, left third relatively empty for text overlay",
   "description": "2-3 sentence YouTube description ending with 3 relevant hashtags",
   "tags": ["8-12 YouTube tags"],
   "scenes": [
@@ -296,14 +355,25 @@ Write a scene-segmented script and return ONLY valid JSON with this exact shape:
       "n": 1,
       "title": "3-6 word scene title",
       "narration": "60-150 words of spoken narration",
-      "visual_mode": "broll | ai_image | kinetic | stat",
+      "visual_mode": "broll | ai_image | kinetic | stat | map",
+      "delivery": "hook | calm | reveal | urgent",
       "search_terms": ["stock video search term", "alternative term", "broader fallback term"],
       "ai_prompt": "detailed text-to-image prompt (only when visual_mode is ai_image, else empty string)",
       "kinetic_text": "3-6 word punch phrase (only when visual_mode is kinetic, else empty string)",
-      "stat": {{"value": 0, "suffix": "", "label": ""}}
+      "stat": {{"value": 0, "suffix": "", "label": ""}},
+      "map": {{"lat": 0.0, "lon": 0.0, "label": ""}}
     }}
   ]
 }}
+
+Delivery direction (how the narrator speaks each scene):
+- scene 1 = "hook" (energetic). The scene landing the biggest twist/number =
+  "reveal" (slower, with a beat of silence before it). "urgent" at most once.
+  Everything else "calm". Never two "reveal" scenes in a row.
+
+Map scenes: when ONE specific place is the star of a scene, set visual_mode
+"map" with accurate map.lat / map.lon and a short Hindi map.label (0-2 map
+scenes per video; still provide search_terms as fallback).
 
 Visual mode rules (variety is the goal — videos must not feel stock-only):
 - Most scenes are "broll" (stock footage exists for them).
@@ -334,20 +404,9 @@ Script rules:
 
     for attempt in range(3):
         try:
-            script = _parse_json(_llm(prompt, cfg, api_key))
-            assert isinstance(script["scenes"], list) and len(script["scenes"]) >= 4
-            for s in script["scenes"]:
-                assert s["narration"].strip()
-                s.setdefault("visual_mode", "broll")
-                if s["visual_mode"] not in ("broll", "ai_image", "kinetic", "stat"):
-                    s["visual_mode"] = "broll"
-                s.setdefault("search_terms", [])
-                s.setdefault("ai_prompt", "")
-                s.setdefault("kinetic_text", "")
-                s.setdefault("stat", {})
-            assert script["title"].strip()
-            script.setdefault("thumb_text", script["title"][:30])
+            script = _normalize(_parse_json(_llm(prompt, cfg, api_key)), 4)
             script["topic"] = topic
+            script = _critique(script, cfg, api_key, "long", 4)
             modes = [s["visual_mode"] for s in script["scenes"]]
             print(f"[script] '{script['title']}' — {len(modes)} scenes, modes: {modes}")
             return script
@@ -380,6 +439,7 @@ Return ONLY valid JSON:
 {{
   "title": "<= 80 chars, curiosity gap, no clickbait lies",
   "thumb_text": "2-4 bold ENGLISH/Hinglish punch words (Latin script)",
+  "delivery-note": "each scene also gets \"delivery\": hook | calm | reveal | urgent (scene 1 = hook; the twist scene = reveal); and may use visual_mode \"map\" with \"map\": {{\"lat\": 0.0, \"lon\": 0.0, \"label\": \"हिन्दी\"}} when one specific place is the star (0-1 map scenes)",
   "description": "1-2 lines, end with hashtags including #shorts",
   "tags": ["6-10 tags"],
   "scenes": [
@@ -429,20 +489,9 @@ Shorts rules:
 
     for attempt in range(3):
         try:
-            script = _parse_json(_llm(prompt, cfg, api_key))
-            assert isinstance(script["scenes"], list) and len(script["scenes"]) >= 3
-            for s in script["scenes"]:
-                assert s["narration"].strip()
-                s.setdefault("visual_mode", "broll")
-                if s["visual_mode"] not in ("broll", "ai_image", "kinetic", "stat"):
-                    s["visual_mode"] = "broll"
-                s.setdefault("search_terms", [])
-                s.setdefault("ai_prompt", "")
-                s.setdefault("kinetic_text", "")
-                s.setdefault("stat", {})
-            assert script["title"].strip()
-            script.setdefault("thumb_text", script["title"][:20])
+            script = _normalize(_parse_json(_llm(prompt, cfg, api_key)), 3)
             script["topic"] = topic
+            script = _critique(script, cfg, api_key, "short", 3)
             print(f"[script] SHORT '{script['title']}' — "
                   f"{[s['visual_mode'] for s in script['scenes']]}")
             return script

@@ -22,6 +22,7 @@ import requests
 from PIL import Image, ImageDraw
 
 import ai_images
+import vision_qc
 
 VIDEO_API = "https://api.pexels.com/videos/search"
 PHOTO_API = "https://api.pexels.com/v1/search"
@@ -108,9 +109,11 @@ def _orientation(cfg) -> str:
     return "portrait" if cfg["video"]["height"] > cfg["video"]["width"] else "landscape"
 
 
-def _stock_videos(scene, need_seconds, outdir, cfg, api_key, used, max_clips):
+def _stock_videos(scene, need_seconds, outdir, cfg, api_key, used, max_clips,
+                  gemini_key=""):
     w = cfg["video"]["width"]
-    assets, covered = [], 0.0
+    assets, covered, qc_budget = [], 0.0, 6  # cap vision checks per scene
+    desc = scene.get("narration", "")
     for term in _shaped_queries(scene.get("search_terms", []), scene["n"]):
         if covered >= need_seconds or len(assets) >= max_clips:
             break
@@ -135,6 +138,16 @@ def _stock_videos(scene, need_seconds, outdir, cfg, api_key, used, max_clips):
             except Exception as e:
                 print(f"[assets] download failed ({vid['id']}): {e}")
                 continue
+            if qc_budget > 0:  # visual sanity check before accepting
+                qc_budget -= 1
+                if not vision_qc.frame_ok(path, "video", desc, term,
+                                          gemini_key, cfg):
+                    used.add(vid_key)  # never try this clip again
+                    try:
+                        os.remove(path)
+                    except OSError:
+                        pass
+                    continue
             used.add(vid_key)
             covered += min(vid.get("duration", 8), cfg["video"]["max_shot_seconds"] * 2)
             assets.append({"path": path, "kind": "video"})
@@ -142,7 +155,9 @@ def _stock_videos(scene, need_seconds, outdir, cfg, api_key, used, max_clips):
     return assets, covered
 
 
-def _stock_photo(scene, outdir, api_key, used, orientation="landscape"):
+def _stock_photo(scene, outdir, api_key, used, orientation="landscape",
+                 cfg=None, gemini_key=""):
+    qc_budget = 3
     for term in _shaped_queries(scene.get("search_terms", []), scene["n"]):
         try:
             data = _get(PHOTO_API, {"query": term, "per_page": 8,
@@ -158,6 +173,17 @@ def _stock_photo(scene, outdir, api_key, used, orientation="landscape"):
                 _download(ph["src"]["large2x"], path)
             except Exception:
                 continue
+            if cfg is not None and qc_budget > 0:
+                qc_budget -= 1
+                if not vision_qc.frame_ok(path, "image",
+                                          scene.get("narration", ""), term,
+                                          gemini_key, cfg):
+                    used.add(key)
+                    try:
+                        os.remove(path)
+                    except OSError:
+                        pass
+                    continue
             used.add(key)
             print(f"[assets] scene {scene['n']}: stock photo {ph['id']} ({term})")
             return {"path": path, "kind": "image"}
@@ -172,6 +198,10 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
     os.makedirs(outdir, exist_ok=True)
     mode = scene.get("visual_mode", "broll")
     assets: list[dict] = []
+
+    # map scenes render their own background (MapZoom) — no assets needed
+    if mode == "map" and scene.get("map_render"):
+        return []
 
     # AI-generated hero image (for ai_image scenes, or as bg for kinetic/stat)
     wants_ai = mode == "ai_image" or (
@@ -192,21 +222,25 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
     if mode in ("kinetic", "stat"):
         if not assets:
             stock, _ = _stock_videos(scene, min(need_seconds, 10), outdir, cfg,
-                                     pexels_key, used, max_clips=1)
+                                     pexels_key, used, max_clips=1,
+                                     gemini_key=gemini_key)
             assets.extend(stock)
         if not assets:
-            photo = _stock_photo(scene, outdir, pexels_key, used, _orientation(cfg))
+            photo = _stock_photo(scene, outdir, pexels_key, used,
+                                 _orientation(cfg), cfg, gemini_key)
             if photo:
                 assets.append(photo)
     else:
         covered = 6.0 * len(assets)
         max_clips = max(2, int(need_seconds // cfg["video"]["max_shot_seconds"]) + 1)
         stock, c = _stock_videos(scene, need_seconds - covered, outdir, cfg,
-                                 pexels_key, used, max_clips)
+                                 pexels_key, used, max_clips,
+                                 gemini_key=gemini_key)
         assets.extend(stock)
         covered += c
         if covered < need_seconds and len(assets) < 2:
-            photo = _stock_photo(scene, outdir, pexels_key, used, _orientation(cfg))
+            photo = _stock_photo(scene, outdir, pexels_key, used,
+                                 _orientation(cfg), cfg, gemini_key)
             if photo:
                 assets.append(photo)
 

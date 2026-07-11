@@ -19,10 +19,13 @@ import time
 import yaml
 
 sys.path.insert(0, os.path.dirname(__file__))
+import ai_images                    # noqa: E402
 import analytics as analytics_mod   # noqa: E402
 import assets as assets_mod         # noqa: E402
 import captions as captions_mod     # noqa: E402
+import mapgen                       # noqa: E402
 import script_gen                   # noqa: E402
+import sfx as sfx_mod               # noqa: E402
 import tts as tts_mod               # noqa: E402
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -140,13 +143,34 @@ def main() -> None:
     scenes, offset = [], 0.0
     for sc in script["scenes"]:
         wav = os.path.join(workdir, f"vo_s{sc['n']:02d}.wav")
-        dur = tts_mod.synth_scene(sc["narration"], wav, cfg)
+        dur = tts_mod.synth_scene(sc["narration"], wav, cfg,
+                                  sc.get("delivery", "calm"))
         scenes.append({**sc, "audio_path": wav, "audio_duration": dur,
                        "start": max(offset, 0.0)})
         offset += dur - xfade
-        print(f"[tts] scene {sc['n']}: {dur:.1f}s ({sc.get('visual_mode', 'broll')})")
+        print(f"[tts] scene {sc['n']}: {dur:.1f}s ({sc.get('visual_mode', 'broll')}"
+              f"/{sc.get('delivery', 'calm')})")
     scenes[0]["start"] = 0.0
     print(f"[tts] {tts_mod.usage_summary()}")
+
+    # 2b) map scenes — render branded world/region maps (fail -> b-roll)
+    if cfg.get("maps", {}).get("enabled", True):
+        for sc in scenes:
+            if sc.get("visual_mode") == "map":
+                mp = sc.get("map") or {}
+                render = None
+                if mp.get("lat") is not None and mp.get("lon") is not None:
+                    render = mapgen.render_scene_maps(
+                        mp["lat"], mp["lon"], workdir, sc["n"], portrait=False)
+                if render:
+                    render["label"] = str(mp.get("label", ""))[:40]
+                    sc["map_render"] = render
+                else:
+                    sc["visual_mode"] = "broll"
+    else:
+        for sc in scenes:
+            if sc.get("visual_mode") == "map":
+                sc["visual_mode"] = "broll"
 
     # 3) assets — AI first where scripted, stock fallback, never repeat -----
     log_path = os.path.join(REPO_ROOT, "assets_used.json")
@@ -173,6 +197,16 @@ def main() -> None:
     with open(os.path.join(outdir, "captions.srt"), "w", encoding="utf-8") as f:
         f.write(srt)
 
+    # 4b) sound design + dedicated AI thumbnail --------------------------------
+    sfx_events = sfx_mod.plan_events(scenes, cfg, workdir)
+    thumb_ai = None
+    tp = (script.get("thumb_prompt") or "").strip()
+    if tp:
+        p = os.path.join(workdir, "thumb_ai.png")
+        if ai_images.generate(tp, p, gemini_key, cfg, aspect="16:9 wide"):
+            thumb_ai = "thumb_ai.png"
+            print("[thumb] dedicated AI thumbnail generated")
+
     # 5) manifest ------------------------------------------------------------
     rcfg = cfg.get("render", {})
     brand_cfg = cfg.get("brand", {})
@@ -191,6 +225,8 @@ def main() -> None:
         "outroSeconds": float(cfg["video"].get("outro_seconds", 4)),
         "title": script["title"],
         "thumbText": script.get("thumb_text", script["title"][:24]),
+        "thumbAiPath": thumb_ai,
+        "sfx": sfx_events,
         "musicPath": pick_music(workdir, cfg),
         "musicVolume": float(cfg["music"].get("volume", 0.12)),
         "captions": [{"start": round(s, 3), "end": round(e, 3), "text": t}
@@ -202,6 +238,7 @@ def main() -> None:
             "visualMode": sc.get("visual_mode", "broll"),
             "kineticText": sc.get("kinetic_text", ""),
             "stat": sc.get("stat", {}) or {},
+            "map": sc.get("map_render") or {},
             "audioPath": os.path.basename(sc["audio_path"]),
             "audioDuration": round(sc["audio_duration"], 3),
             "assets": [{
@@ -241,7 +278,9 @@ def main() -> None:
     except Exception as e:
         print(f"[thumb] Remotion still failed ({e}) -> PIL fallback")
         import thumbnail as thumb_mod
-        thumb_mod.make_thumbnail(scenes[0]["assets"], script["thumb_text"], thumb_path)
+        thumb_assets = ([{"path": os.path.join(workdir, "thumb_ai.png"),
+                          "kind": "image"}] if thumb_ai else []) + scenes[0]["assets"]
+        thumb_mod.make_thumbnail(thumb_assets, script["thumb_text"], thumb_path)
 
     # 8) metadata ----------------------------------------------------------------
     n_ai = sum(1 for sc in scenes for a in sc["assets"] if a.get("ai"))

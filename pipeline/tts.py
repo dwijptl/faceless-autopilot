@@ -29,6 +29,16 @@ _engines: set = set()
 _sarvam_chars = 0          # cost telemetry (₹ estimate in usage_summary)
 _kokoro = None
 
+# Per-scene voice direction: how a human narrator would deliver it.
+# pace_mul multiplies cfg tts.speed; pre = seconds of silence BEFORE the
+# scene (dramatic beat); temperature = bulbul:v3 expressiveness.
+DELIVERY = {
+    "hook":   {"pace_mul": 1.06, "temperature": 0.72, "pre": 0.0},
+    "calm":   {"pace_mul": 1.00, "temperature": 0.55, "pre": 0.0},
+    "reveal": {"pace_mul": 0.88, "temperature": 0.62, "pre": 0.5},
+    "urgent": {"pace_mul": 1.12, "temperature": 0.75, "pre": 0.0},
+}
+
 
 # ── sentence-aware chunking (Hindi danda । + Latin punctuation) ──────────
 def _sentences(text: str) -> list[str]:
@@ -55,16 +65,18 @@ def _chunks(text: str, limit: int = SARVAM_CHAR_LIMIT) -> list[str]:
 
 
 # ── Sarvam bulbul:v3 ─────────────────────────────────────────────────────
-def _sarvam_request(chunk: str, cfg: dict, api_key: str, speaker: str) -> np.ndarray:
+def _sarvam_request(chunk: str, cfg: dict, api_key: str, speaker: str,
+                    dlv: dict) -> np.ndarray:
     t = cfg["tts"]
-    pace = min(max(float(t.get("speed", 1.0)), 0.5), 2.0)  # bulbul:v3 range
+    base = float(t.get("speed", 1.0)) * dlv.get("pace_mul", 1.0)
+    pace = min(max(base, 0.5), 2.0)  # bulbul:v3 range
     body = {
         "text": chunk,
         "target_language_code": cfg["channel"].get("language", "hi-IN"),
         "model": t.get("sarvam_model", "bulbul:v3"),
         "speaker": speaker,
-        "pace": pace,
-        "temperature": float(t.get("temperature", 0.6)),
+        "pace": round(pace, 3),
+        "temperature": dlv.get("temperature", float(t.get("temperature", 0.6))),
         "speech_sample_rate": SAMPLE_RATE,
     }
     headers = {"api-subscription-key": api_key, "Content-Type": "application/json"}
@@ -105,7 +117,7 @@ def _sarvam_request(chunk: str, cfg: dict, api_key: str, speaker: str) -> np.nda
     raise RuntimeError(f"Sarvam TTS failed after retries — {last}")
 
 
-def _synth_sarvam(text: str, cfg: dict) -> np.ndarray:
+def _synth_sarvam(text: str, cfg: dict, dlv: dict) -> np.ndarray:
     global _sarvam_chars
     api_key = os.environ.get("SARVAM_API_KEY", "").strip()
     if not api_key:
@@ -114,7 +126,7 @@ def _synth_sarvam(text: str, cfg: dict) -> np.ndarray:
                or cfg["tts"].get("sarvam_speaker", "amit"))
     pieces = []
     for chunk in _chunks(text):
-        pieces.append(_sarvam_request(chunk, cfg, api_key, speaker))
+        pieces.append(_sarvam_request(chunk, cfg, api_key, speaker, dlv))
         _sarvam_chars += len(chunk)
         time.sleep(0.3)  # gentle on rate limits
     if not pieces:
@@ -185,27 +197,34 @@ def _synth_kokoro(text: str, cfg: dict) -> np.ndarray:
 
 
 # ── public API ───────────────────────────────────────────────────────────
-def synth_scene(text: str, wav_path: str, cfg: dict) -> float:
-    """Synthesize one scene's narration to wav_path. Returns duration (s)."""
+def synth_scene(text: str, wav_path: str, cfg: dict,
+                delivery: str = "calm") -> float:
+    """Synthesize one scene's narration to wav_path. Returns duration (s).
+    delivery: hook | calm | reveal | urgent (per-scene voice direction)."""
     global ENGINE_USED
+    dlv = DELIVERY.get(str(delivery).lower().strip(), DELIVERY["calm"])
     engine = str(cfg.get("tts", {}).get("engine", "sarvam")).lower()
     audio = None
     if engine == "sarvam":
         try:
-            audio = _synth_sarvam(text, cfg)
+            audio = _synth_sarvam(text, cfg, dlv)
             _engines.add("sarvam:" + cfg["tts"].get("sarvam_model", "bulbul:v3"))
         except Exception as e:
             if os.environ.get("TTS_NO_FALLBACK", "").strip() == "1":
                 raise
             print(f"[tts] SARVAM FAILED -> Kokoro fallback. Reason: {e}")
     if audio is None:
-        audio = _synth_kokoro(text, cfg)
+        kcfg = dict(cfg)
+        kcfg["tts"] = dict(cfg["tts"])
+        kcfg["tts"]["speed"] = float(cfg["tts"].get("speed", 1.0)) * dlv["pace_mul"]
+        audio = _synth_kokoro(text, kcfg)
         _engines.add("kokoro-82m")
     ENGINE_USED = " + ".join(sorted(_engines))
 
-    # trailing breath before the next scene
+    # dramatic beat before reveals + trailing breath before the next scene
+    pre = np.zeros(int(dlv.get("pre", 0.0) * SAMPLE_RATE), dtype=np.float32)
     audio = np.concatenate(
-        [audio, np.zeros(int(0.35 * SAMPLE_RATE), dtype=np.float32)])
+        [pre, audio, np.zeros(int(0.35 * SAMPLE_RATE), dtype=np.float32)])
     peak = float(np.max(np.abs(audio))) or 1.0  # normalize to healthy loudness
     audio = audio * (0.89 / peak)
     sf.write(wav_path, audio, SAMPLE_RATE)
