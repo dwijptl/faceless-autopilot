@@ -58,8 +58,13 @@ lasts months. Skipping is fine; videos just render without music.
 English both work; leave empty for auto). In ~30–60 min a release named
 `video-<date>_<time>` appears under **Releases**.
 
-Schedules: long-form **Mon/Wed/Fri 06:30 UTC**, Shorts **Tue/Thu/Sat**
-(edit the cron lines in `.github/workflows/`).
+Schedules (tuned for the Indian audience): long-form renders **Mon + Thu
+10:30 AM IST** → review, then schedule the publish for **4–5:30 PM IST**
+(viewing peaks 6–8 PM). Shorts render **Tue/Wed/Fri/Sat 10:30 AM IST** →
+publish **6–8 PM IST** (scroll peaks 7–10 PM). That's 2 long + 4 shorts
+≈ 26 uploads/month — shorts funnel viewers to long-form, and each long
+video gets a clean 3-day browse window. Edit the cron lines in
+`.github/workflows/` to change.
 
 ---
 
