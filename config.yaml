@@ -101,6 +101,17 @@ music:
   volume: 0.12             # 0 disables music even if files exist
   fade: 1.5
 
+sfx:                       # synthesized sound design (whoosh/riser/hit)
+  enabled: true
+  volume: 0.5
+
+qc:
+  visual_check: true       # Gemini vision sanity-checks every stock clip
+                           # (free tier; fail-open — never blocks a run)
+
+maps:
+  enabled: true            # animated map-zoom scenes for place-based topics
+
 captions:
   enabled: true
   max_chars: 30            # per caption line (Devanagari glyphs run wider)
