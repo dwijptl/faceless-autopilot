@@ -71,7 +71,8 @@ def test_critique_preserves_structured_visual_payload(monkeypatch):
     revised = {"title": "x", "scenes": [{"narration": "better words",
         "visual_mode": "glass", "glass": {}}]}
     monkeypatch.setattr(script_gen, "_llm", lambda *args: json.dumps(revised))
-    result = script_gen._critique(original, {"llm": {"critique": True}},
+    cfg = {"llm": {"critique": True}, "channel": {"language": "hi-IN"}}
+    result = script_gen._critique(original, cfg,
                                   "key", "short", 1)
     assert result["scenes"][0]["glass"]["value"] == 42
     assert result["scenes"][0]["narration"] == "better words"
