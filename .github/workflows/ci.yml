@@ -64,3 +64,5 @@ jobs:
           npx remotion still src/index.ts MotionGallery /tmp/gallery-frame.jpg --frame=1350
           npx remotion still src/index.ts MotionGallery /tmp/gallery-lower-third.jpg --frame=1800
           npx remotion still src/index.ts MotionGallery /tmp/gallery-cta.jpg --frame=2250
+          npx remotion still src/index.ts MotionGallery /tmp/gallery-glass-fact.jpg --frame=2500
+          npx remotion still src/index.ts MotionGallery /tmp/gallery-glass-reveal.jpg --frame=2800
