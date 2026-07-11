@@ -16,7 +16,7 @@ jobs:
       - name: Apply motion library and Claude upgrades
         shell: bash
         run: |
-          base64 -d > /tmp/pending.patch <<'PATCH'
+          base64 -d <<'PATCH' | gzip -d > /tmp/pending.patch
           H4sIAIZgUmoCA+y9a28jSXYg+l2/IobjtshSMsVMPsUqVY+6HtPy1KNvSdPtgSxQSTIpZRdfwyRL
           0qgIjA14bcAwFrhYr4GF771fqvcu1r5rY4Fd2192gd0/UvAvuecRERmRzKSoKvlx907NdFUyM54n
           zjtOnHg+m4xErdfo9fqBF3TDVndQ39trVFvVetDoVZt7YT/oh32vFvZ6FfFyMhZH4VR4TVGptOn/
