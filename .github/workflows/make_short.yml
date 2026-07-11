@@ -2,8 +2,10 @@ name: Make Short
 
 on:
   schedule:
-    # Tue / Thu / Sat at 06:30 UTC — alternates with long-form Mon/Wed/Fri
-    - cron: "30 6 * * 2,4,6"
+    # Tue / Wed / Fri / Sat at 05:00 UTC (= 10:30 AM IST) — shorts fill the
+    # gap days between Mon/Thu long-form videos. Publish in the evening:
+    # Shorts scroll in India peaks 7-10 PM IST.
+    - cron: "0 5 * * 2,3,5,6"
   workflow_dispatch:
     inputs:
       topic:

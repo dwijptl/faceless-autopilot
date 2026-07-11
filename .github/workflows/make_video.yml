@@ -2,8 +2,10 @@ name: Make Video
 
 on:
   schedule:
-    # Mon / Wed / Fri at 06:30 UTC — edit freely (crontab.guru)
-    - cron: "30 6 * * 1,3,5"
+    # Mon + Thu at 05:00 UTC (= 10:30 AM IST) — video is ready by lunch.
+    # Review it, then SCHEDULE the YouTube publish for 16:00-17:30 IST
+    # (Hindi long-form viewing peaks 6-8 PM IST). Edit freely (crontab.guru).
+    - cron: "0 5 * * 1,4"
   workflow_dispatch:
     inputs:
       topic:
