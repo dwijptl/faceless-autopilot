@@ -33,6 +33,7 @@ import {
   KineticTitle,
   SceneFrame,
 } from './motion-library';
+import type {MotionSpec} from './motion-library';
 
 // Deterministic transition choice, biased by the video's style pack.
 // Remotion's transition presentations are invariant generic types; this helper
@@ -87,7 +88,7 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
     const mode = scene.visualMode ?? 'broll';
     const overlayScene = mode === 'kinetic' || mode === 'stat' || mode === 'card';
     const isMap = mode === 'map' && scene.map && scene.map.world;
-    const motion = scene.motion ?? {};
+    const motion: MotionSpec = scene.motion ?? {};
     items.push(
       <TransitionSeries.Sequence key={`s-${scene.n}`} durationInFrames={sceneFrames}>
         {isMap ? (
