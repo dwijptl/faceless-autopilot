@@ -105,7 +105,7 @@ Each release `video-YYYY-MM-DD_HHMM` contains:
   of front-page vacation clips. Raw terms remain as recall fallback.
 - **Karaoke captions** — words appear as they're spoken, active word in
   brand amber, spring pop per word (documentary + kinetic packs).
-- **32-variant native motion library** — six stat cards, six kinetic-title
+- **33-variant native motion library** — six stat cards, seven kinetic-title
   treatments, five editorial cards, six scene frames, five lower thirds and
   four subscribe/bell CTAs rotate deterministically before repeating. The
   matching 18-cue sound pack is synthesized at render time, so both libraries

@@ -9,7 +9,7 @@ import hashlib
 
 
 STAT_VARIANTS = ("glass", "split", "radial", "ticker", "stamp", "horizon")
-KINETIC_VARIANTS = ("word-pop", "wipe", "stack", "orbit", "split", "marker")
+KINETIC_VARIANTS = ("word-pop", "wipe", "stack", "emphasis", "orbit", "split", "marker")
 CARD_VARIANTS = ("definition", "quote", "split", "timeline", "warning")
 FRAME_VARIANTS = ("corners", "film", "grid", "scanner", "focus", "aperture")
 LOWER_THIRD_VARIANTS = ("rail", "pill", "underline", "locator", "index")

@@ -38,7 +38,10 @@ const FALLBACK = {
       visualMode: 'broll',
       kineticText: '',
       card: {} as {kicker?: string; headline?: string; body?: string},
-      stat: {} as {value?: number; suffix?: string; label?: string},
+      stat: {} as {
+        value?: number; suffix?: string; label?: string; max?: number;
+        baseline?: number; bars?: {label?: string; value?: number}[];
+      },
       map: {} as {
         world?: string;
         region?: string;

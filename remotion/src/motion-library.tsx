@@ -12,7 +12,7 @@ import {fontFamily} from './elements';
 
 export const MOTION_CATALOG = {
   stats: ['glass', 'split', 'radial', 'ticker', 'stamp', 'horizon'],
-  kinetic: ['word-pop', 'wipe', 'stack', 'orbit', 'split', 'marker'],
+  kinetic: ['word-pop', 'wipe', 'stack', 'emphasis', 'orbit', 'split', 'marker'],
   cards: ['definition', 'quote', 'split', 'timeline', 'warning'],
   frames: ['corners', 'film', 'grid', 'scanner', 'focus', 'aperture'],
   lowerThirds: ['rail', 'pill', 'underline', 'locator', 'index'],
@@ -25,6 +25,15 @@ export type MotionSpec = {
   cardVariant?: string;
   frameVariant?: string;
   lowerThirdVariant?: string;
+};
+
+export type StatData = {
+  value?: number;
+  suffix?: string;
+  label?: string;
+  max?: number;
+  baseline?: number;
+  bars?: {label?: string; value?: number}[];
 };
 
 export type CtaEvent = {
@@ -50,7 +59,7 @@ const formatStat = (value: number, shown: number) =>
     : shown.toFixed(1);
 
 export const AnimatedStatCard: React.FC<{
-  stat: {value?: number; suffix?: string; label?: string};
+  stat: StatData;
   style: StylePack;
   variant?: string;
 }> = ({stat, style, variant = 'glass'}) => {
@@ -71,7 +80,82 @@ export const AnimatedStatCard: React.FC<{
   const label = stat.label ?? '';
 
   let body: React.ReactNode;
-  if (variant === 'split') {
+  const bars = (stat.bars ?? []).slice(0, 5).filter((item) =>
+    Number.isFinite(Number(item.value))
+  );
+  const maximum = Number(stat.max);
+  const baseline = Number(stat.baseline);
+
+  if (bars.length >= 2) {
+    const barMax = Math.max(...bars.map((item) => Math.abs(Number(item.value))), 1);
+    body = <div style={{width: 1050 * s, minHeight: 430 * s,
+      background: 'rgba(7,14,28,.90)', borderRadius: 24 * s,
+      border: `${2 * s}px solid ${style.accent}55`, padding: `${42 * s}px ${58 * s}px`,
+      boxShadow: '0 28px 90px rgba(0,0,0,.58)'}}>
+      <div style={{fontSize: 28 * s, color: 'rgba(255,255,255,.70)',
+        textAlign: 'center', marginBottom: 30 * s, lineHeight: 1.35}}>{label}</div>
+      <div style={{height: 280 * s, display: 'flex', alignItems: 'flex-end',
+        justifyContent: 'center', gap: 30 * s}}>
+        {bars.map((item, index) => {
+          const barValue = Number(item.value);
+          const height = Math.max(Math.abs(barValue) / barMax, .04) * 210 * s * line;
+          const active = Math.abs(barValue) === barMax;
+          return <div key={`${item.label}-${index}`} style={{width: 150 * s,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 9 * s}}>
+            <div style={{fontSize: 28 * s, color: active ? style.accent : 'white',
+              fontWeight: 850}}>{formatStat(barValue, barValue * line)}{stat.suffix ?? ''}</div>
+            <div style={{height, width: 82 * s, borderRadius: `${12 * s}px ${12 * s}px 3px 3px`,
+              background: active ? style.accent : `${style.accent2}88`,
+              boxShadow: active ? `0 0 ${28 * s}px ${style.accent}44` : 'none'}}/>
+            <div style={{fontSize: 22 * s, color: 'rgba(255,255,255,.72)',
+              textAlign: 'center', lineHeight: 1.25}}>{item.label ?? ''}</div>
+          </div>;
+        })}
+      </div>
+    </div>;
+  } else if (Number.isFinite(baseline)) {
+    const compareMax = Math.max(Math.abs(baseline), Math.abs(value), 1);
+    const valueW = Math.abs(shown) / compareMax * 100;
+    const baseW = Math.abs(baseline) / compareMax * 100;
+    body = <div style={{width: 1050 * s, background: 'rgba(7,14,28,.91)',
+      borderRadius: 24 * s, padding: `${48 * s}px ${62 * s}px`,
+      border: `${2 * s}px solid ${style.accent}55`, boxShadow: '0 28px 90px rgba(0,0,0,.58)'}}>
+      <div style={{fontSize: 34 * s, color: 'rgba(255,255,255,.76)',
+        textAlign: 'center', marginBottom: 34 * s, lineHeight: 1.35}}>{label}</div>
+      <div style={{display: 'grid', gridTemplateColumns: '1fr auto 1fr',
+        alignItems: 'center', gap: 34 * s}}>
+        <div style={{fontSize: 105 * s, fontWeight: 920, color: 'rgba(255,255,255,.62)',
+          textAlign: 'right', lineHeight: 1}}>{formatStat(baseline, baseline)}<span style={{fontSize:'.46em'}}>{stat.suffix ?? ''}</span></div>
+        <div style={{fontSize: 70 * s, color: style.accent}}>→</div>
+        <div style={{fontSize: 126 * s, fontWeight: 950, color: style.accent,
+          lineHeight: 1}}>{number}</div>
+      </div>
+      <div style={{display: 'grid', gap: 13 * s, marginTop: 35 * s}}>
+        <div style={{height: 12 * s, width: `${baseW}%`, background: 'rgba(255,255,255,.30)', borderRadius: 8}}/>
+        <div style={{height: 16 * s, width: `${valueW}%`, background: style.accent, borderRadius: 8,
+          boxShadow: `0 0 ${20 * s}px ${style.accent}44`}}/>
+      </div>
+    </div>;
+  } else if (Number.isFinite(maximum) && maximum > 0) {
+    const radius = 156 * s;
+    const circumference = 2 * Math.PI * radius;
+    const ratio = Math.min(Math.max(shown / maximum, 0), 1);
+    body = <div style={{width: 470 * s, height: 470 * s, position: 'relative',
+      display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+      <svg width={470 * s} height={470 * s} style={{position:'absolute', transform:'rotate(-90deg)'}}>
+        <circle cx={235*s} cy={235*s} r={radius} fill="rgba(7,14,28,.88)"
+          stroke="rgba(255,255,255,.14)" strokeWidth={24*s}/>
+        <circle cx={235*s} cy={235*s} r={radius} fill="none" stroke={style.accent}
+          strokeWidth={24*s} strokeLinecap="round" strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1-ratio)}/>
+      </svg>
+      <div style={{textAlign:'center', zIndex:2, maxWidth:310*s}}>
+        <div style={{fontSize:112*s, fontWeight:950, color:style.accent, lineHeight:1}}>{number}</div>
+        <div style={{fontSize:28*s, color:'rgba(255,255,255,.78)', lineHeight:1.35,
+          marginTop:18*s}}>{label}</div>
+      </div>
+    </div>;
+  } else if (variant === 'split') {
     body = <div style={{display: 'grid', gridTemplateColumns: '1.15fr 1fr',
       alignItems: 'stretch', width: 1080 * s, minHeight: 310 * s,
       background: 'rgba(7,14,28,0.90)', borderRadius: 18 * s,
@@ -187,6 +271,24 @@ export const KineticTitle: React.FC<{
             lineHeight: 1.16, color: i % 2 ? style.accent : 'white',
             opacity: p, transform: `translateX(${interpolate(p,[0,1],[i%2?-140:140,0])}px)`}}>{word}</div>;
         })}
+      </div>
+    </AbsoluteFill>;
+  }
+  if (variant === 'emphasis') {
+    const focusIndex = Math.max(words.findIndex((word) => /\d/.test(word)), words.length - 1);
+    const before = words.slice(0, focusIndex).join(' ');
+    const focus = words[focusIndex] ?? '';
+    const after = words.slice(focusIndex + 1).join(' ');
+    return <AbsoluteFill style={{justifyContent:'center', alignItems:'center', fontFamily,
+      padding:100*s, textAlign:'center'}}>
+      <div style={{opacity:base, maxWidth:1100*s}}>
+        {before ? <div style={{fontSize:56*s, color:'white', fontWeight:760,
+          lineHeight:1.4}}>{before}</div> : null}
+        <div style={{fontSize:230*s, color:style.accent, fontWeight:950,
+          lineHeight:1.05, transform:`scale(${interpolate(base,[0,1],[.72,1])})`,
+          textShadow:`0 14px 64px ${style.accent}44`}}>{focus}</div>
+        {after ? <div style={{fontSize:62*s, color:'white', fontWeight:820,
+          lineHeight:1.4}}>{after}</div> : null}
       </div>
     </AbsoluteFill>;
   }
@@ -485,6 +587,15 @@ const GALLERY: GalleryItem[] = [
 
 export const MOTION_GALLERY_DURATION = GALLERY.length * 75;
 
+const galleryStat = (variant: string): StatData => {
+  if (variant === 'glass') return {value:50,suffix:'%',label:'समुद्र का संरक्षित हिस्सा',max:100};
+  if (variant === 'split') return {value:49,suffix:'%',label:'ऑक्सीजन स्तर',baseline:8};
+  if (variant === 'radial') return {suffix:'%',label:'तीन क्षेत्रों की तुलना',bars:[
+    {label:'उत्तर',value:28},{label:'मध्य',value:49},{label:'दक्षिण',value:36},
+  ]};
+  return {value:12742,suffix:' km',label:'एक असंभव लगने वाली दूरी'};
+};
+
 export const MotionGallery: React.FC<{style: StylePack}> = ({style}) => (
   <AbsoluteFill style={{background:`radial-gradient(circle at 30% 20%, ${BRAND.panel}, ${BRAND.navy} 65%)`,fontFamily}}>
     {GALLERY.map((item,index)=><Sequence key={`${item.family}-${item.variant}`}
@@ -492,7 +603,7 @@ export const MotionGallery: React.FC<{style: StylePack}> = ({style}) => (
       <AbsoluteFill>
         <div style={{position:'absolute',left:42,top:28,zIndex:20,color:style.accent,
           fontSize:22,fontWeight:900,letterSpacing:4}}>{item.family} · {item.variant.toUpperCase()}</div>
-        {item.family==='STAT' ? <AnimatedStatCard stat={{value:12742,suffix:' km',label:'एक असंभव लगने वाली दूरी'}} style={style} variant={item.variant}/> : null}
+        {item.family==='STAT' ? <AnimatedStatCard stat={galleryStat(item.variant)} style={style} variant={item.variant}/> : null}
         {item.family==='TITLE' ? <KineticTitle text="धरती का सबसे गहरा रहस्य" style={style} variant={item.variant}/> : null}
         {item.family==='CARD' ? <EditorialCard card={{kicker:'FIELD NOTE',headline:'यहाँ समय अलग चलता है',body:'एक साफ, सिनेमाई व्याख्या जो दर्शक तुरंत समझ सके।'}} style={style} variant={item.variant}/> : null}
         {item.family==='FRAME' ? <><div style={{position:'absolute',inset:180,background:`linear-gradient(135deg,${style.accent}22,${BRAND.panel})`,borderRadius:28}}/><SceneFrame variant={item.variant} style={style} sceneN={index+1}/></> : null}

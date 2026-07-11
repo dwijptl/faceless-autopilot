@@ -8,6 +8,7 @@ viewer-facing text is written in Devanagari, while stock search terms and
 AI image prompts stay in English (libraries are indexed in English).
 """
 import json
+import math
 import os
 import re
 import time
@@ -218,6 +219,45 @@ def _ai_max(cfg: dict) -> int:
 VALID_MODES = ("broll", "ai_image", "kinetic", "stat", "card", "map")
 
 
+def _num_or_none(value):
+    """Return a finite float, otherwise None (LLMs sometimes emit NaN/inf)."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
+def _normalize_stat(raw) -> dict:
+    """Keep only safe, bounded fields understood by the Remotion stat cards."""
+    stat = raw if isinstance(raw, dict) else {}
+    value = _num_or_none(stat.get("value"))
+    baseline = _num_or_none(stat.get("baseline"))
+    maximum = _num_or_none(stat.get("max"))
+    bars = []
+    if isinstance(stat.get("bars"), list):
+        for item in stat["bars"][:5]:
+            if not isinstance(item, dict):
+                continue
+            bar_value = _num_or_none(item.get("value"))
+            if bar_value is None:
+                continue
+            bars.append({"label": str(item.get("label", ""))[:24],
+                         "value": bar_value})
+    result = {
+        "value": value if value is not None else 0,
+        "suffix": str(stat.get("suffix", ""))[:12],
+        "label": str(stat.get("label", ""))[:100],
+    }
+    if baseline is not None:
+        result["baseline"] = baseline
+    if maximum is not None and maximum > 0:
+        result["max"] = maximum
+    if len(bars) >= 2:
+        result["bars"] = bars
+    return result
+
+
 def _normalize(script: dict, min_scenes: int) -> dict:
     """Validate + default-fill a script dict. Raises on structural problems."""
     assert isinstance(script["scenes"], list) and len(script["scenes"]) >= min_scenes
@@ -229,7 +269,7 @@ def _normalize(script: dict, min_scenes: int) -> dict:
         s.setdefault("search_terms", [])
         s.setdefault("ai_prompt", "")
         s.setdefault("kinetic_text", "")
-        s.setdefault("stat", {})
+        s["stat"] = _normalize_stat(s.get("stat"))
         s.setdefault("card", {})
         s.setdefault("map", {})
         d = str(s.get("delivery", "calm")).lower().strip()
@@ -361,7 +401,7 @@ Write a scene-segmented script and return ONLY valid JSON with this exact shape:
       "search_terms": ["stock video search term", "alternative term", "broader fallback term"],
       "ai_prompt": "detailed text-to-image prompt (only when visual_mode is ai_image, else empty string)",
       "kinetic_text": "3-6 word punch phrase (only when visual_mode is kinetic, else empty string)",
-      "stat": {{"value": 0, "suffix": "", "label": ""}},
+      "stat": {{"value": 0, "suffix": "", "label": "", "max": null, "baseline": null, "bars": [{{"label": "short label", "value": 0}}]}},
       "card": {{"kicker": "short category", "headline": "5-10 word headline", "body": "one concise explanatory sentence"}},
       "map": {{"lat": 0.0, "lon": 0.0, "label": ""}}
     }}
@@ -388,7 +428,10 @@ Visual mode rules (variety is the goal — videos must not feel stock-only):
   line (often the hook or re-hook). kinetic_text = the phrase, punchy.
 - 0-2 scenes are "stat": when narration centers on ONE striking number.
   Fill stat.value (number only), stat.suffix ("%", "km", "×"...), stat.label
-  (what the number is). Narration must actually say that number.
+  (what the number is). Narration must actually say that number. For a share of
+  a whole, add stat.max to opt into a ring gauge. For before/after, add numeric
+  stat.baseline. For a 2-5 item comparison, add stat.bars with short labels and
+  numeric values. Use only one of max, baseline or bars; omit unused fields.
 - 0-2 scenes are "card": use a concise editorial definition, warning,
   comparison, quotation or timeline beat when text explains the idea better
   than generic stock. Fill card.kicker/headline/body; keep body under 18 words.
@@ -456,7 +499,7 @@ Return ONLY valid JSON:
       "search_terms": ["concrete visual term", "alternative", "broader fallback"],
       "ai_prompt": "text-to-image prompt (only for ai_image, else empty)",
       "kinetic_text": "3-6 word punch phrase (only for kinetic, else empty)",
-      "stat": {{"value": 0, "suffix": "", "label": ""}},
+      "stat": {{"value": 0, "suffix": "", "label": "", "max": null, "baseline": null, "bars": [{{"label": "short label", "value": 0}}]}},
       "card": {{"kicker": "category", "headline": "short headline", "body": "under 12 words"}}
     }}
   ]
@@ -481,6 +524,8 @@ Shorts rules:
 - Exactly 1-2 "kinetic" scenes, 0-1 "stat", 0-{short_ai_max} "ai_image"
   (put an ai_image on the hook when the topic's strongest visual doesn't
   exist as stock), rest "broll".
+- A stat may add max (ring gauge), baseline (before/after) or 2-4 bars. Keep a
+  bare value/suffix/label for the original punchy big-number treatment.
 - 0-1 "card" scene may replace a broll scene when a definition, warning or
   comparison communicates the idea faster. Keep all card text extremely short.
 - SEARCH TERM DISCIPLINE (footage relevance depends on this):

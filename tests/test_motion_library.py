@@ -18,9 +18,11 @@ def test_motion_variants_cycle_before_repeating():
                                     "frameVariant", "lowerThirdVariant"}
                for s in scenes)
 
-    for mode, key, count in (("stat", "statVariant", 6),
-                             ("kinetic", "kineticVariant", 6),
-                             ("card", "cardVariant", 5)):
+    for mode, key, count in (
+        ("stat", "statVariant", len(motion.STAT_VARIANTS)),
+        ("kinetic", "kineticVariant", len(motion.KINETIC_VARIANTS)),
+        ("card", "cardVariant", len(motion.CARD_VARIANTS)),
+    ):
         family_scenes = [{"n": i + 1, "visual_mode": mode} for i in range(count)]
         motion.decorate_scenes(family_scenes, "video-title:documentary")
         assert len({s["motion"][key] for s in family_scenes}) == count
