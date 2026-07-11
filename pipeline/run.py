@@ -264,6 +264,8 @@ def main() -> None:
 
 - [ ] Watch the video once — you are the editor of record
 - [ ] Spot-check any specific numbers/claims in the narration
+- [ ] SCHEDULE the publish for 16:00–17:30 IST — Hindi long-form viewing
+      peaks 6–8 PM IST; going live 2-3h early lets YouTube index + test it
 - [ ] Set the video language to **Hindi** in YouTube Studio (Details → Video language)
 - [ ] If your music track is CC-BY, add the artist credit to the description
 - [ ] Upload `captions.srt` in YouTube Studio → Subtitles (language: Hindi)

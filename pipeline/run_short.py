@@ -219,6 +219,7 @@ voice: {voice_line} · run {stamp}
 ### Checklist
 
 - [ ] Watch it once (it's {duration:.0f} seconds)
+- [ ] Publish or schedule for 18:00–20:00 IST — Shorts scroll peaks 7–10 PM IST
 - [ ] YouTube: upload as a regular video — vertical + <3 min = Short automatically
 - [ ] Set the video language to **Hindi** in YouTube Studio
 - [ ] Instagram: same MP4 works as a Reel
