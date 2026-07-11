@@ -8,8 +8,9 @@ import {BRAND, getStyle} from './styles';
  * lineHeight/letterSpacing tuned so Devanagari matras never clip. */
 export const Thumb: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
   const style = getStyle(m.style);
-  const hero =
-    m.scenes[0]?.assets?.find((a) => a.kind === 'image') ?? m.scenes[0]?.assets?.[0];
+  const hero = m.thumbAiPath
+    ? {path: m.thumbAiPath, kind: 'image'}
+    : m.scenes[0]?.assets?.find((a) => a.kind === 'image') ?? m.scenes[0]?.assets?.[0];
   const words = (m.thumbText || m.title || 'NEW VIDEO').toUpperCase();
 
   return (

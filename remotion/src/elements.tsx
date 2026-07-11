@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   AbsoluteFill,
+  Audio,
   Img,
   Loop,
   OffthreadVideo,
@@ -482,6 +483,20 @@ export const LightLeak: React.FC<{seed: string}> = ({seed}) => {
     </AbsoluteFill>
   );
 };
+
+// ── Sound design: whooshes / risers / hits from the manifest ───────────
+export const SfxLayer: React.FC<{
+  events: {path: string; start: number; volume: number}[];
+  fps: number;
+}> = ({events, fps}) => (
+  <AbsoluteFill style={{pointerEvents: 'none'}}>
+    {(events ?? []).map((e, i) => (
+      <Sequence key={i} from={Math.max(Math.round(e.start * fps), 0)}>
+        <Audio src={staticFile(e.path)} volume={e.volume} />
+      </Sequence>
+    ))}
+  </AbsoluteFill>
+);
 
 export const ProgressBar: React.FC<{accent: string}> = ({accent}) => {
   const frame = useCurrentFrame();

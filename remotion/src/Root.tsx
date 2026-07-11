@@ -21,6 +21,8 @@ const FALLBACK = {
   captionY: 0.78,
   title: 'Terra Incognita',
   thumbText: 'PREVIEW',
+  thumbAiPath: null as string | null,
+  sfx: [] as {path: string; start: number; volume: number}[],
   musicPath: null as string | null,
   musicVolume: 0.12,
   captions: [] as {start: number; end: number; text: string}[],
@@ -31,6 +33,13 @@ const FALLBACK = {
       visualMode: 'broll',
       kineticText: '',
       stat: {} as {value?: number; suffix?: string; label?: string},
+      map: {} as {
+        world?: string;
+        region?: string;
+        markerWorld?: number[];
+        markerRegion?: number[];
+        label?: string;
+      },
       audioPath: null as string | null,
       audioDuration: 5,
       assets: [] as {path: string; kind: string; duration?: number}[],

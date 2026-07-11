@@ -12,6 +12,7 @@ import {TransitionSeries, linearTiming} from '@remotion/transitions';
 import {fade} from '@remotion/transitions/fade';
 import {slide} from '@remotion/transitions/slide';
 import type {Manifest} from './Root';
+import {MapZoom} from './Map';
 import {getStyle, StylePack} from './styles';
 import {
   CaptionsLayer,
@@ -19,6 +20,7 @@ import {
   KineticText,
   ProgressBar,
   SceneVisual,
+  SfxLayer,
   StatCard,
   Watermark,
 } from './elements';
@@ -57,17 +59,22 @@ export const ShortMain: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
     const sceneFrames = Math.round(scene.audioDuration * fps);
     const mode = scene.visualMode ?? 'broll';
     const overlayScene = mode === 'kinetic' || mode === 'stat';
+    const isMap = mode === 'map' && scene.map && scene.map.world;
     items.push(
       <TransitionSeries.Sequence key={`s-${scene.n}`} durationInFrames={sceneFrames}>
-        <SceneVisual
-          assets={scene.assets}
-          sceneFrames={sceneFrames}
-          fps={fps}
-          maxShotSeconds={maxShotSeconds}
-          sceneN={scene.n}
-          style={style}
-          dim={overlayScene}
-        />
+        {isMap ? (
+          <MapZoom map={scene.map} sceneFrames={sceneFrames} style={style} />
+        ) : (
+          <SceneVisual
+            assets={scene.assets}
+            sceneFrames={sceneFrames}
+            fps={fps}
+            maxShotSeconds={maxShotSeconds}
+            sceneN={scene.n}
+            style={style}
+            dim={overlayScene}
+          />
+        )}
         {scene.audioPath ? <Audio src={staticFile(scene.audioPath)} /> : null}
         {mode === 'kinetic' && scene.kineticText ? (
           <KineticText text={scene.kineticText} style={style} />
@@ -102,6 +109,7 @@ export const ShortMain: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
           opacity={Math.max(m.watermarkOpacity ?? 0.08, 0.1)} />
       ) : null}
       {m.progressBar ? <ProgressBar accent={style.accent} /> : null}
+      <SfxLayer events={m.sfx ?? []} fps={fps} />
       <MusicTrack m={m} />
     </AbsoluteFill>
   );
