@@ -215,7 +215,7 @@ def _ai_max(cfg: dict) -> int:
     return int(aicfg.get("max_per_video", 2))
 
 
-VALID_MODES = ("broll", "ai_image", "kinetic", "stat", "map")
+VALID_MODES = ("broll", "ai_image", "kinetic", "stat", "card", "map")
 
 
 def _normalize(script: dict, min_scenes: int) -> dict:
@@ -230,6 +230,7 @@ def _normalize(script: dict, min_scenes: int) -> dict:
         s.setdefault("ai_prompt", "")
         s.setdefault("kinetic_text", "")
         s.setdefault("stat", {})
+        s.setdefault("card", {})
         s.setdefault("map", {})
         d = str(s.get("delivery", "calm")).lower().strip()
         s["delivery"] = d if d in ("hook", "calm", "reveal", "urgent") else "calm"
@@ -355,12 +356,13 @@ Write a scene-segmented script and return ONLY valid JSON with this exact shape:
       "n": 1,
       "title": "3-6 word scene title",
       "narration": "60-150 words of spoken narration",
-      "visual_mode": "broll | ai_image | kinetic | stat | map",
+      "visual_mode": "broll | ai_image | kinetic | stat | card | map",
       "delivery": "hook | calm | reveal | urgent",
       "search_terms": ["stock video search term", "alternative term", "broader fallback term"],
       "ai_prompt": "detailed text-to-image prompt (only when visual_mode is ai_image, else empty string)",
       "kinetic_text": "3-6 word punch phrase (only when visual_mode is kinetic, else empty string)",
       "stat": {{"value": 0, "suffix": "", "label": ""}},
+      "card": {{"kicker": "short category", "headline": "5-10 word headline", "body": "one concise explanatory sentence"}},
       "map": {{"lat": 0.0, "lon": 0.0, "label": ""}}
     }}
   ]
@@ -387,6 +389,9 @@ Visual mode rules (variety is the goal — videos must not feel stock-only):
 - 0-2 scenes are "stat": when narration centers on ONE striking number.
   Fill stat.value (number only), stat.suffix ("%", "km", "×"...), stat.label
   (what the number is). Narration must actually say that number.
+- 0-2 scenes are "card": use a concise editorial definition, warning,
+  comparison, quotation or timeline beat when text explains the idea better
+  than generic stock. Fill card.kicker/headline/body; keep body under 18 words.
 - Every scene still needs search_terms as fallback. Concrete visual nouns only,
   and every term must belong to the topic's own visual world — never
   metaphorical/studio/commercial imagery (no drinks, food, offices, product
@@ -447,11 +452,12 @@ Return ONLY valid JSON:
       "n": 1,
       "title": "2-4 word label",
       "narration": "8-30 words",
-      "visual_mode": "broll | ai_image | kinetic | stat",
+      "visual_mode": "broll | ai_image | kinetic | stat | card",
       "search_terms": ["concrete visual term", "alternative", "broader fallback"],
       "ai_prompt": "text-to-image prompt (only for ai_image, else empty)",
       "kinetic_text": "3-6 word punch phrase (only for kinetic, else empty)",
-      "stat": {{"value": 0, "suffix": "", "label": ""}}
+      "stat": {{"value": 0, "suffix": "", "label": ""}},
+      "card": {{"kicker": "category", "headline": "short headline", "body": "under 12 words"}}
     }}
   ]
 }}
@@ -475,6 +481,8 @@ Shorts rules:
 - Exactly 1-2 "kinetic" scenes, 0-1 "stat", 0-{short_ai_max} "ai_image"
   (put an ai_image on the hook when the topic's strongest visual doesn't
   exist as stock), rest "broll".
+- 0-1 "card" scene may replace a broll scene when a definition, warning or
+  comparison communicates the idea faster. Keep all card text extremely short.
 - SEARCH TERM DISCIPLINE (footage relevance depends on this):
   * Every term must belong to the TOPIC'S OWN VISUAL WORLD. If the topic is
     polar, terms are "glacier calving aerial", "arctic tundra", "ice sheet

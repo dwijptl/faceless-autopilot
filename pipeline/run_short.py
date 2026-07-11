@@ -23,6 +23,7 @@ import assets as assets_mod         # noqa: E402
 import captions as captions_mod     # noqa: E402
 import factcheck                    # noqa: E402
 import mapgen                       # noqa: E402
+import motion as motion_mod         # noqa: E402
 import script_gen                   # noqa: E402
 import sfx as sfx_mod               # noqa: E402
 import tts as tts_mod               # noqa: E402
@@ -193,6 +194,11 @@ def main() -> None:
         music_rel = "music" + os.path.splitext(track)[1]
         shutil.copyfile(track, os.path.join(workdir, music_rel))
 
+    motion_seed = f"{script['title']}:{style}:short"
+    motion_mod.decorate_scenes(scenes, motion_seed)
+    cta_event = motion_mod.plan_cta(scenes, cfg, motion_seed, is_short=True)
+    sfx_events = sfx_mod.plan_events(scenes, cfg, workdir, cta_event)
+
     manifest = {"manifest": {
         "fps": fps, "width": 1080, "height": 1920,
         "xfadeFrames": max(int(round(xfade * fps)), 1),
@@ -207,7 +213,9 @@ def main() -> None:
         "captionY": float(cfg.get("short", {}).get("caption_y", 0.62)),
         "title": script["title"],
         "thumbText": script.get("thumb_text", ""),
-        "sfx": sfx_mod.plan_events(scenes, cfg, workdir),
+        "motionSeed": motion_seed,
+        "cta": cta_event,
+        "sfx": sfx_events,
         "musicPath": music_rel,
         "musicVolume": float(cfg["music"]["volume"]),
         "captions": [{"start": round(s, 3), "end": round(e, 3), "text": t}
@@ -217,7 +225,9 @@ def main() -> None:
             "visualMode": sc.get("visual_mode", "broll"),
             "kineticText": sc.get("kinetic_text", ""),
             "stat": sc.get("stat", {}) or {},
+            "card": sc.get("card", {}) or {},
             "map": sc.get("map_render") or {},
+            "motion": sc.get("motion") or {},
             "audioPath": os.path.basename(sc["audio_path"]),
             "audioDuration": round(sc["audio_duration"], 3),
             "assets": [{
@@ -291,7 +301,13 @@ voice: {voice_line} · run {stamp}
     with open(os.path.join(outdir, "run_summary.json"), "w", encoding="utf-8") as f:
         json.dump({"draft_release": draft_release, "voice_fallback": voice_fallback,
                    "voice": voice_line, "captions": caption_status,
-                   "factcheck": fact_report}, f, indent=2, ensure_ascii=False)
+                   "factcheck": fact_report,
+                   "motion_library": {
+                       "seed": motion_seed,
+                       "cta": cta_event,
+                       "scene_variants": [sc.get("motion", {}) for sc in scenes],
+                       "sound_events": len(sfx_events),
+                   }}, f, indent=2, ensure_ascii=False)
 
     script_gen.log_topic_done(topic, DONE_FILE)
 

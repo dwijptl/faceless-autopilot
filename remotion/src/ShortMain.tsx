@@ -17,13 +17,12 @@ import {getStyle, StylePack} from './styles';
 import {
   CaptionsLayer,
   CinematicOverlay,
-  KineticText,
   ProgressBar,
   SceneVisual,
   SfxLayer,
-  StatCard,
   Watermark,
 } from './elements';
+import {AnimatedStatCard, CtaLayer, EditorialCard, KineticTitle, SceneFrame} from './motion-library';
 
 // Shorts: fast, mostly vertical slides + fades.
 const pickTransition = (i: number, style: StylePack): any => {
@@ -58,8 +57,9 @@ export const ShortMain: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
   m.scenes.forEach((scene, i) => {
     const sceneFrames = Math.round(scene.audioDuration * fps);
     const mode = scene.visualMode ?? 'broll';
-    const overlayScene = mode === 'kinetic' || mode === 'stat';
+    const overlayScene = mode === 'kinetic' || mode === 'stat' || mode === 'card';
     const isMap = mode === 'map' && scene.map && scene.map.world;
+    const motion = scene.motion ?? {};
     items.push(
       <TransitionSeries.Sequence key={`s-${scene.n}`} durationInFrames={sceneFrames}>
         {isMap ? (
@@ -77,11 +77,17 @@ export const ShortMain: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
         )}
         {scene.audioPath ? <Audio src={staticFile(scene.audioPath)} /> : null}
         {mode === 'kinetic' && scene.kineticText ? (
-          <KineticText text={scene.kineticText} style={style} />
+          <KineticTitle text={scene.kineticText} style={style}
+            variant={motion.kineticVariant} />
         ) : null}
         {mode === 'stat' && scene.stat && scene.stat.label ? (
-          <StatCard stat={scene.stat} style={style} />
+          <AnimatedStatCard stat={scene.stat} style={style}
+            variant={motion.statVariant} />
         ) : null}
+        {mode === 'card' && scene.card && scene.card.headline ? (
+          <EditorialCard card={scene.card} style={style} variant={motion.cardVariant} />
+        ) : null}
+        <SceneFrame variant={motion.frameVariant} style={style} sceneN={scene.n} />
       </TransitionSeries.Sequence>
     );
     if (i < m.scenes.length - 1) {
@@ -104,6 +110,7 @@ export const ShortMain: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
         yFrac={(m as {captionY?: number}).captionY ?? 0.62}
       />
       <CinematicOverlay />
+      <CtaLayer event={m.cta} style={style} fps={fps} />
       {m.watermarkPath ? (
         <Watermark src={m.watermarkPath} corner="tl"
           opacity={Math.max(m.watermarkOpacity ?? 0.08, 0.1)} />

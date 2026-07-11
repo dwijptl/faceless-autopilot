@@ -105,6 +105,12 @@ Each release `video-YYYY-MM-DD_HHMM` contains:
   of front-page vacation clips. Raw terms remain as recall fallback.
 - **Karaoke captions** — words appear as they're spoken, active word in
   brand amber, spring pop per word (documentary + kinetic packs).
+- **32-variant native motion library** — six stat cards, six kinetic-title
+  treatments, five editorial cards, six scene frames, five lower thirds and
+  four subscribe/bell CTAs rotate deterministically before repeating. The
+  matching 18-cue sound pack is synthesized at render time, so both libraries
+  are free and carry no marketplace-license dependency. See
+  [`docs/MOTION_LIBRARY.md`](docs/MOTION_LIBRARY.md).
 - **Human-writing rules** — banned stock phrases ("did you know", "क्या आप
   जानते हैं"…), enforced sentence rhythm, one vivid named fact per scene;
   optional Claude script engine via `ANTHROPIC_API_KEY`.

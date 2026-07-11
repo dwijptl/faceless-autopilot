@@ -4,7 +4,8 @@
   "description": "Remotion compositions for the faceless video pipeline",
   "scripts": {
     "studio": "remotion studio src/index.ts",
-    "render": "remotion render src/index.ts Main out.mp4"
+    "render": "remotion render src/index.ts Main out.mp4",
+    "gallery": "remotion render src/index.ts MotionGallery motion-gallery.mp4"
   },
   "dependencies": {
     "@remotion/cli": "4.0.464",

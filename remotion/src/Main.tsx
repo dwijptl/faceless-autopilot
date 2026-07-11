@@ -18,16 +18,21 @@ import {getStyle, StylePack} from './styles';
 import {
   CaptionsLayer,
   CinematicOverlay,
-  KineticText,
   LightLeak,
-  LowerThird,
   Outro,
   ProgressBar,
   SceneVisual,
   SfxLayer,
-  StatCard,
   Watermark,
 } from './elements';
+import {
+  AnimatedLowerThird,
+  AnimatedStatCard,
+  CtaLayer,
+  EditorialCard,
+  KineticTitle,
+  SceneFrame,
+} from './motion-library';
 
 // Deterministic transition choice, biased by the video's style pack.
 // Remotion's transition presentations are invariant generic types; this helper
@@ -80,8 +85,9 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
   m.scenes.forEach((scene, i) => {
     const sceneFrames = Math.round(scene.audioDuration * fps);
     const mode = scene.visualMode ?? 'broll';
-    const overlayScene = mode === 'kinetic' || mode === 'stat';
+    const overlayScene = mode === 'kinetic' || mode === 'stat' || mode === 'card';
     const isMap = mode === 'map' && scene.map && scene.map.world;
+    const motion = scene.motion ?? {};
     items.push(
       <TransitionSeries.Sequence key={`s-${scene.n}`} durationInFrames={sceneFrames}>
         {isMap ? (
@@ -99,14 +105,21 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
         )}
         {scene.audioPath ? <Audio src={staticFile(scene.audioPath)} /> : null}
         {mode === 'kinetic' && scene.kineticText ? (
-          <KineticText text={scene.kineticText} style={style} />
+          <KineticTitle text={scene.kineticText} style={style}
+            variant={motion.kineticVariant} />
         ) : null}
         {mode === 'stat' && scene.stat && scene.stat.label ? (
-          <StatCard stat={scene.stat} style={style} />
+          <AnimatedStatCard stat={scene.stat} style={style}
+            variant={motion.statVariant} />
+        ) : null}
+        {mode === 'card' && scene.card && scene.card.headline ? (
+          <EditorialCard card={scene.card} style={style} variant={motion.cardVariant} />
         ) : null}
         {!overlayScene && !isMap && scene.title ? (
-          <LowerThird title={scene.title} style={style} />
+          <AnimatedLowerThird title={scene.title} style={style}
+            variant={motion.lowerThirdVariant} index={scene.n} />
         ) : null}
+        <SceneFrame variant={motion.frameVariant} style={style} sceneN={scene.n} />
         {i > 0 ? <LightLeak seed={`scene-${scene.n}`} /> : null}
       </TransitionSeries.Sequence>
     );
@@ -135,6 +148,7 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
       <TransitionSeries>{items}</TransitionSeries>
       <CaptionsLayer captions={m.captions} style={style} />
       <CinematicOverlay />
+      <CtaLayer event={m.cta} style={style} fps={fps} />
       {m.watermarkPath ? (
         <Watermark src={m.watermarkPath} opacity={m.watermarkOpacity ?? 0.08} />
       ) : null}

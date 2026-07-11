@@ -17,3 +17,4 @@ def test_normalize_sets_safe_defaults():
     result = script_gen._normalize(script, 1)
     assert result["scenes"][0]["visual_mode"] == "broll"
     assert result["scenes"][0]["delivery"] == "hook"
+    assert result["scenes"][0]["card"] == {}

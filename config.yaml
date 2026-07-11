@@ -115,6 +115,15 @@ qc:
 maps:
   enabled: true            # animated map-zoom scenes for place-based topics
 
+motion_library:
+  enabled: true            # deterministic native Remotion motion-element library
+  cta_enabled: true        # one subtle subscribe + bell moment per video
+  cta_in_shorts: true      # compact CTA that stays clear of the loop ending
+  cta_seconds: 3.2
+  cta_short_seconds: 1.8
+  cta_title: "सब्सक्राइब करें"
+  cta_subtitle: "नई खोजें हर हफ्ते"
+
 captions:
   enabled: true
   max_chars: 30            # per caption line (Devanagari glyphs run wider)

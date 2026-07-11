@@ -16,6 +16,15 @@
     "title": "Test",
     "thumbText": "TEST",
     "thumbAiPath": null,
+    "motionSeed": "ci-smoke",
+    "cta": {
+      "start": 0.1,
+      "duration": 0.7,
+      "variant": "pill",
+      "title": "Subscribe",
+      "subtitle": "Weekly discoveries",
+      "compact": false
+    },
     "sfx": [],
     "musicPath": null,
     "musicVolume": 0,
@@ -26,7 +35,15 @@
       "visualMode": "broll",
       "kineticText": "",
       "stat": {},
+      "card": {},
       "map": {},
+      "motion": {
+        "statVariant": "glass",
+        "kineticVariant": "word-pop",
+        "cardVariant": "definition",
+        "frameVariant": "corners",
+        "lowerThirdVariant": "rail"
+      },
       "audioPath": null,
       "audioDuration": 1,
       "assets": []

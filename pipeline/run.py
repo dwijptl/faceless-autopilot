@@ -26,6 +26,7 @@ import assets as assets_mod         # noqa: E402
 import captions as captions_mod     # noqa: E402
 import factcheck                    # noqa: E402
 import mapgen                       # noqa: E402
+import motion as motion_mod         # noqa: E402
 import script_gen                   # noqa: E402
 import sfx as sfx_mod               # noqa: E402
 import tts as tts_mod               # noqa: E402
@@ -217,8 +218,11 @@ def main() -> None:
     with open(os.path.join(outdir, "captions.srt"), "w", encoding="utf-8") as f:
         f.write(srt)
 
-    # 4b) sound design + dedicated AI thumbnail --------------------------------
-    sfx_events = sfx_mod.plan_events(scenes, cfg, workdir)
+    # 4b) deterministic motion library + sound design + dedicated thumbnail ----
+    motion_seed = f"{script['title']}:{style}"
+    motion_mod.decorate_scenes(scenes, motion_seed)
+    cta_event = motion_mod.plan_cta(scenes, cfg, motion_seed, is_short=False)
+    sfx_events = sfx_mod.plan_events(scenes, cfg, workdir, cta_event)
     thumb_ai = None
     tp = (script.get("thumb_prompt") or "").strip()
     if tp:
@@ -246,6 +250,8 @@ def main() -> None:
         "title": script["title"],
         "thumbText": script.get("thumb_text", script["title"][:24]),
         "thumbAiPath": thumb_ai,
+        "motionSeed": motion_seed,
+        "cta": cta_event,
         "sfx": sfx_events,
         "musicPath": pick_music(workdir, cfg),
         "musicVolume": float(cfg["music"].get("volume", 0.12)),
@@ -258,7 +264,9 @@ def main() -> None:
             "visualMode": sc.get("visual_mode", "broll"),
             "kineticText": sc.get("kinetic_text", ""),
             "stat": sc.get("stat", {}) or {},
+            "card": sc.get("card", {}) or {},
             "map": sc.get("map_render") or {},
+            "motion": sc.get("motion") or {},
             "audioPath": os.path.basename(sc["audio_path"]),
             "audioDuration": round(sc["audio_duration"], 3),
             "assets": [{
@@ -357,7 +365,13 @@ Remotion. Brand: Terra Incognita.*
     with open(os.path.join(outdir, "run_summary.json"), "w", encoding="utf-8") as f:
         json.dump({"draft_release": draft_release, "voice_fallback": voice_fallback,
                    "voice": voice_line, "captions": caption_status,
-                   "factcheck": fact_report}, f, indent=2, ensure_ascii=False)
+                   "factcheck": fact_report,
+                   "motion_library": {
+                       "seed": motion_seed,
+                       "cta": cta_event,
+                       "scene_variants": [sc.get("motion", {}) for sc in scenes],
+                       "sound_events": len(sfx_events),
+                   }}, f, indent=2, ensure_ascii=False)
 
     script_gen.log_topic_done(topic, os.path.join(REPO_ROOT, "topics_done.txt"))
 

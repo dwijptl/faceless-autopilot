@@ -3,6 +3,9 @@ import {Composition} from 'remotion';
 import {Main} from './Main';
 import {ShortMain} from './ShortMain';
 import {Thumb} from './Thumb';
+import {MOTION_GALLERY_DURATION, MotionGallery} from './motion-library';
+import type {CtaEvent} from './motion-library';
+import {getStyle} from './styles';
 
 // A tiny placeholder manifest so the Studio can open without props.
 const FALLBACK = {
@@ -22,6 +25,8 @@ const FALLBACK = {
   title: 'Terra Incognita',
   thumbText: 'PREVIEW',
   thumbAiPath: null as string | null,
+  motionSeed: 'preview',
+  cta: null as CtaEvent | null,
   sfx: [] as {path: string; start: number; volume: number}[],
   musicPath: null as string | null,
   musicVolume: 0.12,
@@ -32,6 +37,7 @@ const FALLBACK = {
       title: 'Preview scene',
       visualMode: 'broll',
       kineticText: '',
+      card: {} as {kicker?: string; headline?: string; body?: string},
       stat: {} as {value?: number; suffix?: string; label?: string},
       map: {} as {
         world?: string;
@@ -39,6 +45,10 @@ const FALLBACK = {
         markerWorld?: number[];
         markerRegion?: number[];
         label?: string;
+      },
+      motion: {
+        statVariant: 'glass', kineticVariant: 'word-pop', cardVariant: 'definition',
+        frameVariant: 'corners', lowerThirdVariant: 'rail',
       },
       audioPath: null as string | null,
       audioDuration: 5,
@@ -118,6 +128,15 @@ export const Root: React.FC = () => {
         width={1280}
         height={720}
         defaultProps={{manifest: FALLBACK}}
+      />
+      <Composition
+        id="MotionGallery"
+        component={MotionGallery}
+        durationInFrames={MOTION_GALLERY_DURATION}
+        fps={30}
+        width={1920}
+        height={1080}
+        defaultProps={{style: getStyle('documentary')}}
       />
     </>
   );
