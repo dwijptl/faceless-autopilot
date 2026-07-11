@@ -323,8 +323,10 @@ jobs:
           git cherry-pick 02f174e6b03ab5f41aaf6400560b81478ac7e445
           git cherry-pick c44e47da41f37d3ee31eea3a4ba0db6c363e1307
           git cherry-pick b4c339163341c8c8507298bf62bd05c652683c78
-          git rm .github/workflows/publish-reliability.yml
-          git commit -m "Remove one-time reliability publisher"
+          git restore --source="$GITHUB_SHA" -- .github/workflows/make_video.yml .github/workflows/make_short.yml .github/workflows/publish-reliability.yml
+          git rm -f .github/workflows/ci.yml
+          git add .github/workflows/make_video.yml .github/workflows/make_short.yml
+          git commit -m "Defer workflow files to browser publish"
 
       - uses: actions/setup-python@v5
         with:
