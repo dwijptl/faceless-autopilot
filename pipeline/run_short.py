@@ -114,10 +114,14 @@ def main() -> None:
     fps = int(cfg["video"]["fps"])
     xfade = float(cfg["video"]["crossfade"])
     scenes, offset = [], 0.0
-    for sc in script["scenes"]:
+    short_cfg = cfg.get("short", {})
+    final_index = len(script["scenes"]) - 1
+    for index, sc in enumerate(script["scenes"]):
         wav = os.path.join(workdir, f"vo_s{sc['n']:02d}.wav")
+        tail_seconds = (float(short_cfg.get("loop_tail_seconds", 0.06))
+                        if index == final_index else 0.35)
         dur = tts_mod.synth_scene(sc["narration"], wav, cfg,
-                                  sc.get("delivery", "calm"))
+                                  sc.get("delivery", "calm"), tail_seconds=tail_seconds)
         scenes.append({**sc, "audio_path": wav, "audio_duration": dur,
                        "start": max(offset, 0.0)})
         offset += dur - xfade

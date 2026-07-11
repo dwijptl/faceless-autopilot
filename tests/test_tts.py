@@ -17,3 +17,15 @@ def test_sarvam_failure_sets_fallback_flag(monkeypatch, tmp_path):
            "channel": {"language": "hi-IN"}}
     tts.synth_scene("नमस्ते", str(tmp_path / "voice.wav"), cfg)
     assert tts.fallback_used()
+
+
+def test_tail_seconds_controls_scene_duration(monkeypatch, tmp_path):
+    monkeypatch.setattr(tts, "_synth_kokoro",
+                        lambda *args: np.ones(tts.SAMPLE_RATE, dtype=np.float32))
+    cfg = {"tts": {"engine": "kokoro", "speed": 1},
+           "channel": {"language": "hi-IN"}}
+    full = tts.synth_scene("x", str(tmp_path / "full.wav"), cfg,
+                           tail_seconds=0.35)
+    loop = tts.synth_scene("x", str(tmp_path / "loop.wav"), cfg,
+                           tail_seconds=0.06)
+    assert 0.28 < full - loop < 0.30

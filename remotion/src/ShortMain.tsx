@@ -36,7 +36,7 @@ const MusicTrack: React.FC<{m: Manifest}> = ({m}) => {
   const frame = useCurrentFrame();
   const {durationInFrames, fps} = useVideoConfig();
   if (!m.musicPath || m.musicVolume <= 0) return null;
-  const fadeF = Math.round(0.6 * fps); // quick fades keep the loop tight
+  const fadeF = Math.max(Math.round(0.15 * fps), 2); // nearly seamless replay boundary
   const vol =
     m.musicVolume *
     interpolate(

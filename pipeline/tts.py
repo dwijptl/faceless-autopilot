@@ -199,7 +199,7 @@ def _synth_kokoro(text: str, cfg: dict) -> np.ndarray:
 
 # ── public API ───────────────────────────────────────────────────────────
 def synth_scene(text: str, wav_path: str, cfg: dict,
-                delivery: str = "calm") -> float:
+                delivery: str = "calm", tail_seconds: float = 0.35) -> float:
     """Synthesize one scene's narration to wav_path. Returns duration (s).
     delivery: hook | calm | reveal | urgent (per-scene voice direction)."""
     global ENGINE_USED, FALLBACK_USED
@@ -223,10 +223,11 @@ def synth_scene(text: str, wav_path: str, cfg: dict,
         _engines.add("kokoro-82m")
     ENGINE_USED = " + ".join(sorted(_engines))
 
-    # dramatic beat before reveals + trailing breath before the next scene
+    # dramatic beat before reveals + configurable breath before the next scene
     pre = np.zeros(int(dlv.get("pre", 0.0) * SAMPLE_RATE), dtype=np.float32)
+    tail = max(0.0, min(float(tail_seconds), 2.0))
     audio = np.concatenate(
-        [pre, audio, np.zeros(int(0.35 * SAMPLE_RATE), dtype=np.float32)])
+        [pre, audio, np.zeros(int(tail * SAMPLE_RATE), dtype=np.float32)])
     peak = float(np.max(np.abs(audio))) or 1.0  # normalize to healthy loudness
     audio = audio * (0.89 / peak)
     sf.write(wav_path, audio, SAMPLE_RATE)
