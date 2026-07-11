@@ -8,8 +8,9 @@ music, renders a 1080p MP4 — and publishes everything to a
 **date-and-time-stamped GitHub Release**. Shorts run on the alternate days.
 
 ```
-topic (Gemini, auto) ─→ Hindi script (Gemini) ─→ voiceover (Sarvam bulbul:v3, YOUR cloned voice;
-        auto-fallback: Kokoro-82M Hindi, $0) ─→ b-roll (Pexels API) ─→ captions (auto-synced, Devanagari)
+topic (Gemini, auto) ─→ Hindi script (Gemini) ─→ grounded claim review ─→ voiceover
+        (Sarvam bulbul:v3, YOUR cloned voice; guarded Kokoro fallback) ─→ b-roll (Pexels API)
+        ─→ captions (Sarvam STT-aligned when available, estimated fallback; Devanagari)
         ─→ render (Remotion / FFmpeg) ─→ Release "video-2026-07-10_0630" { final.mp4 · captions.srt · thumbnail.jpg · script.json }
 ```
 
@@ -119,6 +120,12 @@ Each release `video-YYYY-MM-DD_HHMM` contains:
   (see its README); the weekly **Update Learnings** workflow digests them into
   `learnings.md`, which steers topic choice, hooks, pacing, length and
   thumbnail text on every subsequent video.
+- **Production safety gates** — fallback narration is clearly marked and
+  published only as a draft release; Hindi captions use Sarvam STT word
+  timestamps when available; factual claims are checked with grounded Google
+  Search before TTS; stock-video QC samples multiple points in each clip.
+- **Reviewer status** — every release includes `run_summary.json` and a prominent
+  metadata line showing voice, caption, fact-check and draft status.
 - **Terra Incognita brand kit** — `brand/` has the banner, avatar, and
   YouTube watermark to upload once in YouTube Studio → Customization; every
   video automatically carries the corner watermark, branded captions/lower
@@ -152,6 +159,8 @@ lives in the workflow files.
 |---|---|
 | Run fails at "Run pipeline" with missing key | Check all secrets exist with exact names |
 | Narration is NOT your voice | `SARVAM_API_KEY`/`SARVAM_SPEAKER` missing or out of credits — run **Test Voice** to see the exact error; check dashboard.sarvam.ai balance |
+| Release is a draft with REVIEW warning | A voice fallback or configured fact-check gate requested human review; read `run_summary.json`, fix the cause, and re-run |
+| Captions say estimated/mixed | Sarvam STT alignment was unavailable for one or more scenes; captions still use the safe timing estimate |
 | Sarvam 422 in the log | `SARVAM_SPEAKER` doesn't match bulbul:v3 — re-copy the cloned voice ID from the dashboard |
 | `Gemini call failed on all models` | Update `llm.model` in config.yaml to a current free-tier Flash model from ai.google.dev |
 | Hindi text shows as boxes (tofu) | Workflow installs `fonts-noto-core` — check that apt step succeeded |
