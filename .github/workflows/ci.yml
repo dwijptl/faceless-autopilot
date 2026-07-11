@@ -56,3 +56,11 @@ jobs:
           npx remotion still src/index.ts Thumb ../tests/fixtures/thumb.jpg --props ../tests/fixtures/props.json
           npx remotion render src/index.ts Main ../tests/fixtures/main.mp4 --props ../tests/fixtures/props.json --frames=0-15 --concurrency=1
           npx remotion render src/index.ts Short ../tests/fixtures/short.mp4 --props ../tests/fixtures/props.json --frames=0-15 --concurrency=1
+          npx remotion still src/index.ts MotionGallery /tmp/gallery-stat.jpg --frame=0
+          npx remotion still src/index.ts MotionGallery /tmp/gallery-stat-compare.jpg --frame=75
+          npx remotion still src/index.ts MotionGallery /tmp/gallery-stat-bars.jpg --frame=150
+          npx remotion still src/index.ts MotionGallery /tmp/gallery-title.jpg --frame=450
+          npx remotion still src/index.ts MotionGallery /tmp/gallery-card.jpg --frame=975
+          npx remotion still src/index.ts MotionGallery /tmp/gallery-frame.jpg --frame=1350
+          npx remotion still src/index.ts MotionGallery /tmp/gallery-lower-third.jpg --frame=1800
+          npx remotion still src/index.ts MotionGallery /tmp/gallery-cta.jpg --frame=2250
