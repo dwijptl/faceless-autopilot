@@ -9,6 +9,7 @@ import {
 } from 'remotion';
 import {BRAND, StylePack} from './styles';
 import {fontFamily} from './elements';
+import {GlassCard, GlassData} from './glass';
 
 export const MOTION_CATALOG = {
   stats: ['glass', 'split', 'radial', 'ticker', 'stamp', 'horizon'],
@@ -17,6 +18,7 @@ export const MOTION_CATALOG = {
   frames: ['corners', 'film', 'grid', 'scanner', 'focus', 'aperture'],
   lowerThirds: ['rail', 'pill', 'underline', 'locator', 'index'],
   ctas: ['pill', 'stamp', 'minimal', 'orbit'],
+  glass: ['fact', 'metric', 'location', 'chapter', 'reveal'],
 } as const;
 
 export type MotionSpec = {
@@ -25,6 +27,7 @@ export type MotionSpec = {
   cardVariant?: string;
   frameVariant?: string;
   lowerThirdVariant?: string;
+  glassVariant?: string;
 };
 
 export type StatData = {
@@ -583,6 +586,7 @@ const GALLERY: GalleryItem[] = [
   ...MOTION_CATALOG.frames.map((variant)=>({family:'FRAME',variant})),
   ...MOTION_CATALOG.lowerThirds.map((variant)=>({family:'LOWER THIRD',variant})),
   ...MOTION_CATALOG.ctas.map((variant)=>({family:'CTA',variant})),
+  ...MOTION_CATALOG.glass.map((variant)=>({family:'GLASS',variant})),
 ];
 
 export const MOTION_GALLERY_DURATION = GALLERY.length * 75;
@@ -594,6 +598,19 @@ const galleryStat = (variant: string): StatData => {
     {label:'उत्तर',value:28},{label:'मध्य',value:49},{label:'दक्षिण',value:36},
   ]};
   return {value:12742,suffix:' km',label:'एक असंभव लगने वाली दूरी'};
+};
+
+const galleryGlass = (variant: string): GlassData => {
+  if (variant === 'metric') return {kicker:'लवणता',value:35,suffix:'‰',
+    label:'औसत समुद्री लवणता',delta:12,deltaDirection:'down'};
+  if (variant === 'location') return {location:'मरियाना गर्त',
+    coordinates:'11.3°N · 142.2°E',headline:'प्रशांत महासागर'};
+  if (variant === 'chapter') return {chapter:'भाग 02',
+    headline:'पानी नीचे कहाँ जाता है?',body:'समुद्र की सबसे गहरी परतों में'};
+  if (variant === 'reveal') return {kicker:'अंतिम उत्तर',value:11034,suffix:' मीटर',
+    label:'सबसे गहरा ज्ञात बिंदु',body:'माउंट एवरेस्ट से भी अधिक गहरा'};
+  return {kicker:'गहराई',value:8848,suffix:' मीटर',
+    headline:'एवरेस्ट की पूरी ऊँचाई',body:'फिर भी यह तल तक नहीं पहुँचेगा।'};
 };
 
 export const MotionGallery: React.FC<{style: StylePack}> = ({style}) => (
@@ -609,6 +626,7 @@ export const MotionGallery: React.FC<{style: StylePack}> = ({style}) => (
         {item.family==='FRAME' ? <><div style={{position:'absolute',inset:180,background:`linear-gradient(135deg,${style.accent}22,${BRAND.panel})`,borderRadius:28}}/><SceneFrame variant={item.variant} style={style} sceneN={index+1}/></> : null}
         {item.family==='LOWER THIRD' ? <AnimatedLowerThird title="अज्ञात की सीमा" style={style} variant={item.variant} index={index+1}/> : null}
         {item.family==='CTA' ? <SubscribeBell event={{start:0,duration:2.5,variant:item.variant,title:'सब्सक्राइब करें',subtitle:'नई खोजें हर हफ्ते'}} style={style}/> : null}
+        {item.family==='GLASS' ? <GlassCard data={galleryGlass(item.variant)} style={style} variant={item.variant}/> : null}
       </AbsoluteFill>
     </Sequence>)}
   </AbsoluteFill>

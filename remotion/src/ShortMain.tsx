@@ -24,6 +24,7 @@ import {
 } from './elements';
 import {AnimatedStatCard, CtaLayer, EditorialCard, KineticTitle, SceneFrame} from './motion-library';
 import type {MotionSpec} from './motion-library';
+import {GlassCard} from './glass';
 
 // Shorts: fast, mostly vertical slides + fades.
 const pickTransition = (i: number, style: StylePack): any => {
@@ -58,7 +59,7 @@ export const ShortMain: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
   m.scenes.forEach((scene, i) => {
     const sceneFrames = Math.round(scene.audioDuration * fps);
     const mode = scene.visualMode ?? 'broll';
-    const overlayScene = mode === 'kinetic' || mode === 'stat' || mode === 'card';
+    const overlayScene = mode === 'kinetic' || mode === 'stat' || mode === 'card' || mode === 'glass';
     const isMap = mode === 'map' && scene.map && scene.map.world;
     const motion: MotionSpec = scene.motion ?? {};
     items.push(
@@ -87,6 +88,9 @@ export const ShortMain: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
         ) : null}
         {mode === 'card' && scene.card && scene.card.headline ? (
           <EditorialCard card={scene.card} style={style} variant={motion.cardVariant} />
+        ) : null}
+        {mode === 'glass' && scene.glass && (scene.glass.headline || scene.glass.label || scene.glass.location || scene.glass.chapter || scene.glass.value != null) ? (
+          <GlassCard data={scene.glass} style={style} variant={motion.glassVariant} />
         ) : null}
         <SceneFrame variant={motion.frameVariant} style={style} sceneN={scene.n} />
       </TransitionSeries.Sequence>

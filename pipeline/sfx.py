@@ -16,7 +16,16 @@ SOUND_CATALOG = (
     "whoosh_soft", "whoosh_fast", "whoosh_reverse", "riser", "hit",
     "sub_hit", "pop", "tick", "pulse", "chime", "bell", "sparkle",
     "glitch", "beep", "shutter", "page_turn", "rumble", "air",
+    "swell", "thud", "ui_blip", "sonar",
 )
+
+GLASS_SFX = {
+    "fact": "ui_blip",
+    "metric": "ui_blip",
+    "location": "sonar",
+    "chapter": "thud",
+    "reveal": "swell",
+}
 
 
 def _norm(x: np.ndarray, peak: float = 0.9) -> np.ndarray:
@@ -177,6 +186,42 @@ def _air(dur: float = 1.55) -> np.ndarray:
     return _norm(noise * env, 0.38)
 
 
+def _swell(dur: float = 1.65) -> np.ndarray:
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    phase = 2 * np.pi * np.cumsum(72 + 105 * (t / dur) ** 1.7) / SR
+    tone = (np.sin(phase) + .32 * np.sin(phase * 2.01))
+    air = _lowpass(np.random.default_rng(89).standard_normal(n), 3200)
+    env = np.sin(np.pi * np.clip(t / dur, 0, 1)) ** 1.35
+    return _norm((tone * .42 + air * .34) * env, .62)
+
+
+def _thud(dur: float = .85) -> np.ndarray:
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    phase = 2 * np.pi * np.cumsum(96 * np.exp(-t * 5.8) + 43) / SR
+    body = np.sin(phase) * np.exp(-t * 7.0)
+    knock = _lowpass(np.random.default_rng(97).standard_normal(n), 420)
+    knock *= np.exp(-t * 28)
+    return _norm(body + knock * .55, .72)
+
+
+def _ui_blip(dur: float = .32) -> np.ndarray:
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    tone = (np.sin(2 * np.pi * 720 * t) * np.exp(-t * 22)
+            + .42 * np.sin(2 * np.pi * 1080 * t) * np.exp(-t * 29))
+    return _norm(tone, .45)
+
+
+def _sonar(dur: float = 1.3) -> np.ndarray:
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    ping = np.sin(2 * np.pi * 980 * t) * np.exp(-t * 5.4)
+    halo = np.sin(2 * np.pi * 490 * t) * np.exp(-t * 3.2) * .26
+    return _norm(ping + halo, .56)
+
+
 def build_pack(workdir: str) -> dict:
     """Synthesize the pack into workdir. Returns {name: filename}."""
     soft = _whoosh(0.76, 7, 2100)
@@ -200,6 +245,10 @@ def build_pack(workdir: str) -> dict:
         "page_turn": _page_turn(),
         "rumble": _rumble(),
         "air": _air(),
+        "swell": _swell(),
+        "thud": _thud(),
+        "ui_blip": _ui_blip(),
+        "sonar": _sonar(),
     }
     out = {}
     for name, audio in pack.items():
@@ -265,6 +314,18 @@ def plan_events(scenes: list[dict], cfg: dict, workdir: str,
                            "volume": round(base * 0.58, 3)})
             events.append({"path": pack["chime"], "start": start + 0.60,
                            "volume": round(base * 0.36, 3)})
+        elif mode == "glass":
+            variant = str((sc.get("motion") or {}).get("glassVariant", "fact"))
+            cue = GLASS_SFX.get(variant, "ui_blip")
+            if variant == "reveal":
+                events.append({"path": pack["swell"],
+                               "start": max(start - 1.15, 0.0),
+                               "volume": round(base * .62, 3)})
+                events.append({"path": pack["thud"], "start": start + .08,
+                               "volume": round(base * .74, 3)})
+            else:
+                events.append({"path": pack[cue], "start": start + .10,
+                               "volume": round(base * .48, 3)})
         elif mode == "ai_image":
             events.append({"path": pack["shutter"], "start": start + 0.02,
                            "volume": round(base * 0.22, 3)})

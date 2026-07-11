@@ -5,6 +5,7 @@ import {ShortMain} from './ShortMain';
 import {Thumb} from './Thumb';
 import {MOTION_GALLERY_DURATION, MotionGallery} from './motion-library';
 import type {CtaEvent} from './motion-library';
+import type {GlassData} from './glass';
 import {getStyle} from './styles';
 
 // A tiny placeholder manifest so the Studio can open without props.
@@ -38,6 +39,7 @@ const FALLBACK = {
       visualMode: 'broll',
       kineticText: '',
       card: {} as {kicker?: string; headline?: string; body?: string},
+      glass: {} as GlassData,
       stat: {} as {
         value?: number; suffix?: string; label?: string; max?: number;
         baseline?: number; bars?: {label?: string; value?: number}[];
@@ -52,6 +54,7 @@ const FALLBACK = {
       motion: {
         statVariant: 'glass', kineticVariant: 'word-pop', cardVariant: 'definition',
         frameVariant: 'corners', lowerThirdVariant: 'rail',
+        glassVariant: 'fact',
       },
       audioPath: null as string | null,
       audioDuration: 5,

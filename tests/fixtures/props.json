@@ -36,13 +36,15 @@
       "kineticText": "",
       "stat": {},
       "card": {},
+      "glass": {},
       "map": {},
       "motion": {
         "statVariant": "glass",
         "kineticVariant": "word-pop",
         "cardVariant": "definition",
         "frameVariant": "corners",
-        "lowerThirdVariant": "rail"
+        "lowerThirdVariant": "rail",
+        "glassVariant": "fact"
       },
       "audioPath": null,
       "audioDuration": 1,

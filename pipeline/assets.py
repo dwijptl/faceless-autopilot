@@ -2,7 +2,7 @@
 
 Priority per scene (by visual_mode from the script):
   ai_image  -> FLUX (fal.ai) or Gemini image gen -> stock fallback
-  kinetic / stat / card -> one background asset (stock or AI) — overlays drawn in Remotion
+  kinetic / stat / card / glass -> one background asset (stock or AI) — overlays drawn in Remotion
   broll     -> Pexels video -> Pexels photo -> gradient card
 
 CINEMATIC QUERY SHAPING: raw search terms pull generic vacation-stock. Every
@@ -205,7 +205,7 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
 
     # AI-generated hero image (for ai_image scenes, or as bg for kinetic/stat)
     wants_ai = mode == "ai_image" or (
-        mode in ("kinetic", "stat", "card") and not scene.get("search_terms"))
+        mode in ("kinetic", "stat", "card", "glass") and not scene.get("search_terms"))
     prompt = (scene.get("ai_prompt") or "").strip()
     if wants_ai and prompt and ai_budget[0] > 0:
         ph = hashlib.sha1(prompt.lower().encode()).hexdigest()[:16]
@@ -218,8 +218,8 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
                 ai_budget[0] -= 1
                 assets.append({"path": path, "kind": "image", "ai": True})
 
-    # kinetic/stat scenes need just 1-2 background assets (overlay carries them)
-    if mode in ("kinetic", "stat", "card"):
+    # Overlay scenes need one strong background; the graphic carries the beat.
+    if mode in ("kinetic", "stat", "card", "glass"):
         if not assets:
             stock, _ = _stock_videos(scene, min(need_seconds, 10), outdir, cfg,
                                      pexels_key, used, max_clips=1,

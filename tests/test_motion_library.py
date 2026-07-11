@@ -5,7 +5,7 @@ import sfx
 
 
 def _scenes(count=8):
-    modes = ["broll", "stat", "kinetic", "map", "ai_image", "broll", "stat", "kinetic"]
+    modes = ["broll", "stat", "kinetic", "map", "glass", "broll", "stat", "kinetic"]
     return [{"n": i + 1, "start": i * 4.0, "audio_duration": 4.2,
              "visual_mode": modes[i % len(modes)]} for i in range(count)]
 
@@ -15,7 +15,7 @@ def test_motion_variants_cycle_before_repeating():
     motion.decorate_scenes(scenes, "video-title:documentary")
     assert len({s["motion"]["frameVariant"] for s in scenes[:6]}) == 6
     assert all(set(s["motion"]) == {"statVariant", "kineticVariant", "cardVariant",
-                                    "frameVariant", "lowerThirdVariant"}
+                                    "frameVariant", "lowerThirdVariant", "glassVariant"}
                for s in scenes)
 
     for mode, key, count in (
@@ -34,6 +34,18 @@ def test_variant_counters_ignore_unrelated_scenes():
     scenes.append({"n": 8, "visual_mode": "stat"})
     motion.decorate_scenes(scenes, "spaced-stats")
     assert scenes[0]["motion"]["statVariant"] != scenes[-1]["motion"]["statVariant"]
+
+
+def test_glass_selection_matches_scene_data():
+    scenes = [
+        {"visual_mode": "glass", "glass": {"location": "x", "coordinates": "1N"}},
+        {"visual_mode": "glass", "glass": {"value": 42}},
+        {"visual_mode": "glass", "glass": {"chapter": "भाग 2"}},
+        {"visual_mode": "glass", "delivery": "reveal", "glass": {"headline": "x"}},
+    ]
+    motion.decorate_scenes(scenes, "semantic-glass")
+    assert [s["motion"]["glassVariant"] for s in scenes] == [
+        "location", "metric", "chapter", "reveal"]
 
 
 def test_cta_is_planned_inside_a_scene_for_both_formats():
@@ -61,5 +73,5 @@ def test_sound_pack_is_complete_and_events_use_scene_roles(tmp_path):
     events = sfx.plan_events(scenes, cfg, str(tmp_path), cta)
     used = {event["path"] for event in events}
     for expected in ("sfx_bell.wav", "sfx_tick.wav", "sfx_pulse.wav",
-                     "sfx_sparkle.wav", "sfx_glitch.wav"):
+                     "sfx_sparkle.wav", "sfx_glitch.wav", "sfx_ui_blip.wav"):
         assert expected in used

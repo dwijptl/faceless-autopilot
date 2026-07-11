@@ -14,6 +14,7 @@ CARD_VARIANTS = ("definition", "quote", "split", "timeline", "warning")
 FRAME_VARIANTS = ("corners", "film", "grid", "scanner", "focus", "aperture")
 LOWER_THIRD_VARIANTS = ("rail", "pill", "underline", "locator", "index")
 CTA_VARIANTS = ("pill", "stamp", "minimal", "orbit")
+GLASS_VARIANTS = ("fact", "metric", "location", "chapter", "reveal")
 
 
 def _offset(seed: str, family: str, size: int) -> int:
@@ -25,9 +26,24 @@ def _pick_cycle(items: tuple[str, ...], seed: str, family: str, index: int) -> s
     return items[(_offset(seed, family, len(items)) + index) % len(items)]
 
 
+def _pick_glass(scene: dict, seed: str, index: int) -> str:
+    """Prefer a layout that matches the data, then fall back to seeded variety."""
+    data = scene.get("glass") if isinstance(scene.get("glass"), dict) else {}
+    if data.get("coordinates") or data.get("location"):
+        return "location"
+    if str(scene.get("delivery", "")).lower() == "reveal":
+        return "reveal"
+    if data.get("chapter"):
+        return "chapter"
+    if data.get("value") is not None:
+        return "metric"
+    return _pick_cycle(("fact", "chapter"), seed, "glass", index)
+
+
 def decorate_scenes(scenes: list[dict], seed: str) -> None:
     """Attach a complete variant set to every scene, mutating scenes in place."""
-    use_index = {"stat": 0, "kinetic": 0, "card": 0, "lower-third": 0}
+    use_index = {"stat": 0, "kinetic": 0, "card": 0, "glass": 0,
+                 "lower-third": 0}
     for index, scene in enumerate(scenes):
         mode = str(scene.get("visual_mode", "broll"))
         scene["motion"] = {
@@ -40,10 +56,11 @@ def decorate_scenes(scenes: list[dict], seed: str) -> None:
             "frameVariant": _pick_cycle(FRAME_VARIANTS, seed, "frame", index),
             "lowerThirdVariant": _pick_cycle(
                 LOWER_THIRD_VARIANTS, seed, "lower-third", use_index["lower-third"]),
+            "glassVariant": _pick_glass(scene, seed, use_index["glass"]),
         }
-        if mode in ("stat", "kinetic", "card"):
+        if mode in ("stat", "kinetic", "card", "glass"):
             use_index[mode] += 1
-        if mode not in ("stat", "kinetic", "card", "map"):
+        if mode not in ("stat", "kinetic", "card", "glass", "map"):
             use_index["lower-third"] += 1
 
 

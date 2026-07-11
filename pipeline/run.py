@@ -265,6 +265,7 @@ def main() -> None:
             "kineticText": sc.get("kinetic_text", ""),
             "stat": sc.get("stat", {}) or {},
             "card": sc.get("card", {}) or {},
+            "glass": sc.get("glass", {}) or {},
             "map": sc.get("map_render") or {},
             "motion": sc.get("motion") or {},
             "audioPath": os.path.basename(sc["audio_path"]),

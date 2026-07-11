@@ -216,7 +216,7 @@ def _ai_max(cfg: dict) -> int:
     return int(aicfg.get("max_per_video", 2))
 
 
-VALID_MODES = ("broll", "ai_image", "kinetic", "stat", "card", "map")
+VALID_MODES = ("broll", "ai_image", "kinetic", "stat", "card", "map", "glass")
 
 
 def _num_or_none(value):
@@ -258,6 +258,31 @@ def _normalize_stat(raw) -> dict:
     return result
 
 
+def _normalize_glass(raw) -> dict:
+    """Bound the data contract consumed by the liquid-glass renderer."""
+    data = raw if isinstance(raw, dict) else {}
+    result = {
+        "kicker": str(data.get("kicker", ""))[:32],
+        "headline": str(data.get("headline", ""))[:90],
+        "body": str(data.get("body", ""))[:130],
+        "suffix": str(data.get("suffix", ""))[:14],
+        "label": str(data.get("label", ""))[:90],
+        "location": str(data.get("location", ""))[:60],
+        "coordinates": str(data.get("coordinates", ""))[:36],
+        "chapter": str(data.get("chapter", ""))[:24],
+    }
+    value = _num_or_none(data.get("value"))
+    delta = _num_or_none(data.get("delta"))
+    if value is not None:
+        result["value"] = value
+    if delta is not None:
+        result["delta"] = delta
+    direction = str(data.get("delta_direction", data.get("deltaDirection", ""))).lower()
+    if direction in ("up", "down", "flat"):
+        result["deltaDirection"] = direction
+    return result
+
+
 def _normalize(script: dict, min_scenes: int) -> dict:
     """Validate + default-fill a script dict. Raises on structural problems."""
     assert isinstance(script["scenes"], list) and len(script["scenes"]) >= min_scenes
@@ -270,6 +295,7 @@ def _normalize(script: dict, min_scenes: int) -> dict:
         s.setdefault("ai_prompt", "")
         s.setdefault("kinetic_text", "")
         s["stat"] = _normalize_stat(s.get("stat"))
+        s["glass"] = _normalize_glass(s.get("glass"))
         s.setdefault("card", {})
         s.setdefault("map", {})
         d = str(s.get("delivery", "calm")).lower().strip()
@@ -306,6 +332,12 @@ DRAFT:
 {json.dumps(script, ensure_ascii=False)}"""
     try:
         revised = _normalize(_parse_json(_llm(prompt, cfg, api_key)), min_scenes)
+        # The critique edits words, not factual display payloads. Preserve the
+        # first pass's structured visual data so a rewrite cannot silently turn
+        # a stat/glass/map scene into an empty overlay.
+        for before, after in zip(script["scenes"], revised["scenes"]):
+            for field in ("stat", "card", "glass", "map"):
+                after[field] = before.get(field, {})
         revised["topic"] = script.get("topic", "")
         print("[script] critique pass applied")
         return revised
@@ -396,13 +428,14 @@ Write a scene-segmented script and return ONLY valid JSON with this exact shape:
       "n": 1,
       "title": "3-6 word scene title",
       "narration": "60-150 words of spoken narration",
-      "visual_mode": "broll | ai_image | kinetic | stat | card | map",
+      "visual_mode": "broll | ai_image | kinetic | stat | card | map | glass",
       "delivery": "hook | calm | reveal | urgent",
       "search_terms": ["stock video search term", "alternative term", "broader fallback term"],
       "ai_prompt": "detailed text-to-image prompt (only when visual_mode is ai_image, else empty string)",
       "kinetic_text": "3-6 word punch phrase (only when visual_mode is kinetic, else empty string)",
       "stat": {{"value": 0, "suffix": "", "label": "", "max": null, "baseline": null, "bars": [{{"label": "short label", "value": 0}}]}},
       "card": {{"kicker": "short category", "headline": "5-10 word headline", "body": "one concise explanatory sentence"}},
+      "glass": {{"kicker": "short category", "headline": "main Hindi line", "body": "one short support line", "value": null, "suffix": "", "label": "", "delta": null, "delta_direction": "up | down | flat", "location": "", "coordinates": "", "chapter": ""}},
       "map": {{"lat": 0.0, "lon": 0.0, "label": ""}}
     }}
   ]
@@ -435,6 +468,10 @@ Visual mode rules (variety is the goal — videos must not feel stock-only):
 - 0-2 scenes are "card": use a concise editorial definition, warning,
   comparison, quotation or timeline beat when text explains the idea better
   than generic stock. Fill card.kicker/headline/body; keep body under 18 words.
+- EXACTLY 1 scene is "glass": a premium smoked liquid-glass information beat.
+  Use value/suffix/label for a metric, location/coordinates for a place,
+  chapter/headline for an act break, or headline/body for a fact. Reserve the
+  biggest reveal for delivery="reveal"; the renderer selects the matching layout.
 - Every scene still needs search_terms as fallback. Concrete visual nouns only,
   and every term must belong to the topic's own visual world — never
   metaphorical/studio/commercial imagery (no drinks, food, offices, product
@@ -495,12 +532,13 @@ Return ONLY valid JSON:
       "n": 1,
       "title": "2-4 word label",
       "narration": "8-30 words",
-      "visual_mode": "broll | ai_image | kinetic | stat | card",
+      "visual_mode": "broll | ai_image | kinetic | stat | card | map | glass",
       "search_terms": ["concrete visual term", "alternative", "broader fallback"],
       "ai_prompt": "text-to-image prompt (only for ai_image, else empty)",
       "kinetic_text": "3-6 word punch phrase (only for kinetic, else empty)",
       "stat": {{"value": 0, "suffix": "", "label": "", "max": null, "baseline": null, "bars": [{{"label": "short label", "value": 0}}]}},
-      "card": {{"kicker": "category", "headline": "short headline", "body": "under 12 words"}}
+      "card": {{"kicker": "category", "headline": "short headline", "body": "under 12 words"}},
+      "glass": {{"kicker": "category", "headline": "short Hindi line", "body": "under 10 words", "value": null, "suffix": "", "label": "", "delta": null, "delta_direction": "up | down | flat", "location": "", "coordinates": "", "chapter": ""}}
     }}
   ]
 }}
@@ -528,6 +566,8 @@ Shorts rules:
   bare value/suffix/label for the original punchy big-number treatment.
 - 0-1 "card" scene may replace a broll scene when a definition, warning or
   comparison communicates the idea faster. Keep all card text extremely short.
+- 0-1 "glass" scene may replace a stat/card beat for the hook or payoff. Use
+  only one focal number or one short fact; never stack multiple facts in it.
 - SEARCH TERM DISCIPLINE (footage relevance depends on this):
   * Every term must belong to the TOPIC'S OWN VISUAL WORLD. If the topic is
     polar, terms are "glacier calving aerial", "arctic tundra", "ice sheet
