@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    paths:
+      - 'pipeline/**'
+      - 'remotion/**'
+      - 'config.yaml'
+      - 'requirements*'
+      - 'tests/**'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    paths:
+      - 'pipeline/**'
+      - 'remotion/**'
+      - 'config.yaml'
+      - 'requirements*'
+      - 'tests/**'
+      - '.github/workflows/ci.yml'
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install test dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Unit tests
+        run: pytest -q
+      - name: Compile Python
+        run: python -m compileall -q pipeline
+
+  remotion:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        working-directory: remotion
+        run: npm install --no-audit --no-fund
+      - name: Typecheck and list compositions
+        working-directory: remotion
+        run: |
+          npx tsc --noEmit
+          npx remotion compositions src/index.ts
+      - name: Render smoke test
+        working-directory: remotion
+        run: |
+          npx remotion browser ensure
+          npx remotion still src/index.ts Thumb ../tests/fixtures/thumb.jpg --props ../tests/fixtures/props.json
+          npx remotion render src/index.ts Main ../tests/fixtures/main.mp4 --props ../tests/fixtures/props.json --frames=0-15 --concurrency=1
+          npx remotion render src/index.ts Short ../tests/fixtures/short.mp4 --props ../tests/fixtures/props.json --frames=0-15 --concurrency=1
