@@ -1,9 +1,7 @@
-"""Stage 4a — captions synced to the voiceover.
+"""Stage 4a — captions aligned to the narration when word timings exist.
 
-We know each scene's exact narration text and exact audio duration, so caption
-timing is allocated proportionally by character count within each scene. This
-is deterministic, needs no extra models, and tracks the voice closely because
-Kokoro reads at a steady rate.
+Sarvam STT word timings are preferred. The character-rate estimate remains a
+safe fallback when alignment is unavailable or does not match the script.
 """
 
 
@@ -18,6 +16,36 @@ def _chunks(text: str, max_chars: int) -> list[str]:
     if cur:
         out.append(cur)
     return out
+
+
+def _aligned_events(sc: dict, chunks: list[str]) -> list[tuple] | None:
+    """Make caption-line timings from scene-relative ``word_times``.
+
+    A transcript can normalize Hindi numbers or punctuation, so accept timing
+    only when its token count is close to the intended narration. Captions keep
+    the authored text while borrowing the actual spoken timing.
+    """
+    timings = sc.get("word_times") or []
+    wanted = sc.get("narration", "").split()
+    if not timings or not wanted:
+        return None
+    if not 0.80 <= len(timings) / len(wanted) <= 1.20:
+        return None
+
+    out, idx = [], 0
+    for chunk in chunks:
+        count = len(chunk.split())
+        if count <= 0 or idx + count > len(timings):
+            return None
+        first, last = timings[idx], timings[idx + count - 1]
+        try:
+            start = sc["start"] + max(float(first[1]), 0.0)
+            end = sc["start"] + max(float(last[2]), float(first[1]) + 0.05)
+        except (IndexError, TypeError, ValueError):
+            return None
+        out.append((start, min(end, sc["start"] + sc["audio_duration"]), chunk))
+        idx += count
+    return out if idx <= len(timings) else None
 
 
 def _ts(t: float) -> str:
@@ -37,6 +65,10 @@ def build_captions(scenes: list[dict], max_chars: int) -> tuple[list[tuple], str
     for sc in scenes:
         chunks = _chunks(sc["narration"], max_chars)
         if not chunks:
+            continue
+        aligned = _aligned_events(sc, chunks)
+        if aligned is not None:
+            events.extend(aligned)
             continue
         total_chars = sum(len(c) for c in chunks)
         speakable = max(sc["audio_duration"] - 0.35, 0.5)  # minus trailing pause

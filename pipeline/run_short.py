@@ -18,12 +18,15 @@ import yaml
 
 sys.path.insert(0, os.path.dirname(__file__))
 import analytics as analytics_mod   # noqa: E402
+import align                         # noqa: E402
 import assets as assets_mod         # noqa: E402
 import captions as captions_mod     # noqa: E402
+import factcheck                    # noqa: E402
 import mapgen                       # noqa: E402
 import script_gen                   # noqa: E402
 import sfx as sfx_mod               # noqa: E402
 import tts as tts_mod               # noqa: E402
+import vision_qc                    # noqa: E402
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REMOTION_DIR = os.path.join(REPO_ROOT, "remotion")
@@ -68,6 +71,7 @@ def short_cfg(cfg: dict) -> dict:
 
 def main() -> None:
     t0 = time.time()
+    tts_mod.reset_run_state()
     with open(os.path.join(REPO_ROOT, "config.yaml"), encoding="utf-8") as f:
         base_cfg = yaml.safe_load(f)
     cfg = short_cfg(base_cfg)
@@ -101,6 +105,7 @@ def main() -> None:
     # 1) topic + short script ------------------------------------------------
     topic = script_gen.pick_topic(cfg, gemini_key, DONE_FILE, learnings)
     script = script_gen.generate_short_script(cfg, topic, gemini_key, learnings)
+    fact_report = factcheck.check_script(script, cfg, gemini_key)
     with open(os.path.join(outdir, "script.json"), "w", encoding="utf-8") as f:
         json.dump(script, f, indent=2, ensure_ascii=False)
 
@@ -119,6 +124,17 @@ def main() -> None:
               f"/{sc.get('delivery', 'calm')})")
     scenes[0]["start"] = 0.0
     print(f"[tts] {tts_mod.usage_summary()}")
+    voice_fallback = (str(cfg.get("tts", {}).get("engine", "")).lower() == "sarvam"
+                      and tts_mod.fallback_used())
+    aligned_scenes = 0
+    if cfg.get("captions", {}).get("align", True):
+        for sc in scenes:
+            sc["word_times"] = align.scene_word_times(sc, cfg)
+            aligned_scenes += int(bool(sc["word_times"]))
+    caption_status = (f"aligned (Sarvam STT, {aligned_scenes}/{len(scenes)} scenes)"
+                      if aligned_scenes == len(scenes) else
+                      (f"mixed ({aligned_scenes}/{len(scenes)} scenes aligned)"
+                       if aligned_scenes else "estimated (heuristic)"))
 
     # 2b) map scenes (portrait) — fail -> b-roll
     if cfg.get("maps", {}).get("enabled", True):
@@ -142,6 +158,7 @@ def main() -> None:
     # 3) portrait assets (shared never-repeat log) -----------------------------
     log_path = os.path.join(REPO_ROOT, "assets_used.json")
     usage_log = assets_mod.load_usage_log(log_path)
+    vision_qc.begin_run(cfg)
     used: set = set(usage_log["pexels"])
     used_prompts: set = set(usage_log["prompts"])
     ai_budget = [int(cfg["ai_images"].get("max_per_video", 1))]
@@ -228,7 +245,19 @@ def main() -> None:
 
     # 7) metadata ---------------------------------------------------------------
     voice_line = tts_mod.ENGINE_USED or "unknown"
+    fact_line = factcheck.markdown(fact_report)
+    fact_requires_review = (bool(cfg.get("factcheck", {}).get("gate", False))
+                            and fact_report.get("unsupported", 0) > 0)
+    draft_release = voice_fallback or fact_requires_review
+    status_voice = "⚠️ FALLBACK — DO NOT PUBLISH" if voice_fallback else "OK (cloned)"
+    status_fact = (f"⚠️ REVIEW CLAIMS ({fact_report.get('unsupported', 0)} unsupported)"
+                   if fact_requires_review else fact_report.get("status", "unknown"))
+    voice_banner = ("> ⚠️ **VOICE FALLBACK — DO NOT PUBLISH.** This run used Kokoro, "
+                    "not your cloned Sarvam voice. Re-run when Sarvam is available.\n\n"
+                    if voice_fallback else "")
     meta = f"""## {script['title']}
+
+{voice_banner}**Reliability:** Voice: {status_voice} | Captions: {caption_status} | Fact-check: {status_fact}
 
 **SHORT** · {duration:.0f}s · {len(scenes)} scenes · style: {style} ·
 voice: {voice_line} · run {stamp}
@@ -240,6 +269,10 @@ voice: {voice_line} · run {stamp}
 ### Tags
 
 {', '.join(script.get('tags', []))}
+
+### Reliability report
+
+{fact_line}
 
 ### Checklist
 
@@ -255,6 +288,11 @@ voice: {voice_line} · run {stamp}
     with open(os.path.join(outdir, "metadata.md"), "w", encoding="utf-8") as f:
         f.write(meta)
 
+    with open(os.path.join(outdir, "run_summary.json"), "w", encoding="utf-8") as f:
+        json.dump({"draft_release": draft_release, "voice_fallback": voice_fallback,
+                   "voice": voice_line, "captions": caption_status,
+                   "factcheck": fact_report}, f, indent=2, ensure_ascii=False)
+
     script_gen.log_topic_done(topic, DONE_FILE)
 
     gh_out = os.environ.get("GITHUB_OUTPUT")
@@ -262,10 +300,13 @@ voice: {voice_line} · run {stamp}
         safe_title = script["title"].replace('"', "'").replace("\n", " ")
         with open(gh_out, "a", encoding="utf-8") as f:
             f.write(f"stamp={stamp}\ndir={os.path.relpath(outdir, os.getcwd())}\n"
-                    f"title={safe_title}\n")
+                    f"title={safe_title}\nvoice_fallback={str(voice_fallback).lower()}\n"
+                    f"draft_release={str(draft_release).lower()}\n")
 
     print(f"=== Short done in {(time.time() - t0) / 60:.1f} min -> {final_path} "
           f"({duration:.0f}s, style={style}) ===")
+    if voice_fallback and cfg.get("tts", {}).get("fail_on_fallback", False):
+        raise RuntimeError("Sarvam failed; artifacts were produced but publishing is blocked")
 
 
 if __name__ == "__main__":

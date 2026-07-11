@@ -42,6 +42,7 @@ tts:
   speed: 0.95              # pace for BOTH engines (Sarvam pace / Kokoro speed)
   voice: "hm_omega"        # Kokoro fallback voice (Hindi): hf_alpha, hf_beta,
                            # hm_omega, hm_psi
+  fail_on_fallback: false  # true = fail workflow after preserving a draft for inspection
 
 llm:
   provider: "auto"         # "auto" = Claude for scripts when ANTHROPIC_API_KEY
@@ -108,6 +109,8 @@ sfx:                       # synthesized sound design (whoosh/riser/hit)
 qc:
   visual_check: true       # Gemini vision sanity-checks every stock clip
                            # (free tier; fail-open — never blocks a run)
+  frames: 3                # sample 20/50/80% of each stock clip, not just one frame
+  max_requests_per_video: 20  # hard cost/rate-limit ceiling for vision QC
 
 maps:
   enabled: true            # animated map-zoom scenes for place-based topics
@@ -116,3 +119,10 @@ captions:
   enabled: true
   max_chars: 30            # per caption line (Devanagari glyphs run wider)
   font_size: 58
+  align: true              # Sarvam STT word timestamps; heuristic fallback on error
+  align_window_seconds: 25 # Sarvam REST requests stay under its short-audio limit
+
+factcheck:
+  enabled: true            # Gemini Google Search review before TTS
+  max_claims: 8            # keeps grounded requests cheap and focused
+  gate: false              # true = claims marked unsupported produce a draft release

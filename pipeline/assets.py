@@ -58,8 +58,8 @@ def load_usage_log(path: str) -> dict:
 
 def save_usage_log(path: str, log: dict) -> None:
     # keep the file bounded (~4000 most recent entries each)
-    log["pexels"] = log["pexels"][-4000:]
-    log["prompts"] = log["prompts"][-4000:]
+    log["pexels"] = list(dict.fromkeys(log["pexels"]))[-4000:]
+    log["prompts"] = list(dict.fromkeys(log["prompts"]))[-4000:]
     with open(path, "w", encoding="utf-8") as f:
         json.dump(log, f, indent=0)
 

@@ -28,6 +28,7 @@ ENGINE_USED = "none"       # run.py reports this in the release notes
 _engines: set = set()
 _sarvam_chars = 0          # cost telemetry (₹ estimate in usage_summary)
 _kokoro = None
+FALLBACK_USED = False       # never silently present a fallback run as cloned voice
 
 # Per-scene voice direction: how a human narrator would deliver it.
 # pace_mul multiplies cfg tts.speed; pre = seconds of silence BEFORE the
@@ -201,7 +202,7 @@ def synth_scene(text: str, wav_path: str, cfg: dict,
                 delivery: str = "calm") -> float:
     """Synthesize one scene's narration to wav_path. Returns duration (s).
     delivery: hook | calm | reveal | urgent (per-scene voice direction)."""
-    global ENGINE_USED
+    global ENGINE_USED, FALLBACK_USED
     dlv = DELIVERY.get(str(delivery).lower().strip(), DELIVERY["calm"])
     engine = str(cfg.get("tts", {}).get("engine", "sarvam")).lower()
     audio = None
@@ -212,6 +213,7 @@ def synth_scene(text: str, wav_path: str, cfg: dict,
         except Exception as e:
             if os.environ.get("TTS_NO_FALLBACK", "").strip() == "1":
                 raise
+            FALLBACK_USED = True
             print(f"[tts] SARVAM FAILED -> Kokoro fallback. Reason: {e}")
     if audio is None:
         kcfg = dict(cfg)
@@ -229,6 +231,20 @@ def synth_scene(text: str, wav_path: str, cfg: dict,
     audio = audio * (0.89 / peak)
     sf.write(wav_path, audio, SAMPLE_RATE)
     return len(audio) / SAMPLE_RATE
+
+
+def fallback_used() -> bool:
+    """Whether this run used a non-primary voice after a Sarvam failure."""
+    return FALLBACK_USED
+
+
+def reset_run_state() -> None:
+    """Reset module telemetry when a process intentionally runs more than once."""
+    global ENGINE_USED, FALLBACK_USED, _sarvam_chars
+    ENGINE_USED = "none"
+    FALLBACK_USED = False
+    _sarvam_chars = 0
+    _engines.clear()
 
 
 def usage_summary() -> str:
