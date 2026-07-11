@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+out/
+node_modules/
+remotion/node_modules/
+npm-debug.log*

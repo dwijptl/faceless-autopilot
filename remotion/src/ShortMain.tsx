@@ -26,7 +26,7 @@ import {
 } from './elements';
 
 // Shorts: fast, mostly vertical slides + fades.
-const pickTransition = (i: number, style: StylePack) => {
+const pickTransition = (i: number, style: StylePack): any => {
   const r = random(`str-${style.name}-${i}`);
   if (r < 0.4) return slide({direction: 'from-bottom'});
   if (r < 0.6) return slide({direction: 'from-right'});

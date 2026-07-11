@@ -1,0 +1,35 @@
+{
+  "manifest": {
+    "fps": 30,
+    "width": 1920,
+    "height": 1080,
+    "xfadeFrames": 6,
+    "style": "documentary",
+    "accent": "#FFB020",
+    "progressBar": false,
+    "brandName": "TERRA INCOGNITA",
+    "brandTagline": "Test",
+    "watermarkPath": null,
+    "watermarkOpacity": 0.08,
+    "outroSeconds": 1,
+    "captionY": 0.78,
+    "title": "Test",
+    "thumbText": "TEST",
+    "thumbAiPath": null,
+    "sfx": [],
+    "musicPath": null,
+    "musicVolume": 0,
+    "captions": [],
+    "scenes": [{
+      "n": 1,
+      "title": "Test scene",
+      "visualMode": "broll",
+      "kineticText": "",
+      "stat": {},
+      "map": {},
+      "audioPath": null,
+      "audioDuration": 1,
+      "assets": []
+    }]
+  }
+}

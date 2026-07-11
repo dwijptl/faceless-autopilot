@@ -30,7 +30,9 @@ import {
 } from './elements';
 
 // Deterministic transition choice, biased by the video's style pack.
-const pickTransition = (i: number, style: StylePack) => {
+// Remotion's transition presentations are invariant generic types; this helper
+// intentionally mixes slide, fade and wipe presentations at runtime.
+const pickTransition = (i: number, style: StylePack): any => {
   const r = random(`tr-${style.name}-${i}`);
   switch (style.transitionBias) {
     case 'slides':
