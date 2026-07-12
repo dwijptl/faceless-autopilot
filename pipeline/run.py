@@ -27,6 +27,7 @@ import captions as captions_mod     # noqa: E402
 import factcheck                    # noqa: E402
 import mapgen                       # noqa: E402
 import motion as motion_mod         # noqa: E402
+import postprocess                  # noqa: E402
 import script_gen                   # noqa: E402
 import sfx as sfx_mod               # noqa: E402
 import tts as tts_mod               # noqa: E402
@@ -48,13 +49,15 @@ def probe_duration(path: str) -> float:
         return 6.0
 
 
-def pick_music(workdir: str, cfg: dict) -> str | None:
+def pick_music(workdir: str, cfg: dict, seed: str, style: str) -> str | None:
     if float(cfg["music"].get("volume", 0)) <= 0:
         return None
     tracks = []
     for ext in ("mp3", "wav", "m4a", "ogg"):
         tracks += glob.glob(os.path.join(REPO_ROOT, "music", f"*.{ext}"))
     if not tracks:
+        if cfg["music"].get("auto_ambient", True):
+            return sfx_mod.build_ambient_bed(workdir, seed, style, is_short=False)
         print("[music] no files in music/ — rendering without music")
         return None
     track = random.choice(sorted(tracks))
@@ -239,6 +242,7 @@ def main() -> None:
         "width": int(cfg["video"]["width"]),
         "height": int(cfg["video"]["height"]),
         "xfadeFrames": max(int(round(xfade * fps)), 1),
+        "maxShotSeconds": float(cfg["video"].get("max_shot_seconds", 5)),
         "style": style,
         "accent": rcfg.get("accent", "#FFB020"),
         "progressBar": bool(rcfg.get("progress_bar", True)),
@@ -253,13 +257,15 @@ def main() -> None:
         "motionSeed": motion_seed,
         "cta": cta_event,
         "sfx": sfx_events,
-        "musicPath": pick_music(workdir, cfg),
+        "musicPath": pick_music(workdir, cfg, motion_seed, style),
         "musicVolume": float(cfg["music"].get("volume", 0.12)),
+        "musicLoopSafe": False,
         "captions": [{"start": round(s, 3), "end": round(e, 3), "text": t}
                      for s, e, t in events
                      if bool(cfg["captions"].get("enabled", True))],
         "scenes": [{
             "n": sc["n"],
+            "start": round(sc["start"], 3),
             "title": sc.get("title", ""),
             "visualMode": sc.get("visual_mode", "broll"),
             "kineticText": sc.get("kinetic_text", ""),
@@ -297,6 +303,7 @@ def main() -> None:
         used_engine = "moviepy"
         import render as render_mod
         render_mod.render(scenes, events, final_path, cfg)
+    postprocess.master_delivery(final_path, cfg)
     duration = probe_duration(final_path)
 
     # 7) thumbnail ---------------------------------------------------------------

@@ -6,6 +6,7 @@ Events are selected by scene role and CTA type so the same sound is not used
 on every transition.
 The Remotion SfxLayer plays them from the manifest's `sfx` event list.
 """
+import hashlib
 import os
 
 import numpy as np
@@ -256,6 +257,57 @@ def build_pack(workdir: str) -> dict:
         sf.write(os.path.join(workdir, fn), audio, SR)
         out[name] = fn
     return out
+
+
+def build_ambient_bed(workdir: str, seed: str, style: str = "documentary",
+                      is_short: bool = False) -> str:
+    """Create a deterministic, loop-safe cinematic bed with no licensing cost.
+
+    The waveform is periodic by construction, so Remotion can loop it without
+    a click. It stays intentionally quiet; final loudness is handled by the
+    delivery mastering pass after the video render.
+    """
+    duration = 12.0 if is_short else 24.0
+    n = int(duration * SR)
+    digest = hashlib.sha256(f"{seed}:{style}:{is_short}".encode()).digest()
+    rng = np.random.default_rng(int.from_bytes(digest[:8], "big"))
+    t = np.arange(n, dtype=np.float32) / SR
+    profiles = {
+        "noir": (42.0, 56.0, 84.0, 126.0),
+        "kinetic": (48.0, 64.0, 96.0, 144.0),
+        "editorial": (55.0, 73.0, 110.0, 165.0),
+        "documentary": (46.0, 61.0, 92.0, 138.0),
+    }
+    targets = profiles.get(style, profiles["documentary"])
+
+    left = np.zeros(n, dtype=np.float32)
+    right = np.zeros(n, dtype=np.float32)
+    for index, target in enumerate(targets):
+        # Quantize to whole cycles so the first and last sample join cleanly.
+        freq = round(target * duration) / duration
+        phase = rng.uniform(0, 2 * np.pi)
+        amp = (0.30, 0.23, 0.13, 0.08)[index]
+        left += (amp * np.sin(2 * np.pi * freq * t + phase)).astype(np.float32)
+        right += (amp * np.sin(2 * np.pi * freq * t + phase + 0.10 * (index + 1))).astype(np.float32)
+
+    # Periodic filtered texture adds air without sounding like a plain chord.
+    bins = np.fft.rfftfreq(n, 1 / SR)
+    spectrum = np.zeros(len(bins), dtype=np.complex64)
+    mask = (bins >= 120) & (bins <= (1100 if style != "noir" else 650))
+    phases = rng.uniform(0, 2 * np.pi, int(mask.sum()))
+    shaped = 1.0 / np.maximum(bins[mask], 1.0) ** 0.72
+    spectrum[mask] = shaped * np.exp(1j * phases)
+    texture = np.fft.irfft(spectrum, n).astype(np.float32)
+    texture = _norm(texture, 0.22)
+    left += texture * 0.22
+    right += np.roll(texture, int(0.019 * SR)) * 0.20
+
+    stereo = np.stack([left, right], axis=1)
+    stereo = _norm(stereo, 0.32)
+    filename = "ambient_auto.wav"
+    sf.write(os.path.join(workdir, filename), stereo, SR, subtype="PCM_16")
+    print(f"[music] generated {duration:.0f}s loop-safe {style} ambience")
+    return filename
 
 
 def plan_events(scenes: list[dict], cfg: dict, workdir: str,

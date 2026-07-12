@@ -80,7 +80,11 @@ const MusicTrack: React.FC<{m: Manifest}> = ({m}) => {
 export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
   const fps = m.fps;
   const style = getStyle(m.style);
-  const maxShotSeconds = 8;
+  const maxShotSeconds = m.maxShotSeconds ?? 5;
+  const overlayRanges = m.scenes
+    .filter((scene) => ['kinetic', 'stat', 'card', 'glass'].includes(scene.visualMode ?? ''))
+    .map((scene) => ({start: scene.start ?? 0,
+      end: (scene.start ?? 0) + scene.audioDuration}));
   const outroFrames = Math.max(Math.round((m.outroSeconds ?? 4) * fps), fps);
 
   const items: React.ReactNode[] = [];
@@ -151,7 +155,8 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
   return (
     <AbsoluteFill style={{backgroundColor: style.bg}}>
       <TransitionSeries>{items}</TransitionSeries>
-      <CaptionsLayer captions={m.captions} style={style} />
+      <CaptionsLayer captions={m.captions} style={style}
+        compactRanges={overlayRanges} compactYFrac={0.84} />
       <CinematicOverlay />
       <CtaLayer event={m.cta} style={style} fps={fps} />
       {m.watermarkPath ? (

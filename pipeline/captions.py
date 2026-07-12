@@ -63,7 +63,10 @@ def build_captions(scenes: list[dict], max_chars: int) -> tuple[list[tuple], str
     """
     events = []
     for sc in scenes:
-        chunks = _chunks(sc["narration"], max_chars)
+        # Let the opening premise land as a readable phrase rather than a
+        # sequence of isolated words. Later captions stay short and kinetic.
+        scene_max = min(max_chars * 3, 44) if sc.get("delivery") == "hook" else max_chars
+        chunks = _chunks(sc["narration"], scene_max)
         if not chunks:
             continue
         aligned = _aligned_events(sc, chunks)

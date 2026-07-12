@@ -14,6 +14,7 @@ const FALLBACK = {
   width: 1920,
   height: 1080,
   xfadeFrames: 12,
+  maxShotSeconds: 5,
   style: 'documentary',
   accent: '#FFB020',
   progressBar: true,
@@ -31,10 +32,12 @@ const FALLBACK = {
   sfx: [] as {path: string; start: number; volume: number}[],
   musicPath: null as string | null,
   musicVolume: 0.12,
+  musicLoopSafe: false,
   captions: [] as {start: number; end: number; text: string}[],
   scenes: [
     {
       n: 1,
+      start: 0,
       title: 'Preview scene',
       visualMode: 'broll',
       kineticText: '',

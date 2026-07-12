@@ -2,8 +2,11 @@ import React from 'react';
 import {
   AbsoluteFill,
   Audio,
+  Img,
   interpolate,
+  OffthreadVideo,
   random,
+  Sequence,
   staticFile,
   useCurrentFrame,
   useVideoConfig,
@@ -38,6 +41,9 @@ const MusicTrack: React.FC<{m: Manifest}> = ({m}) => {
   const frame = useCurrentFrame();
   const {durationInFrames, fps} = useVideoConfig();
   if (!m.musicPath || m.musicVolume <= 0) return null;
+  if (m.musicLoopSafe) {
+    return <Audio loop src={staticFile(m.musicPath)} volume={m.musicVolume} />;
+  }
   const fadeF = Math.max(Math.round(0.15 * fps), 2); // nearly seamless replay boundary
   const vol =
     m.musicVolume *
@@ -50,10 +56,33 @@ const MusicTrack: React.FC<{m: Manifest}> = ({m}) => {
   return <Audio loop src={staticFile(m.musicPath)} volume={vol} />;
 };
 
+const LoopBridge: React.FC<{asset?: {path: string; kind: string}; fps: number}> = ({asset, fps}) => {
+  const frame = useCurrentFrame();
+  if (!asset) return null;
+  const frames = Math.max(Math.round(0.45 * fps), 2);
+  const opacity = interpolate(frame, [0, frames - 1], [0, 1],
+    {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  return <AbsoluteFill style={{opacity}}>
+    {asset.kind === 'video' ? (
+      <OffthreadVideo muted src={staticFile(asset.path)}
+        style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+    ) : (
+      <Img src={staticFile(asset.path)}
+        style={{width: '100%', height: '100%', objectFit: 'cover', transform: 'scale(1.05)'}} />
+    )}
+  </AbsoluteFill>;
+};
+
 export const ShortMain: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
   const fps = m.fps;
+  const {durationInFrames} = useVideoConfig();
   const style = getStyle(m.style);
-  const maxShotSeconds = 3.5;
+  const maxShotSeconds = m.maxShotSeconds ?? 2.4;
+  const overlayRanges = m.scenes
+    .filter((scene) => ['kinetic', 'stat', 'card', 'glass'].includes(scene.visualMode ?? ''))
+    .map((scene) => ({start: scene.start ?? 0,
+      end: (scene.start ?? 0) + scene.audioDuration}));
+  const bridgeFrames = Math.max(Math.round(0.45 * fps), 2);
 
   const items: React.ReactNode[] = [];
   m.scenes.forEach((scene, i) => {
@@ -109,10 +138,16 @@ export const ShortMain: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
   return (
     <AbsoluteFill style={{backgroundColor: style.bg}}>
       <TransitionSeries>{items}</TransitionSeries>
+      <Sequence from={Math.max(0, durationInFrames - bridgeFrames)}
+        durationInFrames={bridgeFrames}>
+        <LoopBridge asset={m.scenes[0]?.assets?.[0]} fps={fps} />
+      </Sequence>
       <CaptionsLayer
         captions={m.captions}
         style={style}
         yFrac={(m as {captionY?: number}).captionY ?? 0.62}
+        compactYFrac={0.75}
+        compactRanges={overlayRanges}
       />
       <CinematicOverlay />
       <CtaLayer event={m.cta} style={style} fps={fps} />

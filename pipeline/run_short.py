@@ -24,6 +24,7 @@ import captions as captions_mod     # noqa: E402
 import factcheck                    # noqa: E402
 import mapgen                       # noqa: E402
 import motion as motion_mod         # noqa: E402
+import postprocess                  # noqa: E402
 import script_gen                   # noqa: E402
 import sfx as sfx_mod               # noqa: E402
 import tts as tts_mod               # noqa: E402
@@ -189,6 +190,7 @@ def main() -> None:
     if os.path.exists(src_wm):
         shutil.copyfile(src_wm, os.path.join(workdir, "brand_watermark.png"))
         wm = "brand_watermark.png"
+    motion_seed = f"{script['title']}:{style}:short"
     music_rel = None
     tracks = []
     for ext in ("mp3", "wav", "m4a", "ogg"):
@@ -197,8 +199,10 @@ def main() -> None:
         track = random.choice(sorted(tracks))
         music_rel = "music" + os.path.splitext(track)[1]
         shutil.copyfile(track, os.path.join(workdir, music_rel))
+    elif float(cfg["music"]["volume"]) > 0 and cfg["music"].get("auto_ambient", True):
+        music_rel = sfx_mod.build_ambient_bed(
+            workdir, motion_seed, style, is_short=True)
 
-    motion_seed = f"{script['title']}:{style}:short"
     motion_mod.decorate_scenes(scenes, motion_seed)
     cta_event = motion_mod.plan_cta(scenes, cfg, motion_seed, is_short=True)
     sfx_events = sfx_mod.plan_events(scenes, cfg, workdir, cta_event)
@@ -206,6 +210,7 @@ def main() -> None:
     manifest = {"manifest": {
         "fps": fps, "width": 1080, "height": 1920,
         "xfadeFrames": max(int(round(xfade * fps)), 1),
+        "maxShotSeconds": float(cfg["video"].get("max_shot_seconds", 2.4)),
         "style": style,
         "accent": cfg["render"].get("accent", "#FFB020"),
         "progressBar": bool(cfg["render"].get("progress_bar", False)),
@@ -222,10 +227,12 @@ def main() -> None:
         "sfx": sfx_events,
         "musicPath": music_rel,
         "musicVolume": float(cfg["music"]["volume"]),
+        "musicLoopSafe": music_rel == "ambient_auto.wav",
         "captions": [{"start": round(s, 3), "end": round(e, 3), "text": t}
                      for s, e, t in events],
         "scenes": [{
             "n": sc["n"], "title": sc.get("title", ""),
+            "start": round(sc["start"], 3),
             "visualMode": sc.get("visual_mode", "broll"),
             "kineticText": sc.get("kinetic_text", ""),
             "stat": sc.get("stat", {}) or {},
@@ -256,6 +263,7 @@ def main() -> None:
     subprocess.run(cmd, cwd=REMOTION_DIR, check=True, timeout=2 * 3600)
     if not os.path.exists(final_path) or os.path.getsize(final_path) < 200_000:
         raise RuntimeError("Remotion produced no/too-small output")
+    postprocess.master_delivery(final_path, cfg)
     duration = probe_duration(final_path)
 
     # 7) metadata ---------------------------------------------------------------

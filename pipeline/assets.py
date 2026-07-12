@@ -15,6 +15,7 @@ sure no Pexels clip/photo or AI prompt ever repeats across videos.
 """
 import hashlib
 import json
+import math
 import os
 import time
 
@@ -221,8 +222,13 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
     # Overlay scenes need one strong background; the graphic carries the beat.
     if mode in ("kinetic", "stat", "card", "glass"):
         if not assets:
+            # Long overlay scenes still need visual development behind the
+            # graphic. Cap at three free stock clips to prevent a 30-second
+            # card from sitting over one repeated background.
+            max_shot = max(float(cfg["video"].get("max_shot_seconds", 5)), 0.5)
+            overlay_clips = max(1, min(3, int(math.ceil(need_seconds / max_shot))))
             stock, _ = _stock_videos(scene, min(need_seconds, 10), outdir, cfg,
-                                     pexels_key, used, max_clips=1,
+                                     pexels_key, used, max_clips=overlay_clips,
                                      gemini_key=gemini_key)
             assets.extend(stock)
         if not assets:

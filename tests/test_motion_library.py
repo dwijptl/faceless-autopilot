@@ -60,6 +60,12 @@ def test_cta_is_planned_inside_a_scene_for_both_formats():
     assert 0 <= long_cta["start"] < scenes[-1]["start"] + scenes[-1]["audio_duration"]
 
 
+def test_short_cta_can_be_disabled_to_protect_retention():
+    cfg = {"motion_library": {"enabled": True, "cta_enabled": True,
+                              "cta_in_shorts": False}}
+    assert motion.plan_cta(_scenes(), cfg, "short", is_short=True) is None
+
+
 def test_sound_pack_is_complete_and_events_use_scene_roles(tmp_path):
     pack = sfx.build_pack(str(tmp_path))
     assert set(pack) == set(sfx.SOUND_CATALOG)
@@ -75,3 +81,13 @@ def test_sound_pack_is_complete_and_events_use_scene_roles(tmp_path):
     for expected in ("sfx_bell.wav", "sfx_tick.wav", "sfx_pulse.wav",
                      "sfx_sparkle.wav", "sfx_glitch.wav", "sfx_ui_blip.wav"):
         assert expected in used
+
+
+def test_generated_ambience_is_stereo_quiet_and_loop_safe(tmp_path):
+    filename = sfx.build_ambient_bed(
+        str(tmp_path), "gravity:kinetic:short", "kinetic", is_short=True)
+    audio, sample_rate = sfx.sf.read(tmp_path / filename)
+    assert sample_rate == sfx.SR
+    assert audio.shape == (12 * sfx.SR, 2)
+    assert abs(audio).max() <= 0.33
+    assert abs(audio[0] - audio[-1]).max() < 0.02

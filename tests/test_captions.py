@@ -23,3 +23,11 @@ def test_caption_rejects_mismatched_transcript_timings():
              "word_times": [("एक", 0, .5)]}
     events, _ = captions.build_captions([scene], 30)
     assert events[0][1] > 3.0  # heuristic path covers the scene
+
+
+def test_hook_caption_keeps_the_opening_premise_together():
+    scene = {"narration": "अगर गुरुत्वाकर्षण अचानक दोगुना हो जाए तो क्या होगा",
+             "audio_duration": 4.0, "start": 0.0, "delivery": "hook"}
+    events, _ = captions.build_captions([scene], 14)
+    assert len(events) < len(scene["narration"].split())
+    assert len(events[0][2].split()) >= 4

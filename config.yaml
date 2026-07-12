@@ -28,7 +28,7 @@ video:
   fps: 30
   bitrate: "6000k"
   crossfade: 0.4           # seconds between scenes
-  max_shot_seconds: 8      # cut to a new shot at least this often
+  max_shot_seconds: 5      # normal long-form visual beat ceiling
   outro_seconds: 4         # branded end card appended to every video
 
 tts:
@@ -89,7 +89,7 @@ short:                     # vertical Shorts/Reels (Make Short workflow, Tue/Thu
   scenes_min: 4
   scenes_max: 6
   crossfade: 0.25          # faster cuts than long-form
-  max_shot_seconds: 3.5
+  max_shot_seconds: 2.4    # fast novelty; renderer now treats this as a hard ceiling
   captions_max_chars: 14   # 2-3 word caption pops (Devanagari runs wider)
   caption_y: 0.62          # centered-low, inside the Shorts UI safe zone
   music_volume: 0.18       # music matters more in shorts
@@ -102,6 +102,13 @@ short:                     # vertical Shorts/Reels (Make Short workflow, Tue/Thu
 music:
   volume: 0.12             # 0 disables music even if files exist
   fade: 1.5
+  auto_ambient: true       # synthesize a loop-safe cinematic bed when music/ is empty
+
+audio_mastering:
+  enabled: true
+  target_lufs: -14.0       # competitive mobile loudness; YouTube can turn down safely
+  true_peak_db: -1.5
+  lra: 7.0
 
 sfx:                       # synthesized sound design (whoosh/riser/hit)
   enabled: true
@@ -119,7 +126,7 @@ maps:
 motion_library:
   enabled: true            # deterministic native Remotion motion-element library
   cta_enabled: true        # one subtle subscribe + bell moment per video
-  cta_in_shorts: true      # compact CTA that stays clear of the loop ending
+  cta_in_shorts: false     # protect retention; watermark carries Shorts branding
   cta_seconds: 3.2
   cta_short_seconds: 1.8
   cta_title: "सब्सक्राइब करें"

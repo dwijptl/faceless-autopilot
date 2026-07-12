@@ -477,10 +477,15 @@ Visual mode rules (variety is the goal — videos must not feel stock-only):
   metaphorical/studio/commercial imagery (no drinks, food, offices, product
   shots), and wildlife must look wild ("aerial", "natural habitat" — never
   zoo/enclosure footage).
+- If narration names a real landmark, machine, animal or anatomical structure,
+  search_terms[0] MUST name the exact subject. When exact footage is unlikely,
+  rewrite the narration generically instead of showing a misleading substitute.
 
 Script rules:
-- {v['scenes_min']} to {v['scenes_max']} scenes. Scene 1 is a 30-second HOOK opening a
-  curiosity gap immediately. A re-hook mid-video. Final scene is a 20-second
+- {v['scenes_min']} to {v['scenes_max']} scenes. Scene 1 is an 18-25 second COLD OPEN
+  that states the premise immediately and opens a curiosity gap. Deliver the
+  first concrete answer by 45 seconds. Add one-sentence re-hooks near 25%, 50%
+  and 75% of the runtime, each paired with a new visual mode. Final scene is a 20-second
   payoff with a next-video tease. No "like and subscribe" begging.
 - Narration is written for the EAR: short sentences, makes sense with eyes closed.
 - Facts must be well-established; when uncertain, phrase carefully rather than
@@ -578,6 +583,9 @@ Shorts rules:
     terms; zoo or enclosure footage is forbidden.
   * Prefer vertical-friendly subjects (waterfalls, cliffs, towers, canyons,
     aurora, drone descents).
+  * If narration names a real landmark, machine, animal or anatomical part,
+    search_terms[0] MUST name that exact subject. If exact footage is unlikely,
+    rewrite the narration generically instead of showing a misleading substitute.
 - Every sentence must earn its half-second. Cut every filler word."""
 
     for attempt in range(3):

@@ -115,15 +115,14 @@ export const SceneVisual: React.FC<{
 }> = ({assets, sceneFrames, fps, maxShotSeconds, sceneN, style, dim}) => {
   const maxShot = Math.round(maxShotSeconds * fps);
   const shots: {from: number; frames: number; asset: Asset; idx: number}[] = [];
+  const shotCount = assets.length > 0
+    ? Math.max(1, Math.ceil(sceneFrames / Math.max(maxShot, 1))) : 0;
+  const baseFrames = shotCount > 0 ? Math.floor(sceneFrames / shotCount) : 0;
   let cursor = 0;
-  let i = 0;
-  while (cursor < sceneFrames && assets.length > 0) {
-    const remaining = sceneFrames - cursor;
-    const frames = remaining < maxShot * 1.5 ? remaining : maxShot;
+  for (let i = 0; i < shotCount; i++) {
+    const frames = baseFrames + (i < sceneFrames % shotCount ? 1 : 0);
     shots.push({from: cursor, frames, asset: assets[i % assets.length], idx: i});
     cursor += frames;
-    i += 1;
-    if (i > 200) break;
   }
   return (
     <AbsoluteFill style={{backgroundColor: style.bg}}>
@@ -207,7 +206,9 @@ export const CaptionsLayer: React.FC<{
   captions: {start: number; end: number; text: string}[];
   style: StylePack;
   yFrac?: number;
-}> = ({captions, style, yFrac}) => {
+  compactYFrac?: number;
+  compactRanges?: {start: number; end: number}[];
+}> = ({captions, style, yFrac, compactYFrac, compactRanges = []}) => {
   const {fps, height, width} = useVideoConfig();
   const s = Math.max(width, height) / 1920;
   return (
@@ -215,10 +216,13 @@ export const CaptionsLayer: React.FC<{
       {captions.map((c, i) => {
         const from = Math.round(c.start * fps);
         const dur = Math.max(Math.round((c.end - c.start) * fps), 2);
+        const midpoint = (c.start + c.end) / 2;
+        const compact = compactRanges.some((r) => midpoint >= r.start && midpoint <= r.end);
         return (
           <Sequence key={i} from={from} durationInFrames={dur}>
             <CaptionChunk text={c.text} style={style}
-              y={height * (yFrac ?? 0.78)} s={s} durFrames={dur} />
+              y={height * (compact ? (compactYFrac ?? 0.84) : (yFrac ?? 0.78))}
+              s={s} durFrames={dur} compact={compact} />
           </Sequence>
         );
       })}
@@ -232,11 +236,13 @@ const CaptionChunk: React.FC<{
   y: number;
   s: number;
   durFrames: number;
-}> = ({text, style, y, s, durFrames}) => {
+  compact: boolean;
+}> = ({text, style, y, s, durFrames, compact}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
   const pop = spring({frame, fps, config: {damping: 14, stiffness: 240, mass: 0.6}});
   const scale = interpolate(pop, [0, 1], [0.84, 1]);
+  const captionScale = compact ? 0.72 : 1;
   const v = style.captionVariant;
   const stroke =
     '0 3px 0 rgba(0,0,0,0.85), 0 -2px 0 rgba(0,0,0,0.85), 3px 0 0 rgba(0,0,0,0.85), -3px 0 0 rgba(0,0,0,0.85), 0 6px 24px rgba(0,0,0,0.6)';
@@ -282,23 +288,23 @@ const CaptionChunk: React.FC<{
         background: 'rgba(8,13,26,0.88)', textAlign: 'center',
         padding: `${12 * s}px ${28 * s}px`, borderRadius: 12 * s,
         borderLeft: `${8 * s}px solid ${style.accent}`,
-      }}>{kineticWords(60, 'white')}</div>
+      }}>{kineticWords(60 * captionScale, 'white')}</div>
     ) : v === 'minimal' ? (
       <div style={{
-        color: BRAND.text, fontSize: 50 * s, fontWeight: 600, letterSpacing: 0.4,
+        color: BRAND.text, fontSize: 50 * captionScale * s, fontWeight: 600, letterSpacing: 0.4,
         textAlign: 'center', lineHeight: 1.4, textShadow: '0 3px 18px rgba(0,0,0,0.9)',
         borderBottom: `${3 * s}px solid ${style.accent}`, paddingBottom: 8 * s,
       }}>{text}</div>
     ) : v === 'chip' ? (
       <div style={{
-        background: style.accent, color: '#0A1428', fontSize: 54 * s,
+        background: style.accent, color: '#0A1428', fontSize: 54 * captionScale * s,
         fontWeight: 900, textAlign: 'center', lineHeight: 1.35,
         padding: `${8 * s}px ${24 * s}px`, borderRadius: 8 * s,
         boxShadow: '0 8px 30px rgba(0,0,0,0.55)',
       }}>{text}</div>
     ) : (
       <div style={{textAlign: 'center'}}>
-        {kineticWords(58, 'white', stroke)}
+        {kineticWords(58 * captionScale, 'white', stroke)}
         <div style={{
           height: 6 * s, width: `${interpolate(pop, [0, 1], [0, 34])}%`,
           background: style.accent, borderRadius: 3, margin: '8px auto 0',
