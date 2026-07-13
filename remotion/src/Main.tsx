@@ -2,6 +2,7 @@ import React from 'react';
 import {
   AbsoluteFill,
   Audio,
+  Sequence,
   interpolate,
   random,
   staticFile,
@@ -35,6 +36,7 @@ import {
 } from './motion-library';
 import type {MotionSpec} from './motion-library';
 import {GlassCard} from './glass';
+import {TelemetryHUD} from './hud';
 
 // Deterministic transition choice, biased by the video's style pack.
 // Remotion's transition presentations are invariant generic types; this helper
@@ -91,14 +93,55 @@ const MusicTrack: React.FC<{m: Manifest}> = ({m}) => {
   return <Audio loop src={staticFile(m.musicPath)} volume={vol} />;
 };
 
+// ── Impact-graphic windowing ────────────────────────────────────────────
+// Overlay graphics (kinetic/stat/card/glass) are impact moments, not
+// wallpaper: they hold for ~overlaySeconds, fade out, and hand the frame
+// back to the footage for the rest of the scene's narration.
+
+const FadeShell: React.FC<{frames: number; fps: number;
+  children: React.ReactNode}> = ({frames, fps, children}) => {
+  const frame = useCurrentFrame();
+  const fadeF = Math.max(Math.round(0.4 * fps), 6);
+  const opacity = interpolate(frame,
+    [Math.max(frames - fadeF, 1), Math.max(frames - 1, 2)], [1, 0],
+    {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  return <AbsoluteFill style={{opacity}}>{children}</AbsoluteFill>;
+};
+
+const OverlayWindow: React.FC<{frames: number; fps: number;
+  children: React.ReactNode}> = ({frames, fps, children}) => (
+  <Sequence durationInFrames={Math.max(frames, 1)}>
+    <FadeShell frames={frames} fps={fps}>{children}</FadeShell>
+  </Sequence>
+);
+
+const DimFill: React.FC<{frames: number; fps: number}> = ({frames, fps}) => {
+  const frame = useCurrentFrame();
+  const fadeF = Math.max(Math.round(0.4 * fps), 6);
+  const opacity = interpolate(frame,
+    [0, 8, Math.max(frames - fadeF, 9), Math.max(frames - 1, 10)],
+    [0, 0.55, 0.55, 0],
+    {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  return <AbsoluteFill style={{background: 'rgb(6,10,20)', opacity,
+    pointerEvents: 'none'}} />;
+};
+
+const TimedDim: React.FC<{frames: number; fps: number}> = ({frames, fps}) => (
+  <Sequence durationInFrames={Math.max(frames, 1)}>
+    <DimFill frames={frames} fps={fps} />
+  </Sequence>
+);
+
 export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
   const fps = m.fps;
   const style = getStyle(m.style);
   const maxShotSeconds = m.maxShotSeconds ?? 5;
+  const overlaySeconds = Math.min(
+    Math.max(Number((m as any).overlaySeconds ?? 5), 2.5), 12);
   const overlayRanges = m.scenes
     .filter((scene) => ['kinetic', 'stat', 'card', 'glass'].includes(scene.visualMode ?? ''))
     .map((scene) => ({start: scene.start ?? 0,
-      end: (scene.start ?? 0) + scene.audioDuration}));
+      end: (scene.start ?? 0) + Math.min(scene.audioDuration, overlaySeconds)}));
   const outroFrames = Math.max(Math.round((m.outroSeconds ?? 4) * fps), fps);
 
   const items: React.ReactNode[] = [];
@@ -106,6 +149,8 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
     const sceneFrames = Math.round(scene.audioDuration * fps);
     const mode = scene.visualMode ?? 'broll';
     const overlayScene = mode === 'kinetic' || mode === 'stat' || mode === 'card' || mode === 'glass';
+    const overlayFrames = Math.min(sceneFrames,
+      Math.round(overlaySeconds * fps));
     const isMap = mode === 'map' && scene.map && scene.map.world;
     const motion: MotionSpec = scene.motion ?? {};
     items.push(
@@ -121,23 +166,31 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
             maxShotSeconds={maxShotSeconds}
             sceneN={scene.n}
             style={style}
-            dim={overlayScene}
           />
         )}
+        {overlayScene ? <TimedDim frames={overlayFrames} fps={fps} /> : null}
         {scene.audioPath ? <Audio src={staticFile(scene.audioPath)} /> : null}
         {mode === 'kinetic' && scene.kineticText ? (
-          <KineticTitle text={scene.kineticText} style={style}
-            variant={motion.kineticVariant} />
+          <OverlayWindow frames={overlayFrames} fps={fps}>
+            <KineticTitle text={scene.kineticText} style={style}
+              variant={motion.kineticVariant} />
+          </OverlayWindow>
         ) : null}
         {mode === 'stat' && scene.stat && scene.stat.label ? (
-          <AnimatedStatCard stat={scene.stat} style={style}
-            variant={motion.statVariant} />
+          <OverlayWindow frames={overlayFrames} fps={fps}>
+            <AnimatedStatCard stat={scene.stat} style={style}
+              variant={motion.statVariant} />
+          </OverlayWindow>
         ) : null}
         {mode === 'card' && scene.card && scene.card.headline ? (
-          <EditorialCard card={scene.card} style={style} variant={motion.cardVariant} />
+          <OverlayWindow frames={overlayFrames} fps={fps}>
+            <EditorialCard card={scene.card} style={style} variant={motion.cardVariant} />
+          </OverlayWindow>
         ) : null}
         {mode === 'glass' && scene.glass && (scene.glass.headline || scene.glass.label || scene.glass.location || scene.glass.chapter || scene.glass.value != null) ? (
-          <GlassCard data={scene.glass} style={style} variant={motion.glassVariant} />
+          <OverlayWindow frames={overlayFrames} fps={fps}>
+            <GlassCard data={scene.glass} style={style} variant={motion.glassVariant} />
+          </OverlayWindow>
         ) : null}
         {!overlayScene && !isMap && scene.title ? (
           <AnimatedLowerThird title={scene.title} style={style}
@@ -171,8 +224,12 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
     <AbsoluteFill style={{backgroundColor: style.bg}}>
       <TransitionSeries>{items}</TransitionSeries>
       <CaptionsLayer captions={m.captions} style={style}
-        compactRanges={overlayRanges} compactYFrac={0.84} />
+        compactRanges={overlayRanges} compactYFrac={0.84} sizeBoost={1.15} />
       <CinematicOverlay />
+      {style.hud ? (
+        <TelemetryHUD starts={m.scenes.map((sc) => sc.start ?? 0)}
+          accent={style.accent} accent2={style.accent2} />
+      ) : null}
       <CtaLayer event={m.cta} style={style} fps={fps} />
       {m.watermarkPath ? (
         <Watermark src={m.watermarkPath} opacity={m.watermarkOpacity ?? 0.08} />

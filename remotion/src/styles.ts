@@ -21,6 +21,7 @@ export type StylePack = {
   gradeOverlay: string; // CSS background layered over footage
   visualFilter: string; // CSS filter applied to footage
   transitionBias: 'mixed' | 'slides' | 'fades' | 'wipes';
+  hud?: boolean; // telemetry pack: persistent sci-doc HUD overlay
 };
 
 export const STYLE_PACKS: Record<string, StylePack> = {
@@ -71,6 +72,19 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'linear-gradient(180deg, rgba(10,20,40,0.22) 0%, rgba(6,9,15,0.38) 100%)',
     visualFilter: 'grayscale(0.85) contrast(1.18) brightness(0.96)',
     transitionBias: 'wipes',
+  },
+  telemetry: {
+    name: 'telemetry',
+    accent: BRAND.amber,
+    accent2: '#6FE3D4',
+    bg: '#060B14',
+    captionVariant: 'minimal',
+    lowerThirdVariant: 'underline',
+    gradeOverlay:
+      'linear-gradient(180deg, rgba(111,227,212,0.04) 0%, rgba(6,11,20,0.30) 100%)',
+    visualFilter: 'saturate(0.88) contrast(1.10) brightness(0.97)',
+    transitionBias: 'fades',
+    hud: true,
   },
 };
 

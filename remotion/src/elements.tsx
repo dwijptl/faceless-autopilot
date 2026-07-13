@@ -223,7 +223,8 @@ export const CaptionsLayer: React.FC<{
   yFrac?: number;
   compactYFrac?: number;
   compactRanges?: {start: number; end: number}[];
-}> = ({captions, style, yFrac, compactYFrac, compactRanges = []}) => {
+  sizeBoost?: number; // long-form mobile readability multiplier
+}> = ({captions, style, yFrac, compactYFrac, compactRanges = [], sizeBoost}) => {
   const {fps, height, width} = useVideoConfig();
   const s = Math.max(width, height) / 1920;
   return (
@@ -237,7 +238,8 @@ export const CaptionsLayer: React.FC<{
           <Sequence key={i} from={from} durationInFrames={dur}>
             <CaptionChunk text={c.text} style={style}
               y={height * (compact ? (compactYFrac ?? 0.84) : (yFrac ?? 0.78))}
-              s={s} durFrames={dur} compact={compact} />
+              s={s} durFrames={dur} compact={compact}
+              sizeBoost={sizeBoost ?? 1} />
           </Sequence>
         );
       })}
@@ -252,12 +254,13 @@ const CaptionChunk: React.FC<{
   s: number;
   durFrames: number;
   compact: boolean;
-}> = ({text, style, y, s, durFrames, compact}) => {
+  sizeBoost: number;
+}> = ({text, style, y, s, durFrames, compact, sizeBoost}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
   const pop = spring({frame, fps, config: {damping: 14, stiffness: 240, mass: 0.6}});
   const scale = interpolate(pop, [0, 1], [0.84, 1]);
-  const captionScale = compact ? 0.72 : 1;
+  const captionScale = (compact ? 0.72 : 1) * sizeBoost;
   const v = style.captionVariant;
   const stroke =
     '0 3px 0 rgba(0,0,0,0.85), 0 -2px 0 rgba(0,0,0,0.85), 3px 0 0 rgba(0,0,0,0.85), -3px 0 0 rgba(0,0,0,0.85), 0 6px 24px rgba(0,0,0,0.6)';
