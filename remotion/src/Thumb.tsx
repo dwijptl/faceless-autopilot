@@ -27,8 +27,11 @@ export const Thumb: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
               filter: style.visualFilter}} />
         )
       ) : null}
+      {/* Text-legibility gradient confined to the title band. The old
+          full-frame 0.82 darkening turned dark AI images into black
+          rectangles at feed size — the image must stay readable. */}
       <AbsoluteFill style={{
-        background: 'linear-gradient(180deg, rgba(6,10,20,0.10) 25%, rgba(6,10,20,0.82) 100%)',
+        background: 'linear-gradient(180deg, rgba(6,10,20,0.04) 0%, rgba(6,10,20,0.04) 55%, rgba(6,10,20,0.58) 100%)',
       }} />
 
       {/* brand chip */}
