@@ -529,6 +529,20 @@ Visual mode rules (variety is the goal — videos must not feel stock-only):
   rewrite the narration generically instead of showing a misleading substitute.
 
 Script rules:
+- NARRATIVE SPINE (most important rule): the whole video follows ONE concrete
+  thread — a journey, a single tightening question, or one entity moving
+  through the story (one drop of rain travelling underground; one signal
+  crossing space; one degree of warming rippling outward). Every scene must
+  visibly advance THAT thread. If any scene reads like an encyclopedia entry
+  that could be reordered without anyone noticing, rewrite it so it continues
+  the thread. Introduce the spine inside the cold open and pay it off in the
+  final scene — the ending should resolve the exact image the video opened on.
+- VISUAL PACING MIX (how a human editor cuts): ~60% of scenes are slow,
+  majestic b-roll moments that breathe; ~20% are rapid intercut stretches
+  (short beats, quick cuts, urgency); ~20% are graphic moments (kinetic /
+  stat / card / glass / map). Graphics are 3-5 second IMPACT hits, not
+  wallpaper — after a graphic lands, the narration must move on and hand the
+  screen back to footage. Never let two graphic scenes sit adjacent.
 - {v['scenes_min']} to {v['scenes_max']} scenes. Scene 1 is an 18-25 second COLD OPEN
   that states the premise immediately and opens a curiosity gap. Deliver the
   first concrete answer by 45 seconds. Add one-sentence re-hooks near 25%, 50%

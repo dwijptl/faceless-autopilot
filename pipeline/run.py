@@ -37,7 +37,7 @@ import vision_qc                    # noqa: E402
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REMOTION_DIR = os.path.join(REPO_ROOT, "remotion")
-STYLES = ["documentary", "kinetic", "editorial", "noir"]
+STYLES = ["documentary", "kinetic", "editorial", "noir", "telemetry"]
 
 
 def probe_duration(path: str) -> float:
@@ -159,7 +159,10 @@ def main() -> None:
     except Exception:
         pass
     style = STYLES[done_count % len(STYLES)]
-    cfg.setdefault("render", {})["style_pack"] = style  # steers AI-image look
+    # telemetry shares editorial's photographic grammar + ambient palette for
+    # the python-side helpers that don't know the new pack
+    base_style = "editorial" if style == "telemetry" else style
+    cfg.setdefault("render", {})["style_pack"] = base_style  # steers AI-image look
     print(f"=== Faceless Autopilot run {stamp} · style: {style} ===")
 
     # 1) topic + script ------------------------------------------------------
@@ -255,7 +258,7 @@ def main() -> None:
     cta_event = motion_mod.plan_cta(scenes, cfg, motion_seed, is_short=False)
     sfx_events = sfx_mod.plan_events(scenes, cfg, workdir, cta_event)
     music_automation = sfx_mod.plan_music_automation(scenes, cfg)
-    music_path = pick_music(workdir, cfg, motion_seed, style)
+    music_path = pick_music(workdir, cfg, motion_seed, base_style)
     thumb_ai = None
     tp = (script.get("thumb_prompt") or "").strip()
     if tp:
@@ -273,6 +276,8 @@ def main() -> None:
         "height": int(cfg["video"]["height"]),
         "xfadeFrames": max(int(round(xfade * fps)), 1),
         "maxShotSeconds": float(cfg["video"].get("max_shot_seconds", 5)),
+        "overlaySeconds": float(cfg.get("longform_quality", {})
+                                .get("overlay_seconds", 5.0)),
         "style": style,
         "accent": rcfg.get("accent", "#FFB020"),
         "progressBar": bool(rcfg.get("progress_bar", True)),
