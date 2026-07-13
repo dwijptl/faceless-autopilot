@@ -28,12 +28,15 @@ import {
 import {AnimatedStatCard, CtaLayer, EditorialCard, KineticTitle, SceneFrame} from './motion-library';
 import type {MotionSpec} from './motion-library';
 import {GlassCard} from './glass';
+import {blurWhip, zoomPunch} from './transitions';
 
-// Shorts: fast, mostly vertical slides + fades.
+// Shorts: fast vertical whips, slides and punches.
 const pickTransition = (i: number, style: StylePack): any => {
   const r = random(`str-${style.name}-${i}`);
-  if (r < 0.4) return slide({direction: 'from-bottom'});
-  if (r < 0.6) return slide({direction: 'from-right'});
+  if (r < 0.28) return blurWhip('from-bottom');
+  if (r < 0.45) return slide({direction: 'from-bottom'});
+  if (r < 0.6) return blurWhip('from-right');
+  if (r < 0.78) return zoomPunch();
   return fade();
 };
 
