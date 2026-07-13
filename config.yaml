@@ -20,7 +20,8 @@ channel:
   wpm: 130                 # spoken words/minute (Hindi narration ~130; English 150)
 
 video:
-  target_minutes: 6        # narration length target (see channel.wpm)
+  target_minutes: 6.25     # aim: story finishes naturally inside 5:30-7:00;
+                           # word budget enforced pre-TTS (see channel.wpm)
   scenes_min: 8
   scenes_max: 12
   width: 1920

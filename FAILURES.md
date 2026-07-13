@@ -37,3 +37,9 @@
    Rule: captions default CALM — white karaoke words on a translucent dark
    scrim; the brand accent appears only on the active word, thin rules, the
    metric counter and impact graphics. When everything shouts, nothing does.
+
+8. **Factually wrong next-video tease** (Mariana outro: "Venus vaporizes
+   iron" — Venus ~467°C melts lead; iron boils near 3,000°C).
+   Rule: the tease is narration like any other — same fact discipline, the
+   correct comparison for the number, and it must describe next_tease_topic,
+   which the pipeline locks in as the next episode.
