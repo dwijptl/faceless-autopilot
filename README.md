@@ -78,6 +78,8 @@ Each release `video-YYYY-MM-DD_HHMM` contains:
 - `captions.srt` — Hindi; upload in YouTube Studio → Subtitles (language: Hindi)
 - `thumbnail.jpg` — 1280×720, hook-scene frame + Hindi title text
 - `script.json` — full script (title, description, tags, scenes — all Hindi)
+- `quality_report.json` — semantic visual coverage, asset reuse and final
+  audio/video delivery checks
 - Release notes — paste-ready YouTube description + pre-upload checklist
 
 ## The language layer
@@ -122,6 +124,10 @@ Each release `video-YYYY-MM-DD_HHMM` contains:
   typography, or animated stat cards. `assets_used.json` guarantees no clip,
   photo, or AI prompt ever repeats across videos. Four visual style packs
   (documentary / kinetic / editorial / noir) rotate per video.
+- **Sentence-level visual editing** — one additional free Gemini planning call
+  divides long-form narration into concrete visual beats. Each beat carries an
+  exact Hindi cue and subject-specific English stock query, so imagery changes
+  with the spoken idea instead of merely rotating through scene-level footage.
 - **Self-learning loop** — drop YouTube Studio CSV exports into `analytics/`
   (see its README); the weekly **Update Learnings** workflow digests them into
   `learnings.md`, which steers topic choice, hooks, pacing, length and
@@ -130,6 +136,9 @@ Each release `video-YYYY-MM-DD_HHMM` contains:
   published only as a draft release; Hindi captions use Sarvam STT word
   timestamps when available; factual claims are checked with grounded Google
   Search before TTS; stock-video QC samples multiple points in each clip.
+- **Automated delivery QC** — long-form runs verify continuous beat coverage,
+  semantic bindings, excessive asset reuse, stream presence, resolution and
+  final duration. It reports problems without blocking production by default.
 - **Reviewer status** — every release includes `run_summary.json` and a prominent
   metadata line showing voice, caption, fact-check and draft status.
 - **Terra Incognita brand kit** — `brand/` has the banner, avatar, and

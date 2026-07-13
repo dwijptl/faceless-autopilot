@@ -91,3 +91,15 @@ def test_generated_ambience_is_stereo_quiet_and_loop_safe(tmp_path):
     assert audio.shape == (12 * sfx.SR, 2)
     assert abs(audio).max() <= 0.33
     assert abs(audio[0] - audio[-1]).max() < 0.02
+
+
+def test_music_automation_ducks_reveals_more_than_calm_scenes():
+    scenes = _scenes(3)
+    scenes[0]["delivery"] = "hook"
+    scenes[1]["delivery"] = "calm"
+    scenes[2]["delivery"] = "reveal"
+    cfg = {"longform_quality": {"dynamic_music": {"enabled": True}}}
+    events = sfx.plan_music_automation(scenes, cfg)
+    assert len(events) == 3
+    assert events[2]["factor"] < events[1]["factor"]
+    assert events[0]["start"] == 0

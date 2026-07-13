@@ -310,6 +310,33 @@ def build_ambient_bed(workdir: str, seed: str, style: str = "documentary",
     return filename
 
 
+def plan_music_automation(scenes: list[dict], cfg: dict) -> list[dict]:
+    """Create restrained scene-level ducking for long-form narrative shape."""
+    settings = cfg.get("longform_quality", {}).get("dynamic_music", {})
+    if not settings.get("enabled", True):
+        return []
+    factors = {
+        "hook": float(settings.get("hook_factor", 0.72)),
+        "calm": float(settings.get("calm_factor", 0.86)),
+        "reveal": float(settings.get("reveal_factor", 0.58)),
+        "urgent": float(settings.get("urgent_factor", 0.66)),
+    }
+    events = []
+    for scene in scenes:
+        delivery = str(scene.get("delivery", "calm")).lower()
+        factor = factors.get(delivery, factors["calm"])
+        # Dense information graphics need slightly more room for narration.
+        if scene.get("visual_mode") in ("stat", "glass"):
+            factor = min(factor, factors["reveal"] + 0.05)
+        events.append({
+            "start": round(float(scene.get("start", 0)), 3),
+            "duration": round(float(scene.get("audio_duration", 0)), 3),
+            "factor": round(max(0.25, min(factor, 1.0)), 3),
+            "delivery": delivery,
+        })
+    return events
+
+
 def plan_events(scenes: list[dict], cfg: dict, workdir: str,
                 cta: dict | None = None) -> list[dict]:
     """Compute [{path, start, volume}] for the manifest. scenes need

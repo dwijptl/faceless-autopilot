@@ -33,6 +33,10 @@ const FALLBACK = {
   musicPath: null as string | null,
   musicVolume: 0.12,
   musicLoopSafe: false,
+  musicAutomation: [] as {
+    start: number; duration: number; factor: number; delivery?: string;
+  }[],
+  musicTransitionSeconds: 0.45,
   captions: [] as {start: number; end: number; text: string}[],
   scenes: [
     {
@@ -62,6 +66,11 @@ const FALLBACK = {
       audioPath: null as string | null,
       audioDuration: 5,
       assets: [] as {path: string; kind: string; duration?: number}[],
+      visualBeats: [] as {
+        start: number; duration: number; cue?: string; purpose?: string;
+        searchTerms?: string[];
+        assets: {path: string; kind: string; duration?: number}[];
+      }[],
     },
   ],
 };

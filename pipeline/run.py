@@ -28,9 +28,11 @@ import factcheck                    # noqa: E402
 import mapgen                       # noqa: E402
 import motion as motion_mod         # noqa: E402
 import postprocess                  # noqa: E402
+import quality_report as quality_mod  # noqa: E402
 import script_gen                   # noqa: E402
 import sfx as sfx_mod               # noqa: E402
 import tts as tts_mod               # noqa: E402
+import visual_beats as visual_beats_mod  # noqa: E402
 import vision_qc                    # noqa: E402
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -92,6 +94,29 @@ def thumbnail_remotion(manifest_path: str, workdir: str, thumb_path: str) -> Non
            "--props", os.path.abspath(manifest_path),
            "--public-dir", os.path.abspath(workdir), "--log", "warn"]
     subprocess.run(cmd, cwd=REMOTION_DIR, check=True, timeout=1200)
+
+
+def _asset_manifest(asset: dict) -> dict:
+    return {
+        "path": os.path.basename(asset["path"]),
+        "kind": asset["kind"],
+        "duration": round(asset["duration"], 2) if asset.get("duration") else None,
+    }
+
+
+def _visual_beat_manifest(scene: dict) -> list[dict]:
+    result = []
+    for index, beat in enumerate(scene.get("visual_beats") or []):
+        result.append({
+            "start": round(float(beat.get("start", 0)), 3),
+            "duration": round(float(beat.get("duration", 0)), 3),
+            "cue": str(beat.get("cue", "")),
+            "purpose": str(beat.get("purpose", "")),
+            "searchTerms": list(beat.get("search_terms") or []),
+            "assets": [_asset_manifest(a) for a in scene.get("assets", [])
+                       if a.get("beat_index") == index],
+        })
+    return result
 
 
 def main() -> None:
@@ -176,6 +201,9 @@ def main() -> None:
                       (f"mixed ({aligned_scenes}/{len(scenes)} scenes aligned)"
                        if aligned_scenes else "estimated (heuristic)"))
 
+    for sc in scenes:
+        visual_beats_mod.time_scene(sc)
+
     # 2b) map scenes — render branded world/region maps (fail -> b-roll)
     if cfg.get("maps", {}).get("enabled", True):
         for sc in scenes:
@@ -226,6 +254,8 @@ def main() -> None:
     motion_mod.decorate_scenes(scenes, motion_seed)
     cta_event = motion_mod.plan_cta(scenes, cfg, motion_seed, is_short=False)
     sfx_events = sfx_mod.plan_events(scenes, cfg, workdir, cta_event)
+    music_automation = sfx_mod.plan_music_automation(scenes, cfg)
+    music_path = pick_music(workdir, cfg, motion_seed, style)
     thumb_ai = None
     tp = (script.get("thumb_prompt") or "").strip()
     if tp:
@@ -257,9 +287,13 @@ def main() -> None:
         "motionSeed": motion_seed,
         "cta": cta_event,
         "sfx": sfx_events,
-        "musicPath": pick_music(workdir, cfg, motion_seed, style),
+        "musicPath": music_path,
         "musicVolume": float(cfg["music"].get("volume", 0.12)),
-        "musicLoopSafe": False,
+        "musicLoopSafe": music_path == "ambient_auto.wav",
+        "musicAutomation": music_automation,
+        "musicTransitionSeconds": float(cfg.get("longform_quality", {})
+                                        .get("dynamic_music", {})
+                                        .get("transition_seconds", 0.45)),
         "captions": [{"start": round(s, 3), "end": round(e, 3), "text": t}
                      for s, e, t in events
                      if bool(cfg["captions"].get("enabled", True))],
@@ -276,11 +310,8 @@ def main() -> None:
             "motion": sc.get("motion") or {},
             "audioPath": os.path.basename(sc["audio_path"]),
             "audioDuration": round(sc["audio_duration"], 3),
-            "assets": [{
-                "path": os.path.basename(a["path"]),
-                "kind": a["kind"],
-                "duration": round(a["duration"], 2) if a.get("duration") else None,
-            } for a in sc["assets"]],
+            "assets": [_asset_manifest(a) for a in sc["assets"]],
+            "visualBeats": _visual_beat_manifest(sc),
         } for sc in scenes],
     }}
     manifest_path = os.path.join(workdir, "props.json")
@@ -305,6 +336,9 @@ def main() -> None:
         render_mod.render(scenes, events, final_path, cfg)
     postprocess.master_delivery(final_path, cfg)
     duration = probe_duration(final_path)
+    quality_report = quality_mod.audit_delivery(
+        final_path, manifest["manifest"], cfg,
+        os.path.join(outdir, "quality_report.json"))
 
     # 7) thumbnail ---------------------------------------------------------------
     thumb_path = os.path.join(outdir, "thumbnail.jpg")
@@ -324,16 +358,21 @@ def main() -> None:
     fact_line = factcheck.markdown(fact_report)
     fact_requires_review = (bool(cfg.get("factcheck", {}).get("gate", False))
                             and fact_report.get("unsupported", 0) > 0)
-    draft_release = voice_fallback or fact_requires_review
+    quality_requires_review = (
+        bool(cfg.get("longform_quality", {}).get("render_qc", {}).get("gate", False))
+        and not quality_report.get("passed", False))
+    draft_release = voice_fallback or fact_requires_review or quality_requires_review
     status_voice = "⚠️ FALLBACK — DO NOT PUBLISH" if voice_fallback else "OK (cloned)"
     status_fact = (f"⚠️ REVIEW CLAIMS ({fact_report.get('unsupported', 0)} unsupported)"
                    if fact_requires_review else fact_report.get("status", "unknown"))
+    status_quality = ("OK" if quality_report.get("passed") else
+                      f"⚠️ REVIEW ({len(quality_report.get('errors', []))} errors)")
     voice_banner = ("> ⚠️ **VOICE FALLBACK — DO NOT PUBLISH.** This run used Kokoro, "
                     "not your cloned Sarvam voice. Re-run when Sarvam is available.\n\n"
                     if voice_fallback else "")
     meta = f"""## {script['title']}
 
-{voice_banner}**Reliability:** Voice: {status_voice} | Captions: {caption_status} | Fact-check: {status_fact}
+{voice_banner}**Reliability:** Voice: {status_voice} | Captions: {caption_status} | Fact-check: {status_fact} | Quality: {status_quality}
 
 **Duration:** {duration / 60:.1f} min · **Scenes:** {len(scenes)} · **Style:** {style} ·
 **AI visuals:** {n_ai} · **Run:** {stamp} · **Renderer:** {used_engine} ·
@@ -374,6 +413,7 @@ Remotion. Brand: Terra Incognita.*
         json.dump({"draft_release": draft_release, "voice_fallback": voice_fallback,
                    "voice": voice_line, "captions": caption_status,
                    "factcheck": fact_report,
+                   "quality": quality_report,
                    "motion_library": {
                        "seed": motion_seed,
                        "cta": cta_event,

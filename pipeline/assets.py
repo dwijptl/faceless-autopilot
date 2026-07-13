@@ -217,7 +217,45 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
             if ai_images.generate(prompt, path, gemini_key, cfg, aspect):
                 used_prompts.add(ph)
                 ai_budget[0] -= 1
-                assets.append({"path": path, "kind": "image", "ai": True})
+                assets.append({"path": path, "kind": "image", "ai": True,
+                               "beat_index": 0})
+
+    # Long-form semantic plan: source one concrete visual for each spoken idea.
+    # This keeps roughly the same number of downloaded clips as the old
+    # duration-based rotation, but now every clip has a narration binding.
+    beats = scene.get("visual_beats") or []
+    if beats:
+        max_shot = max(float(cfg["video"].get("max_shot_seconds", 5)), 0.5)
+        for index, beat in enumerate(beats):
+            beat_assets = [a for a in assets if a.get("beat_index") == index]
+            if not beat_assets:
+                beat_scene = {
+                    **scene,
+                    "search_terms": beat.get("search_terms") or scene.get("search_terms", []),
+                    "narration": f"{beat.get('cue', '')}. {beat.get('purpose', '')}".strip(),
+                }
+                need = min(max(float(beat.get("duration", max_shot)), 1.0), max_shot)
+                stock, _ = _stock_videos(
+                    beat_scene, need, outdir, cfg, pexels_key, used,
+                    max_clips=1, gemini_key=gemini_key)
+                beat_assets.extend(stock)
+                if not beat_assets:
+                    photo = _stock_photo(beat_scene, outdir, pexels_key, used,
+                                         _orientation(cfg), cfg, gemini_key)
+                    if photo:
+                        beat_assets.append(photo)
+            if not beat_assets:
+                path = os.path.join(outdir,
+                                    f"s{scene['n']:02d}_b{index:02d}_card.jpg")
+                _gradient_card(path, cfg["video"]["width"], cfg["video"]["height"],
+                               scene["n"] * 31 + index)
+                beat_assets.append({"path": path, "kind": "image"})
+                print(f"[assets] scene {scene['n']} beat {index + 1}: gradient fallback")
+            for asset in beat_assets:
+                asset["beat_index"] = index
+                if asset not in assets:
+                    assets.append(asset)
+        return assets
 
     # Overlay scenes need one strong background; the graphic carries the beat.
     if mode in ("kinetic", "stat", "card", "glass"):

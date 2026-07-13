@@ -31,6 +31,28 @@ video:
   max_shot_seconds: 5      # normal long-form visual beat ceiling
   outro_seconds: 4         # branded end card appended to every video
 
+# Six-minute quality system. The free Gemini beat-planning pass binds each
+# spoken idea to a concrete visual instead of rotating loosely related assets.
+longform_quality:
+  visual_beats:
+    enabled: true
+    hook_max_seconds: 3.8  # faster semantic changes during the cold open
+    max_seconds: 5.0       # matches the renderer's normal shot ceiling
+    min_per_scene: 2
+    max_per_scene: 12
+  dynamic_music:
+    enabled: true
+    transition_seconds: 0.45
+    hook_factor: 0.72
+    calm_factor: 0.86
+    reveal_factor: 0.58
+    urgent_factor: 0.66
+  render_qc:
+    enabled: true
+    gate: false            # report problems; set true only after several clean runs
+    min_semantic_coverage: 0.90
+    max_asset_uses: 2
+
 tts:
   engine: "sarvam"         # "sarvam" = your cloned Hindi voice (bulbul:v3).
                            # Auto-falls back to Kokoro if the API fails.

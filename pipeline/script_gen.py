@@ -15,6 +15,8 @@ import time
 
 import requests
 
+import visual_beats as visual_beats_mod
+
 API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 
@@ -401,6 +403,51 @@ Return JSON exactly: {{"topic": "<the topic as a working title>"}}"""
     raise RuntimeError(f"Could not pick a topic after 3 attempts: {last_err}")
 
 
+def _plan_visual_beats(script: dict, cfg: dict, api_key: str) -> dict:
+    """Add sentence-level stock intentions using one free Gemini request.
+
+    This intentionally bypasses the optional paid script provider.  The task
+    is constrained visual indexing, not creative writing, and Gemini's free
+    tier is sufficient.  Any API/schema failure falls back to deterministic
+    coverage based on the scene's existing search terms.
+    """
+    settings = cfg.get("longform_quality", {}).get("visual_beats", {})
+    if not settings.get("enabled", True):
+        return script
+    payload = visual_beats_mod.planner_payload(script, cfg)
+    prompt = f"""You are the visual editor of a premium science documentary.
+Turn the FINAL Hindi narration below into a sentence-level visual beat sheet.
+
+Return ONLY JSON:
+{{"scenes":[{{"n":1,"visual_beats":[{{
+  "cue":"an EXACT 3-8 word verbatim phrase from the Hindi narration where this visual starts",
+  "search_terms":["one exact concrete ENGLISH Pexels query","one fallback query"],
+  "purpose":"what the viewer must understand from this visual"
+}}]}}]}}
+
+Rules:
+- Return exactly target_beats for each scene and preserve scene order.
+- Beat 1 starts at the beginning of its scene; all cues proceed in narration order.
+- Each query must depict the nouns in its cue, not the scene's general mood.
+- Named landmarks, animals, machines, planets and anatomy require the exact subject.
+- Prefer real documentary footage: aerials, macro, natural habitat, physical processes.
+- Never use metaphorical offices, typing, food, drinks, products or captive wildlife.
+- Vary scale and camera language across consecutive beats.
+- Do not request generated art, text, logos or copyrighted characters.
+
+SCENES:
+{json.dumps(payload, ensure_ascii=False)}"""
+    try:
+        raw = _parse_json(_gemini(prompt, cfg, api_key))
+        script = visual_beats_mod.normalize_plan(script, raw, cfg)
+        total = sum(len(s.get("visual_beats", [])) for s in script["scenes"])
+        print(f"[script] semantic visual plan: {total} beats (free Gemini pass)")
+        return script
+    except Exception as exc:
+        print(f"[script] visual beat planner skipped ({exc}) — deterministic fallback")
+        return visual_beats_mod.normalize_plan(script, None, cfg)
+
+
 def generate_script(cfg: dict, topic: str, api_key: str, learnings: str = "") -> dict:
     v = cfg["video"]
     wpm = _wpm(cfg)
@@ -497,6 +544,7 @@ Script rules:
             script = _normalize(_parse_json(_llm(prompt, cfg, api_key)), 4)
             script["topic"] = topic
             script = _critique(script, cfg, api_key, "long", 4)
+            script = _plan_visual_beats(script, cfg, api_key)
             modes = [s["visual_mode"] for s in script["scenes"]]
             print(f"[script] '{script['title']}' — {len(modes)} scenes, modes: {modes}")
             return script

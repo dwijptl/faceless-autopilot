@@ -40,6 +40,7 @@ try {
 export const fontFamily = FONT;
 
 type Asset = {path: string; kind: string; duration?: number};
+type VisualBeat = {start: number; duration: number; assets: Asset[]};
 
 // ── Ken Burns still ────────────────────────────────────────────────────
 export const KenBurnsImage: React.FC<{
@@ -106,23 +107,37 @@ const VideoShot: React.FC<{
 // ── Scene visual with style grade ──────────────────────────────────────
 export const SceneVisual: React.FC<{
   assets: Asset[];
+  visualBeats?: VisualBeat[];
   sceneFrames: number;
   fps: number;
   maxShotSeconds: number;
   sceneN: number;
   style: StylePack;
   dim?: boolean; // for kinetic/stat overlay scenes
-}> = ({assets, sceneFrames, fps, maxShotSeconds, sceneN, style, dim}) => {
+}> = ({assets, visualBeats = [], sceneFrames, fps, maxShotSeconds, sceneN, style, dim}) => {
   const maxShot = Math.round(maxShotSeconds * fps);
   const shots: {from: number; frames: number; asset: Asset; idx: number}[] = [];
-  const shotCount = assets.length > 0
-    ? Math.max(1, Math.ceil(sceneFrames / Math.max(maxShot, 1))) : 0;
-  const baseFrames = shotCount > 0 ? Math.floor(sceneFrames / shotCount) : 0;
-  let cursor = 0;
-  for (let i = 0; i < shotCount; i++) {
-    const frames = baseFrames + (i < sceneFrames % shotCount ? 1 : 0);
-    shots.push({from: cursor, frames, asset: assets[i % assets.length], idx: i});
-    cursor += frames;
+  const addShots = (from: number, frames: number, pool: Asset[], seedOffset: number) => {
+    if (frames <= 0 || pool.length === 0) return;
+    const count = Math.max(1, Math.ceil(frames / Math.max(maxShot, 1)));
+    const base = Math.floor(frames / count);
+    let cursor = 0;
+    for (let i = 0; i < count; i++) {
+      const length = base + (i < frames % count ? 1 : 0);
+      shots.push({from: from + cursor, frames: length,
+        asset: pool[i % pool.length], idx: seedOffset + i});
+      cursor += length;
+    }
+  };
+  if (visualBeats.length > 0) {
+    visualBeats.forEach((beat, index) => {
+      const from = Math.max(0, Math.round(beat.start * fps));
+      const frames = Math.min(Math.max(Math.round(beat.duration * fps), 1),
+        Math.max(sceneFrames - from, 0));
+      addShots(from, frames, beat.assets?.length ? beat.assets : assets, index * 100);
+    });
+  } else {
+    addShots(0, sceneFrames, assets, 0);
   }
   return (
     <AbsoluteFill style={{backgroundColor: style.bg}}>

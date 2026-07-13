@@ -66,8 +66,22 @@ const MusicTrack: React.FC<{m: Manifest}> = ({m}) => {
   const {durationInFrames, fps} = useVideoConfig();
   if (!m.musicPath || m.musicVolume <= 0) return null;
   const fadeF = Math.round(1.5 * fps);
+  const seconds = frame / fps;
+  const automation = m.musicAutomation ?? [];
+  let active = -1;
+  for (let i = 0; i < automation.length; i++) {
+    if (seconds >= automation[i].start) active = i;
+  }
+  let narrativeFactor = active >= 0 ? automation[active].factor : 1;
+  if (active > 0) {
+    const local = seconds - automation[active].start;
+    narrativeFactor = interpolate(local, [0, m.musicTransitionSeconds ?? 0.45],
+      [automation[active - 1].factor, automation[active].factor],
+      {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  }
   const vol =
     m.musicVolume *
+    narrativeFactor *
     interpolate(
       frame,
       [0, fadeF, Math.max(durationInFrames - fadeF, fadeF + 1), durationInFrames],
@@ -101,6 +115,7 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
         ) : (
           <SceneVisual
             assets={scene.assets}
+            visualBeats={scene.visualBeats ?? []}
             sceneFrames={sceneFrames}
             fps={fps}
             maxShotSeconds={maxShotSeconds}
