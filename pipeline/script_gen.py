@@ -584,6 +584,10 @@ Visual mode rules (variety is the goal — videos must not feel stock-only):
   rewrite the narration generically instead of showing a misleading substitute.
 
 Script rules:
+- SCENARIO LOCK (scientific integrity): if the premise is a hypothetical with
+  multiple interpretations, CHOOSE ONE in the cold open and derive every
+  consequence from that single scenario — never mix consequences from
+  different interpretations of the same "what if".
 - SIMULATION ENGINE (most important rule): the video is a guided simulation.
   "premise" states one impossible/curious rule; "changing_variable" is the ONE
   number the viewer watches move. EVERY scene gets a milestone.value along
@@ -638,7 +642,9 @@ def generate_short_script(cfg: dict, topic: str, api_key: str,
     """Script for a vertical Short/Reel: one idea, ~25s, loop-friendly."""
     scfg = cfg.get("short", {})
     seconds = int(scfg.get("target_seconds", 25))
-    wpm = _wpm(cfg)
+    # shorts word budget calibrates to the REAL spoken pace (Sarvam Hindi with
+    # pauses runs ~95-105 wpm, well below the long-form planning rate)
+    wpm = int(scfg.get("wpm", min(_wpm(cfg), 105)))
     words = int(seconds / 60 * wpm)
     short_ai_max = min(_ai_max(cfg), 2)
     learn_block = (f"\nCHANNEL LEARNINGS — apply to hook and pacing:\n{learnings}\n"
@@ -677,6 +683,19 @@ Return ONLY valid JSON:
 }}
 
 Shorts rules:
+- SCENARIO LOCK (scientific integrity — highest priority): if the topic is a
+  hypothetical with multiple interpretations (e.g. "oxygen disappears" could
+  mean atmospheric O₂ gas vanishing OR every oxygen atom vanishing from water,
+  rock and concrete), CHOOSE EXACTLY ONE interpretation in scene 1 and derive
+  every consequence from that one scenario only. Never mix consequences across
+  interpretations (atmospheric-O₂ loss does NOT turn concrete to dust). When
+  it sharpens the hook, state the boundary explicitly ("सिर्फ हवा की ऑक्सीजन —
+  10 सेकंड के लिए"). Honest consequences of the chosen scenario are dramatic
+  enough.
+- VISUAL VARIETY: each scene's search_terms must name a DIFFERENT concrete
+  subject — no two consecutive scenes may depict the same subject (never two
+  scenes of the same distressed person). The viewer sees a new image every
+  ~3 seconds.
 - {scfg.get('scenes_min', 4)}-{scfg.get('scenes_max', 6)} micro-scenes. ONE idea total.
   HARD CAP: ~{words} spoken words across the whole script — if over, cut
   adjectives and merge scenes. Shorter beats complete.

@@ -29,6 +29,7 @@ import script_gen                   # noqa: E402
 import sfx as sfx_mod               # noqa: E402
 import tts as tts_mod               # noqa: E402
 import vision_qc                    # noqa: E402
+from run import _impact_start       # noqa: E402  (word-synced overlay timing)
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REMOTION_DIR = os.path.join(REPO_ROOT, "remotion")
@@ -130,6 +131,12 @@ def main() -> None:
               f"/{sc.get('delivery', 'calm')})")
     scenes[0]["start"] = 0.0
     print(f"[tts] {tts_mod.usage_summary()}")
+    total_speech = scenes[-1]["start"] + scenes[-1]["audio_duration"]
+    target_s = float(short_settings.get("target_seconds", 25))
+    if total_speech > target_s * 1.25:
+        print(f"[warn] short runs {total_speech:.1f}s vs {target_s:.0f}s target "
+              f"(+{(total_speech / target_s - 1) * 100:.0f}%) — lower short.wpm "
+              f"in config.yaml to calibrate the word budget")
     voice_fallback = (str(cfg.get("tts", {}).get("engine", "")).lower() == "sarvam"
                       and tts_mod.fallback_used())
     aligned_scenes = 0
@@ -207,10 +214,19 @@ def main() -> None:
     cta_event = motion_mod.plan_cta(scenes, cfg, motion_seed, is_short=True)
     sfx_events = sfx_mod.plan_events(scenes, cfg, workdir, cta_event)
 
+    # word-synced impact windows: the graphic enters on the spoken keyword
+    overlay_seconds = float(short_settings.get("overlay_seconds", 3.5))
+    for sc in scenes:
+        sc["impact_start"] = _impact_start(sc, overlay_seconds)
+        if sc["impact_start"] > 0:
+            print(f"[sync] scene {sc['n']}: {sc.get('visual_mode')} graphic "
+                  f"word-synced to +{sc['impact_start']:.2f}s")
+
     manifest = {"manifest": {
         "fps": fps, "width": 1080, "height": 1920,
         "xfadeFrames": max(int(round(xfade * fps)), 1),
         "maxShotSeconds": float(cfg["video"].get("max_shot_seconds", 2.4)),
+        "overlaySeconds": overlay_seconds,
         "style": style,
         "accent": cfg["render"].get("accent", "#FFB020"),
         "progressBar": bool(cfg["render"].get("progress_bar", False)),
@@ -233,6 +249,7 @@ def main() -> None:
         "scenes": [{
             "n": sc["n"], "title": sc.get("title", ""),
             "start": round(sc["start"], 3),
+            "impactStart": sc.get("impact_start", 0.0),
             "visualMode": sc.get("visual_mode", "broll"),
             "kineticText": sc.get("kinetic_text", ""),
             "stat": sc.get("stat", {}) or {},
