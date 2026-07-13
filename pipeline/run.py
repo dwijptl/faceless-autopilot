@@ -11,6 +11,7 @@ import glob
 import json
 import os
 import random
+import re
 import shutil
 import subprocess
 import sys
@@ -102,6 +103,57 @@ def _asset_manifest(asset: dict) -> dict:
         "kind": asset["kind"],
         "duration": round(asset["duration"], 2) if asset.get("duration") else None,
     }
+
+
+def _impact_start(sc: dict, overlay_seconds: float) -> float:
+    """Word-synced start (seconds, scene-relative) for the scene's graphic.
+
+    Uses Sarvam STT word timestamps so a stat/kinetic/card/glass overlay
+    enters exactly when its key word or number is spoken — motion motivated
+    by narration is what separates 'edited' from 'animated'. Fails open to
+    0.0 (scene start) when alignment or a match is unavailable.
+    """
+    words = sc.get("word_times") or []
+    mode = sc.get("visual_mode", "broll")
+    if mode not in ("stat", "kinetic", "card", "glass") or not words:
+        return 0.0
+
+    def norm(text) -> str:
+        return re.sub(r"[^\wऀ-ॿ]", "", str(text)).lower()
+
+    targets: list[str] = []
+    if mode == "stat":
+        v = (sc.get("stat") or {}).get("value")
+        if isinstance(v, (int, float)):
+            targets.append(str(int(v)) if float(v).is_integer() else str(v))
+    elif mode == "kinetic":
+        targets += str(sc.get("kinetic_text", "")).split()[:2]
+    elif mode == "card":
+        targets += str((sc.get("card") or {}).get("headline", "")).split()[:2]
+    elif mode == "glass":
+        g = sc.get("glass") or {}
+        v = g.get("value")
+        if isinstance(v, (int, float)):
+            targets.append(str(int(v)) if float(v).is_integer() else str(v))
+        targets += str(g.get("headline", "")).split()[:2]
+    targets = [norm(t) for t in targets if len(norm(t)) >= 2]
+    if not targets:
+        return 0.0
+
+    for item in words:
+        try:
+            word, start = str(item[0]), float(item[1])
+        except (TypeError, ValueError, IndexError):
+            continue
+        w = norm(word)
+        if not w:
+            continue
+        if any(t in w or w in t for t in targets):
+            impact = max(start - 0.15, 0.0)  # slight pre-roll: card lands ON the word
+            # keep runway so most of the overlay window fits before scene end
+            latest = max(sc["audio_duration"] - overlay_seconds * 0.8, 0.0)
+            return round(min(impact, latest), 3)
+    return 0.0
 
 
 def _visual_beat_manifest(scene: dict) -> list[dict]:
@@ -270,14 +322,20 @@ def main() -> None:
     # 5) manifest ------------------------------------------------------------
     rcfg = cfg.get("render", {})
     brand_cfg = cfg.get("brand", {})
+    overlay_seconds = float(cfg.get("longform_quality", {})
+                            .get("overlay_seconds", 5.0))
+    for sc in scenes:
+        sc["impact_start"] = _impact_start(sc, overlay_seconds)
+        if sc["impact_start"] > 0:
+            print(f"[sync] scene {sc['n']}: {sc.get('visual_mode')} graphic "
+                  f"word-synced to +{sc['impact_start']:.2f}s")
     manifest = {"manifest": {
         "fps": fps,
         "width": int(cfg["video"]["width"]),
         "height": int(cfg["video"]["height"]),
         "xfadeFrames": max(int(round(xfade * fps)), 1),
         "maxShotSeconds": float(cfg["video"].get("max_shot_seconds", 5)),
-        "overlaySeconds": float(cfg.get("longform_quality", {})
-                                .get("overlay_seconds", 5.0)),
+        "overlaySeconds": overlay_seconds,
         "style": style,
         "accent": rcfg.get("accent", "#FFB020"),
         "progressBar": bool(rcfg.get("progress_bar", True)),
@@ -305,6 +363,7 @@ def main() -> None:
         "scenes": [{
             "n": sc["n"],
             "start": round(sc["start"], 3),
+            "impactStart": sc.get("impact_start", 0.0),
             "title": sc.get("title", ""),
             "visualMode": sc.get("visual_mode", "broll"),
             "kineticText": sc.get("kinetic_text", ""),
