@@ -121,24 +121,28 @@ def _pad_reveal_pause(wav_path: str, seconds: float = 0.35) -> float:
         return 0.0
 
 
-def _attach_hero(scenes: list[dict], hero_path: str) -> None:
-    """Pin the episode's recurring hero still to the hook, the reveal and the
-    payoff scenes (first beat; last beat on the final scene) so the video
-    keeps returning to one consistent subject as conditions change."""
-    targets = {scenes[0]["n"], scenes[-1]["n"]}
+def _attach_hero(scenes: list[dict], poses: dict) -> None:
+    """Pin the episode's recurring hero to the hook, the reveal and the
+    payoff. G6: a 3-pose set (establish / action / final) keeps ONE
+    consistent subject on screen while its state visibly changes with the
+    journey — continuity stock people can never provide."""
+    default = next(iter(poses.values()))
+    wanted = {scenes[0]["n"]: poses.get("establish", default),
+              scenes[-1]["n"]: poses.get("final", default)}
     reveal_n = next((sc["n"] for sc in scenes
                      if sc.get("delivery") == "reveal"), None)
-    if reveal_n is not None:
-        targets.add(reveal_n)
+    if reveal_n is not None and reveal_n not in wanted:
+        wanted[reveal_n] = poses.get("action", default)
     for sc in scenes:
-        if sc["n"] not in targets:
+        path = wanted.get(sc["n"])
+        if not path:
             continue
         beats = sc.get("visual_beats") or []
         bi = max(len(beats) - 1, 0) if sc["n"] == scenes[-1]["n"] else 0
-        sc["assets"].insert(0, {"path": hero_path, "kind": "image",
+        sc["assets"].insert(0, {"path": path, "kind": "image",
                                 "ai": True, "duration": None,
                                 "beat_index": bi})
-    print(f"[hero] attached to scenes {sorted(targets)}")
+    print(f"[hero] attached {len(poses)} pose(s) to scenes {sorted(wanted)}")
 
 
 def _thumb_mean_luma(path: str) -> float:
@@ -305,14 +309,30 @@ def main() -> None:
     with open(os.path.join(outdir, "script.json"), "w", encoding="utf-8") as f:
         json.dump(script, f, indent=2, ensure_ascii=False)
 
-    # recurring hero still — one consistent subject the episode returns to
-    hero_path = None
+    # recurring hero — G6 3-pose set: one consistent subject whose STATE
+    # changes with the journey (establish -> action -> final)
+    hero_poses: dict = {}
     hp = (script.get("hero_prompt") or "").strip()
     if hp:
-        p = os.path.join(workdir, "hero.png")
-        if ai_images.generate(hp, p, gemini_key, cfg, aspect="16:9 wide"):
-            hero_path = p
-            print("[hero] recurring hero still generated")
+        pose_specs = [
+            ("establish", "Establishing wide shot: the subject small against "
+                          "its vast environment, sense of scale, the journey "
+                          "about to begin"),
+            ("action", "Dynamic mid-journey moment: the subject under visible "
+                       "environmental stress, dramatic closer framing"),
+            ("final", "Journey's end state: the subject transformed by the "
+                      "conditions, quiet monumental conclusive lighting"),
+        ]
+        for name, pose in pose_specs:
+            p = os.path.join(workdir, f"hero_{name}.png")
+            if ai_images.generate(
+                    f"{hp}. {pose}. CONTINUITY: the exact same subject with "
+                    "identical design, materials, colors and proportions in "
+                    "every image — one continuous character across a series.",
+                    p, gemini_key, cfg, aspect="16:9 wide"):
+                hero_poses[name] = p
+        if hero_poses:
+            print(f"[hero] pose set generated: {sorted(hero_poses)}")
 
     # 2) voiceover -----------------------------------------------------------
     fps = int(cfg["video"]["fps"])
@@ -397,8 +417,8 @@ def main() -> None:
     usage_log["pexels"] = sorted(used)
     usage_log["prompts"] = sorted(used_prompts)
     assets_mod.save_usage_log(log_path, usage_log)
-    if hero_path:
-        _attach_hero(scenes, hero_path)
+    if hero_poses:
+        _attach_hero(scenes, hero_poses)
 
     # 4) captions ------------------------------------------------------------
     events, srt = captions_mod.build_captions(scenes, cfg["captions"]["max_chars"])
@@ -521,6 +541,11 @@ def main() -> None:
     quality_report = quality_mod.audit_delivery(
         final_path, manifest["manifest"], cfg,
         os.path.join(outdir, "quality_report.json"))
+    # G11 — one-vision-call contact-sheet audit of the ACTUAL render
+    render_audit = vision_qc.audit_render(
+        final_path, cfg, gemini_key,
+        forbidden=script.get("forbidden_visuals") or [],
+        out_path=os.path.join(outdir, "render_audit.json"))
 
     # 7) thumbnail ---------------------------------------------------------------
     thumb_path = os.path.join(outdir, "thumbnail.jpg")
@@ -573,7 +598,9 @@ def main() -> None:
     quality_requires_review = (
         bool(cfg.get("longform_quality", {}).get("render_qc", {}).get("gate", False))
         and not quality_report.get("passed", False))
-    draft_release = voice_fallback or fact_requires_review or quality_requires_review
+    audit_requires_review = not render_audit.get("publishable", True)
+    draft_release = (voice_fallback or fact_requires_review
+                     or quality_requires_review or audit_requires_review)
     status_voice = "⚠️ FALLBACK — DO NOT PUBLISH" if voice_fallback else "OK (cloned)"
     status_fact = (f"⚠️ REVIEW CLAIMS ({fact_report.get('unsupported', 0)} unsupported)"
                    if fact_requires_review else fact_report.get("status", "unknown"))
@@ -586,9 +613,16 @@ def main() -> None:
                    "verified/removed: "
                    + "; ".join(fact_report.get("high_risk_unsupported", [])[:3])
                    + "\n\n" if fact_requires_review else "")
+    audit_banner = ("> ⚠️ **RENDER AUDIT — DO NOT PUBLISH:** "
+                    + "; ".join(str(i.get("note", "")) for i in
+                                render_audit.get("issues", [])
+                                if str(i.get("severity", "")).lower() == "serious")[:200]
+                    + "\n\n" if audit_requires_review else "")
+    status_audit = ("⚠️ REVIEW" if audit_requires_review
+                    else render_audit.get("status", "skipped"))
     meta = f"""## {script['title']}
 
-{voice_banner}{fact_banner}**Reliability:** Voice: {status_voice} | Captions: {caption_status} | Fact-check: {status_fact} | Quality: {status_quality}
+{voice_banner}{fact_banner}{audit_banner}**Reliability:** Voice: {status_voice} | Captions: {caption_status} | Fact-check: {status_fact} | Quality: {status_quality} | Render audit: {status_audit}
 
 **Duration:** {duration / 60:.1f} min · **Scenes:** {len(scenes)} · **Style:** {style} ·
 **AI visuals:** {n_ai} · **Run:** {stamp} · **Renderer:** {used_engine} ·
@@ -642,6 +676,7 @@ Remotion. Brand: Terra Incognita.*
                    "voice": voice_line, "captions": caption_status,
                    "factcheck": fact_report,
                    "quality": quality_report,
+                   "render_audit": render_audit,
                    "motion_library": {
                        "seed": motion_seed,
                        "cta": cta_event,

@@ -148,3 +148,166 @@ def frame_ok(media_path: str, kind: str, scene_desc: str, search_term: str,
         except Exception:
             return True  # fail-open
     return True
+
+
+def _models_list(cfg: dict) -> list[str]:
+    return [cfg["llm"].get("model", "gemini-2.5-flash")] + list(
+        cfg["llm"].get("fallback_models", []))
+
+
+def pick_best(candidates: list, scene_desc: str, search_term: str,
+              api_key: str, cfg: dict, forbidden: list | None = None) -> int:
+    """G4 candidate ranking — ONE vision call compares candidate assets for a
+    beat and picks the semantically better one. candidates = [(path, kind)].
+    Returns 0-based index of the winner, or -1 when NONE is acceptable.
+    Fail-open: any problem returns 0 (first candidate)."""
+    global _requests_remaining
+    if len(candidates) < 2:
+        return 0
+    if not cfg.get("qc", {}).get("visual_check", True) or not api_key:
+        return 0
+    if _requests_remaining is None:
+        begin_run(cfg)
+    if _requests_remaining <= 0:
+        return 0
+    parts = []
+    for i, (path, kind) in enumerate(candidates):
+        frames = _frame_jpegs_b64(path, kind, 1)
+        if not frames:
+            return 0
+        parts.append({"text": f"CANDIDATE {i + 1}:"})
+        parts.append({"inline_data": {"mime_type": "image/jpeg",
+                                      "data": frames[0]}})
+    contract = ""
+    if forbidden:
+        contract = ("REJECT any candidate showing: "
+                    f"{', '.join(str(f) for f in forbidden[:6])}. ")
+    parts.append({"text": (
+        "You are the visual editor of a premium nature/space documentary. "
+        f'SCENE NARRATION (Hindi): "{scene_desc[:280]}"\n'
+        f'SEARCH INTENT: "{search_term}"\n' + contract +
+        "Pick the candidate that best and most TRUTHFULLY illustrates this "
+        "scene (semantic accuracy first, then composition, light, and how "
+        "well it reads behind captions). "
+        'Answer ONLY JSON: {"best": <1-based candidate number, or 0 if NONE '
+        'is acceptable>, "reason": "<5 words>"}')})
+    body = {"contents": [{"parts": parts}],
+            "generationConfig": {"response_mime_type": "application/json",
+                                 "temperature": 0.1}}
+    for model in _models_list(cfg)[:2]:
+        try:
+            _requests_remaining -= 1
+            r = requests.post(f"{API_BASE}/{model}:generateContent?key={api_key}",
+                              json=body, timeout=60)
+            if r.status_code == 429:
+                time.sleep(10)
+                continue
+            if r.status_code in (400, 404):
+                continue
+            r.raise_for_status()
+            text = r.json()["candidates"][0]["content"]["parts"][0]["text"]
+            text = re.sub(r"^```(json)?|```$", "", text.strip(),
+                          flags=re.MULTILINE).strip()
+            best = int(json.loads(text).get("best", 1))
+            if best <= 0:
+                return -1
+            return min(best, len(candidates)) - 1
+        except Exception:
+            return 0  # fail-open to first candidate
+    return 0
+
+
+def audit_render(final_path: str, cfg: dict, api_key: str,
+                 forbidden: list | None = None,
+                 out_path: str | None = None) -> dict:
+    """G11 post-render contact-sheet audit. Extracts one frame every ~12s,
+    tiles them into a single sheet and asks ONE vision question: would the
+    final publish reviewer flag anything? A `serious` issue flips
+    publishable=False (run.py marks the release DRAFT). Fail-open."""
+    report = {"status": "skipped", "publishable": True, "issues": []}
+    try:
+        if not api_key or not cfg.get("qc", {}).get("render_audit", True):
+            return _write_audit(report, out_path)
+        duration = _duration(final_path) or 0.0
+        if duration < 30:
+            return _write_audit(report, out_path)
+        step = max(duration / 24.0, 12.0)
+        positions, pos = [], step / 2
+        while pos < duration and len(positions) < 24:
+            positions.append(pos)
+            pos += step
+        tiles = []
+        for p in positions:
+            r = subprocess.run(
+                ["ffmpeg", "-v", "error", "-ss", f"{p:.2f}", "-i", final_path,
+                 "-frames:v", "1", "-f", "image2pipe", "-vcodec", "mjpeg", "pipe:1"],
+                check=True, timeout=60, capture_output=True)
+            img = Image.open(io.BytesIO(r.stdout)).convert("RGB")
+            img.thumbnail((320, 180))
+            tiles.append(img)
+        if not tiles:
+            return _write_audit(report, out_path)
+        cols = 4
+        rows = (len(tiles) + cols - 1) // cols
+        sheet = Image.new("RGB", (cols * 320, rows * 180), (0, 0, 0))
+        for i, im in enumerate(tiles):
+            sheet.paste(im, ((i % cols) * 320, (i // cols) * 180))
+        buf = io.BytesIO()
+        sheet.save(buf, format="JPEG", quality=70)
+        b64 = base64.b64encode(buf.getvalue()).decode()
+        contract = ""
+        if forbidden:
+            contract = ("This episode's premise FORBIDS showing: "
+                        f"{', '.join(str(f) for f in forbidden[:6])}. ")
+        prompt = (
+            "This contact sheet holds frames sampled at equal intervals "
+            "(left-to-right, top-to-bottom) from a finished Hindi science "
+            "documentary. " + contract +
+            "Audit it as the final publish reviewer. Flag ONLY real problems: "
+            "(1) a frame contradicting the premise/forbidden list, "
+            "(2) near-black unreadable frames, (3) obviously identical "
+            "repeated shots, (4) broken/overlapping text. Severity `serious` "
+            "means a viewer would notice and lose trust; else `minor`. "
+            'Return ONLY JSON: {"issues":[{"severity":"serious","note":'
+            '"<10 words>","frame":3}]} — empty list when clean.')
+        body = {"contents": [{"parts": [
+                    {"inline_data": {"mime_type": "image/jpeg", "data": b64}},
+                    {"text": prompt}]}],
+                "generationConfig": {"response_mime_type": "application/json",
+                                     "temperature": 0.1}}
+        for model in _models_list(cfg)[:2]:
+            r = requests.post(f"{API_BASE}/{model}:generateContent?key={api_key}",
+                              json=body, timeout=90)
+            if r.status_code == 429:
+                time.sleep(10)
+                continue
+            if r.status_code in (400, 404):
+                continue
+            r.raise_for_status()
+            text = r.json()["candidates"][0]["content"]["parts"][0]["text"]
+            text = re.sub(r"^```(json)?|```$", "", text.strip(),
+                          flags=re.MULTILINE).strip()
+            issues = json.loads(text).get("issues") or []
+            report["issues"] = issues[:10]
+            report["publishable"] = not any(
+                str(i.get("severity", "")).lower() == "serious" for i in issues)
+            report["status"] = "ok"
+            n_serious = sum(1 for i in issues
+                            if str(i.get('severity', '')).lower() == 'serious')
+            print(f"[audit] render audit: {len(issues)} issue(s), "
+                  f"{n_serious} serious")
+            break
+    except Exception as exc:
+        report["status"] = f"skipped ({exc})"
+        print(f"[audit] {report['status']}")
+    return _write_audit(report, out_path)
+
+
+def _write_audit(report: dict, out_path: str | None) -> dict:
+    if out_path:
+        try:
+            with open(out_path, "w", encoding="utf-8") as f:
+                json.dump(report, f, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
+    return report
