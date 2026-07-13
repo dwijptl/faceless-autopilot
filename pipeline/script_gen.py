@@ -517,7 +517,7 @@ Write a scene-segmented script and return ONLY valid JSON with this exact shape:
   "title": "click-worthy but honest YouTube title, <= 70 chars",
   "title_options": ["5 alternative Hindi titles, strongest first: one conservative, one high-curiosity, one number-driven among them"],
   "thumb_text": "3-5 bold ENGLISH/Hinglish keywords for the thumbnail (Latin script)",
-  "thumb_prompt": "ENGLISH text-to-image prompt for the thumbnail: ONE dramatic subject, extreme close-up or epic scale, strong rim light, dark moody background, left third relatively empty for text overlay",
+  "thumb_prompt": "ENGLISH text-to-image prompt for the thumbnail. NON-NEGOTIABLE: ONE dramatic subject FILLING 50-70% of the frame, strong rim light separating it clearly from the background, at least one vivid color accent; mid-dark background WITH visible depth — NEVER a mostly-black or murky image (it must read instantly at 160px feed size); keep the bottom third relatively empty for the title text",
   "thumb_options": [{{"text": "2-4 Latin punch words", "concept": "one-line alternative visual idea"}}, {{"text": "...", "concept": "..."}}, {{"text": "...", "concept": "..."}}],
   "premise": "ONE Hindi sentence: the impossible rule / continuous journey of this episode",
   "changing_variable": {{"label": "SHORT ENGLISH metric the viewer watches change (DEPTH, SPEED, TIME, TEMP, SIZE)", "unit": "km"}},

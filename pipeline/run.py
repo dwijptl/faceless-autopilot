@@ -141,6 +141,33 @@ def _attach_hero(scenes: list[dict], hero_path: str) -> None:
     print(f"[hero] attached to scenes {sorted(targets)}")
 
 
+def _thumb_mean_luma(path: str) -> float:
+    try:
+        from PIL import Image, ImageStat
+        return float(ImageStat.Stat(Image.open(path).convert("L")).mean[0])
+    except Exception:
+        return 128.0
+
+
+def _lift_thumb(path: str, target: float = 55.0) -> None:
+    """Adaptive lift for murky AI thumbnails. A thumbnail that reads as a
+    black rectangle at 160px feed size earns zero clicks — brighten toward a
+    minimum mean luminance while keeping contrast. Fail-open."""
+    try:
+        from PIL import Image, ImageEnhance
+        mean = _thumb_mean_luma(path)
+        if mean >= target:
+            return
+        img = Image.open(path).convert("RGB")
+        factor = min(target / max(mean, 12.0), 1.9)
+        img = ImageEnhance.Brightness(img).enhance(factor)
+        img = ImageEnhance.Contrast(img).enhance(1.12)
+        img.save(path, quality=92)
+        print(f"[thumb] lifted dark thumbnail (mean luma {mean:.0f} -> ~{target:.0f})")
+    except Exception as exc:
+        print(f"[thumb] lift skipped ({exc})")
+
+
 def _chapters_block(scenes: list[dict]) -> str:
     """YouTube chapter timestamps from scene starts (first must be 0:00)."""
     if len(scenes) < 3:
@@ -377,6 +404,15 @@ def main() -> None:
     if tp:
         p = os.path.join(workdir, "thumb_ai.png")
         if ai_images.generate(tp, p, gemini_key, cfg, aspect="16:9 wide"):
+            if _thumb_mean_luma(p) < 42:  # murky — one brighter retry
+                print("[thumb] too dark for feed size — regenerating brighter")
+                bright_tp = (tp + " The subject is LARGE in frame with bright "
+                             "dramatic rim lighting and luminous volumetric "
+                             "light — clearly readable as a tiny thumbnail, "
+                             "not a dark murky image.")
+                ai_images.generate(bright_tp, p, gemini_key, cfg,
+                                   aspect="16:9 wide")
+            _lift_thumb(p)
             thumb_ai = "thumb_ai.png"
             print("[thumb] dedicated AI thumbnail generated")
 
