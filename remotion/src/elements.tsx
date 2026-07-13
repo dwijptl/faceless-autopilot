@@ -39,7 +39,7 @@ try {
 }
 export const fontFamily = FONT;
 
-type Asset = {path: string; kind: string; duration?: number};
+type Asset = {path: string; kind: string; duration?: number; ai?: boolean};
 type VisualBeat = {start: number; duration: number; assets: Asset[]};
 
 // ── Ken Burns still ────────────────────────────────────────────────────
@@ -65,6 +65,55 @@ export const KenBurnsImage: React.FC<{
           height: '100%',
           objectFit: 'cover',
           transform: `scale(${scale}) translate(${driftX * t}px, ${driftY * t}px)`,
+        }}
+      />
+    </AbsoluteFill>
+  );
+};
+
+// ── Parallax Ken Burns: fake 2.5D depth for AI signature stills ────────
+// Two layers of the same image: a soft oversized background drifting slowly
+// and a sharp foreground moving faster with a subtle counter-rotation —
+// reads as a camera moving through space rather than a flat zoom.
+export const ParallaxKenBurns: React.FC<{
+  src: string;
+  durationInFrames: number;
+  seed: string;
+}> = ({src, durationInFrames, seed}) => {
+  const frame = useCurrentFrame();
+  const t = frame / Math.max(durationInFrames, 1);
+  const dirX = random(`px-${seed}`) < 0.5 ? 1 : -1;
+  const dirY = random(`py-${seed}`) < 0.5 ? 1 : -1;
+  const zoomIn = random(`pz-${seed}`) < 0.6;
+  const fgScale = zoomIn
+    ? interpolate(t, [0, 1], [1.1, 1.24])
+    : interpolate(t, [0, 1], [1.24, 1.1]);
+  const bgScale = zoomIn
+    ? interpolate(t, [0, 1], [1.3, 1.36])
+    : interpolate(t, [0, 1], [1.36, 1.3]);
+  const fgX = dirX * interpolate(t, [0, 1], [0, 42]);
+  const fgY = dirY * interpolate(t, [0, 1], [0, 26]);
+  const rot = dirX * interpolate(t, [0, 1], [0, 0.5]);
+  return (
+    <AbsoluteFill style={{overflow: 'hidden'}}>
+      <Img
+        src={src}
+        style={{
+          position: 'absolute', width: '100%', height: '100%',
+          objectFit: 'cover', filter: 'blur(9px) brightness(0.75)',
+          transform: `scale(${bgScale}) translate(${-fgX * 0.35}px, ${-fgY * 0.35}px)`,
+        }}
+      />
+      <Img
+        src={src}
+        style={{
+          position: 'absolute', width: '100%', height: '100%',
+          objectFit: 'cover',
+          transform: `scale(${fgScale}) translate(${fgX}px, ${fgY}px) rotate(${rot}deg)`,
+          maskImage:
+            'radial-gradient(ellipse 78% 78% at 50% 50%, black 55%, transparent 100%)',
+          WebkitMaskImage:
+            'radial-gradient(ellipse 78% 78% at 50% 50%, black 55%, transparent 100%)',
         }}
       />
     </AbsoluteFill>
@@ -147,6 +196,9 @@ export const SceneVisual: React.FC<{
             {s.asset.kind === 'video' ? (
               <VideoShot asset={s.asset} shotFrames={s.frames} fps={fps}
                 seed={`${sceneN}-${s.idx}`} />
+            ) : s.asset.ai ? (
+              <ParallaxKenBurns src={staticFile(s.asset.path)}
+                durationInFrames={s.frames} seed={`${sceneN}-${s.idx}`} />
             ) : (
               <KenBurnsImage src={staticFile(s.asset.path)}
                 durationInFrames={s.frames} seed={`${sceneN}-${s.idx}`} />
@@ -522,14 +574,25 @@ export const SfxLayer: React.FC<{
   </AbsoluteFill>
 );
 
-export const ProgressBar: React.FC<{accent: string}> = ({accent}) => {
+export const ProgressBar: React.FC<{
+  accent: string;
+  marks?: number[]; // chapter positions as 0-1 fractions
+}> = ({accent, marks}) => {
   const frame = useCurrentFrame();
   const {durationInFrames} = useVideoConfig();
   return (
-    <div style={{
-      position: 'absolute', top: 0, left: 0, height: 8,
-      width: `${(frame / Math.max(durationInFrames - 1, 1)) * 100}%`,
-      background: accent, opacity: 0.9,
-    }} />
+    <>
+      <div style={{
+        position: 'absolute', top: 0, left: 0, height: 8,
+        width: `${(frame / Math.max(durationInFrames - 1, 1)) * 100}%`,
+        background: accent, opacity: 0.9,
+      }} />
+      {(marks ?? []).map((f, i) => (
+        <div key={i} style={{
+          position: 'absolute', top: 0, left: `${Math.min(Math.max(f, 0), 1) * 100}%`,
+          width: 2, height: 8, background: 'rgba(244,247,251,0.4)',
+        }} />
+      ))}
+    </>
   );
 };

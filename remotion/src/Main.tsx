@@ -140,9 +140,39 @@ const TimedDim: React.FC<{frames: number; fps: number; from?: number}> =
   </Sequence>
 );
 
+// ── Delivery-driven camera: the narrator's tone moves the lens ─────────
+// "reveal": half-second hold, then an accelerating push-in toward the
+// subject. "urgent": a 2-3px deterministic handheld jitter at ~15Hz.
+const CameraRig: React.FC<{
+  delivery?: string;
+  fps: number;
+  frames: number;
+  sceneN: number;
+  children: React.ReactNode;
+}> = ({delivery, fps, frames, sceneN, children}) => {
+  const frame = useCurrentFrame();
+  let transform: string | undefined;
+  if (delivery === 'reveal') {
+    const hold = Math.round(0.5 * fps);
+    const p = interpolate(frame, [hold, Math.max(frames, hold + 1)], [0, 1],
+      {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+    transform = `scale(${(1 + 0.055 * p * p).toFixed(4)})`;
+  } else if (delivery === 'urgent') {
+    const step = Math.floor(frame / 2); // ~15Hz jitter
+    const sx = (random(`shx-${sceneN}-${step}`) - 0.5) * 5;
+    const sy = (random(`shy-${sceneN}-${step}`) - 0.5) * 4;
+    transform = `translate(${sx.toFixed(2)}px, ${sy.toFixed(2)}px) scale(1.02)`;
+  }
+  if (!transform) return <>{children}</>;
+  return <AbsoluteFill style={{transform}}>{children}</AbsoluteFill>;
+};
+
 export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
   const fps = m.fps;
+  const {durationInFrames} = useVideoConfig();
   const style = getStyle(m.style);
+  const chapterMarks = m.scenes.slice(1).map(
+    (sc) => ((sc.start ?? 0) * fps) / Math.max(durationInFrames, 1));
   const maxShotSeconds = m.maxShotSeconds ?? 5;
   const overlaySeconds = Math.min(
     Math.max(Number((m as any).overlaySeconds ?? 5), 2.5), 12);
@@ -170,19 +200,22 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
     const motion: MotionSpec = scene.motion ?? {};
     items.push(
       <TransitionSeries.Sequence key={`s-${scene.n}`} durationInFrames={sceneFrames}>
-        {isMap ? (
-          <MapZoom map={scene.map} sceneFrames={sceneFrames} style={style} />
-        ) : (
-          <SceneVisual
-            assets={scene.assets}
-            visualBeats={scene.visualBeats ?? []}
-            sceneFrames={sceneFrames}
-            fps={fps}
-            maxShotSeconds={maxShotSeconds}
-            sceneN={scene.n}
-            style={style}
-          />
-        )}
+        <CameraRig delivery={(scene as any).delivery} fps={fps}
+          frames={sceneFrames} sceneN={scene.n}>
+          {isMap ? (
+            <MapZoom map={scene.map} sceneFrames={sceneFrames} style={style} />
+          ) : (
+            <SceneVisual
+              assets={scene.assets}
+              visualBeats={scene.visualBeats ?? []}
+              sceneFrames={sceneFrames}
+              fps={fps}
+              maxShotSeconds={maxShotSeconds}
+              sceneN={scene.n}
+              style={style}
+            />
+          )}
+        </CameraRig>
         {overlayScene ? (
           <TimedDim frames={overlayFrames} fps={fps} from={impactF} />
         ) : null}
@@ -251,7 +284,9 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
       {m.watermarkPath ? (
         <Watermark src={m.watermarkPath} opacity={m.watermarkOpacity ?? 0.08} />
       ) : null}
-      {m.progressBar ? <ProgressBar accent={style.accent} /> : null}
+      {m.progressBar ? (
+        <ProgressBar accent={style.accent} marks={chapterMarks} />
+      ) : null}
       <SfxLayer events={m.sfx ?? []} fps={fps} />
       <MusicTrack m={m} />
     </AbsoluteFill>
