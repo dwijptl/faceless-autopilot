@@ -282,7 +282,9 @@ def main() -> None:
     done_count = 0
     try:
         with open(os.path.join(REPO_ROOT, "topics_done.txt"), encoding="utf-8") as f:
-            done_count = sum(1 for ln in f if ln.strip() and not ln.startswith("#"))
+            done_count = sum(1 for ln in f
+                             if ln.strip() and not ln.startswith("#")
+                             and not ln.startswith("NEXT:"))
     except Exception:
         pass
     style = STYLES[done_count % len(STYLES)]
@@ -327,6 +329,13 @@ def main() -> None:
               f"/{sc.get('delivery', 'calm')})")
     scenes[0]["start"] = 0.0
     print(f"[tts] {tts_mod.usage_summary()}")
+    total_speech = scenes[-1]["start"] + scenes[-1]["audio_duration"]
+    target_s = float(cfg["video"]["target_minutes"]) * 60
+    if not 0.85 * target_s <= total_speech <= 1.15 * target_s:
+        print(f"[warn] narration runs {total_speech / 60:.1f} min vs "
+              f"{target_s / 60:.1f} min target "
+              f"({total_speech / target_s * 100:.0f}%) — check word budget "
+              f"and channel.wpm calibration")
     voice_fallback = (str(cfg.get("tts", {}).get("engine", "")).lower() == "sarvam"
                       and tts_mod.fallback_used())
 
@@ -601,6 +610,13 @@ Remotion. Brand: Terra Incognita.*
                    }}, f, indent=2, ensure_ascii=False)
 
     script_gen.log_topic_done(topic, os.path.join(REPO_ROOT, "topics_done.txt"))
+    tease = str(script.get("next_tease_topic", "")).strip()
+    if tease:
+        # the on-screen tease is a promise — lock it as the next episode
+        with open(os.path.join(REPO_ROOT, "topics_done.txt"), "a",
+                  encoding="utf-8") as f:
+            f.write(f"NEXT: {tease}\n")
+        print(f"[script] next episode locked to the on-screen tease: {tease}")
 
     gh_out = os.environ.get("GITHUB_OUTPUT")
     if gh_out:

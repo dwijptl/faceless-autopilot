@@ -328,6 +328,7 @@ def _normalize(script: dict, min_scenes: int) -> dict:
     script["forbidden_visuals"] = [str(t)[:40] for t in
                                    (script.get("forbidden_visuals") or [])
                                    if str(t).strip()][:6]
+    script["next_tease_topic"] = str(script.get("next_tease_topic", ""))[:120]
     script["title_options"] = [str(t)[:90] for t in
                                (script.get("title_options") or [])
                                if str(t).strip()][:5]
@@ -373,7 +374,7 @@ DRAFT:
                 after[field] = before.get(field, {})
         for field in ("premise", "changing_variable", "hero_prompt",
                       "forbidden_visuals", "title_options", "thumb_options",
-                      "thumb_headline", "thumb_question"):
+                      "thumb_headline", "thumb_question", "next_tease_topic"):
             if not revised.get(field):
                 revised[field] = script.get(field, revised.get(field))
         revised["topic"] = script.get("topic", "")
@@ -411,10 +412,21 @@ def pick_topic(cfg: dict, api_key: str, done_file: str = "topics_done.txt",
         print(f"[script] using forced topic: {forced}")
         return forced
 
-    done = []
+    done, tease = [], ""
     if os.path.exists(done_file):
         with open(done_file, encoding="utf-8") as f:
-            done = [ln.strip() for ln in f if ln.strip() and not ln.startswith("#")]
+            for ln in f:
+                ln = ln.strip()
+                if not ln or ln.startswith("#"):
+                    continue
+                if ln.startswith("NEXT:"):
+                    tease = ln[5:].strip()  # last marker wins
+                else:
+                    done.append(ln)
+    # honor the previous episode's on-screen tease — the video made a promise
+    if tease and tease not in done:
+        print(f"[script] honoring previous episode's on-screen tease: {tease}")
+        return tease
 
     learn_block = (f"\nWHAT HAS WORKED ON THIS CHANNEL (analytics digest):\n{learnings}\n"
                    if learnings else "")
@@ -557,6 +569,7 @@ Write a scene-segmented script and return ONLY valid JSON with this exact shape:
   "changing_variable": {{"label": "SHORT ENGLISH metric the viewer watches change (DEPTH, SPEED, TIME, TEMP, SIZE)", "unit": "km"}},
   "hero_prompt": "ENGLISH text-to-image prompt for the episode's recurring HERO subject — one person/object/place the video returns to as conditions change: subject + setting + light + camera angle",
   "forbidden_visuals": ["3-6 short ENGLISH phrases describing footage that would BREAK the premise and must never appear (e.g. for an unprotected-human deep-sea premise: 'scuba diver', 'diving suit', 'oxygen tank', 'snorkeler')"],
+  "next_tease_topic": "the EXACT topic teased in the final scene, as a Hindi working title — the pipeline will make it the next episode, so it must be a producible topic (stock+AI illustrable) and the tease itself must be factually accurate",
   "description": "2-3 sentence YouTube description ending with 3 relevant hashtags",
   "tags": ["8-12 YouTube tags"],
   "scenes": [
@@ -657,16 +670,55 @@ Script rules:
   first concrete answer by 45 seconds. Add one-sentence re-hooks near 25%, 50%
   and 75% of the runtime, each paired with a new visual mode. Final scene is a 20-second
   payoff with a next-video tease. No "like and subscribe" begging.
+- THE TEASE IS A CONTRACT: the final scene's tease must describe
+  next_tease_topic exactly, and its claim must be factually accurate with the
+  correct comparison (Venus melts LEAD — it does not vaporize iron). The next
+  episode WILL be this topic — never tease something unproducible.
 - Narration is written for the EAR: short sentences, makes sense with eyes closed.
 - Facts must be well-established; when uncertain, phrase carefully rather than
   inventing precise numbers.
 - Every scene advances exactly one idea."""
+
+    def _word_count(s: dict) -> int:
+        return sum(len(str(sc.get("narration", "")).split()) for sc in s["scenes"])
 
     for attempt in range(3):
         try:
             script = _normalize(_parse_json(_llm(prompt, cfg, api_key)), 4)
             script["topic"] = topic
             script = _critique(script, cfg, api_key, "long", 4)
+            # enforce the word budget BEFORE TTS — a short script is a short
+            # video, and expanding here is free (no wasted voice credits)
+            wc = _word_count(script)
+            if wc < int(words * 0.88):
+                print(f"[script] undershoot ({wc}/{words} words) — expansion pass")
+                exp = f"""The draft below runs {wc} spoken words but must run
+{int(words * 0.95)}-{int(words * 1.05)} words. Expand the THINNEST scenes with
+concrete, specific material — mechanisms, named places, numbers, consequences
+— never filler, never repetition. Keep the same JSON schema, scene count,
+visual modes and every non-narration field unchanged.
+{_lang_rules(cfg)}
+Return ONLY the full revised JSON.
+
+DRAFT:
+{json.dumps(script, ensure_ascii=False)}"""
+                try:
+                    expanded = _normalize(_parse_json(_llm(exp, cfg, api_key)), 4)
+                    for before, after in zip(script["scenes"], expanded["scenes"]):
+                        for field in ("stat", "card", "glass", "map", "milestone"):
+                            after[field] = before.get(field, {})
+                    for field in ("premise", "changing_variable", "hero_prompt",
+                                  "forbidden_visuals", "title_options",
+                                  "thumb_options", "thumb_headline",
+                                  "thumb_question", "next_tease_topic"):
+                        if not expanded.get(field):
+                            expanded[field] = script.get(field)
+                    expanded["topic"] = topic
+                    if _word_count(expanded) > wc:
+                        script = expanded
+                        print(f"[script] expanded to {_word_count(script)} words")
+                except Exception as exc:
+                    print(f"[script] expansion skipped ({exc})")
             script = _plan_visual_beats(script, cfg, api_key)
             modes = [s["visual_mode"] for s in script["scenes"]]
             print(f"[script] '{script['title']}' — {len(modes)} scenes, modes: {modes}")
