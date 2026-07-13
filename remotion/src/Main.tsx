@@ -116,7 +116,7 @@ const FadeShell: React.FC<{frames: number; fps: number;
   return <AbsoluteFill style={{opacity}}>{children}</AbsoluteFill>;
 };
 
-const OverlayWindow: React.FC<{frames: number; fps: number; from?: number;
+export const OverlayWindow: React.FC<{frames: number; fps: number; from?: number;
   children: React.ReactNode}> = ({frames, fps, from, children}) => (
   <Sequence from={from ?? 0} durationInFrames={Math.max(frames, 1)}>
     <FadeShell frames={frames} fps={fps}>{children}</FadeShell>
@@ -134,7 +134,7 @@ const DimFill: React.FC<{frames: number; fps: number}> = ({frames, fps}) => {
     pointerEvents: 'none'}} />;
 };
 
-const TimedDim: React.FC<{frames: number; fps: number; from?: number}> =
+export const TimedDim: React.FC<{frames: number; fps: number; from?: number}> =
   ({frames, fps, from}) => (
   <Sequence from={from ?? 0} durationInFrames={Math.max(frames, 1)}>
     <DimFill frames={frames} fps={fps} />

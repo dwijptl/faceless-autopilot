@@ -28,6 +28,7 @@ import {
 import {AnimatedStatCard, CtaLayer, EditorialCard, KineticTitle, SceneFrame} from './motion-library';
 import type {MotionSpec} from './motion-library';
 import {GlassCard} from './glass';
+import {OverlayWindow, TimedDim} from './Main';
 import {blurWhip, zoomPunch} from './transitions';
 
 // Shorts: fast vertical whips, slides and punches.
@@ -81,17 +82,29 @@ export const ShortMain: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
   const {durationInFrames} = useVideoConfig();
   const style = getStyle(m.style);
   const maxShotSeconds = m.maxShotSeconds ?? 2.4;
+  const overlaySeconds = Math.min(
+    Math.max(Number((m as any).overlaySeconds ?? 3.5), 1.5), 8);
   const overlayRanges = m.scenes
     .filter((scene) => ['kinetic', 'stat', 'card', 'glass'].includes(scene.visualMode ?? ''))
-    .map((scene) => ({start: scene.start ?? 0,
-      end: (scene.start ?? 0) + scene.audioDuration}));
-  const bridgeFrames = Math.max(Math.round(0.45 * fps), 2);
+    .map((scene) => {
+      const impact = Number((scene as any).impactStart ?? 0);
+      return {start: (scene.start ?? 0) + impact,
+        end: (scene.start ?? 0) + Math.min(scene.audioDuration, impact + overlaySeconds)};
+    });
+  const bridgeFrames = Math.max(Math.round(0.9 * fps), 2);
 
   const items: React.ReactNode[] = [];
   m.scenes.forEach((scene, i) => {
     const sceneFrames = Math.round(scene.audioDuration * fps);
     const mode = scene.visualMode ?? 'broll';
     const overlayScene = mode === 'kinetic' || mode === 'stat' || mode === 'card' || mode === 'glass';
+    // word-synced impact: the graphic enters on the spoken keyword and hands
+    // the frame back to footage after ~overlaySeconds
+    const impactF = Math.max(0, Math.min(
+      Math.round(Number((scene as any).impactStart ?? 0) * fps),
+      Math.max(sceneFrames - fps, 0)));
+    const overlayFrames = Math.max(1, Math.min(sceneFrames - impactF,
+      Math.round(overlaySeconds * fps)));
     const isMap = mode === 'map' && scene.map && scene.map.world;
     const motion: MotionSpec = scene.motion ?? {};
     items.push(
@@ -106,23 +119,33 @@ export const ShortMain: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
             maxShotSeconds={maxShotSeconds}
             sceneN={scene.n}
             style={style}
-            dim={overlayScene}
           />
         )}
+        {overlayScene ? (
+          <TimedDim frames={overlayFrames} fps={fps} from={impactF} />
+        ) : null}
         {scene.audioPath ? <Audio src={staticFile(scene.audioPath)} /> : null}
         {mode === 'kinetic' && scene.kineticText ? (
-          <KineticTitle text={scene.kineticText} style={style}
-            variant={motion.kineticVariant} />
+          <OverlayWindow frames={overlayFrames} fps={fps} from={impactF}>
+            <KineticTitle text={scene.kineticText} style={style}
+              variant={motion.kineticVariant} />
+          </OverlayWindow>
         ) : null}
         {mode === 'stat' && scene.stat && scene.stat.label ? (
-          <AnimatedStatCard stat={scene.stat} style={style}
-            variant={motion.statVariant} />
+          <OverlayWindow frames={overlayFrames} fps={fps} from={impactF}>
+            <AnimatedStatCard stat={scene.stat} style={style}
+              variant={motion.statVariant} />
+          </OverlayWindow>
         ) : null}
         {mode === 'card' && scene.card && scene.card.headline ? (
-          <EditorialCard card={scene.card} style={style} variant={motion.cardVariant} />
+          <OverlayWindow frames={overlayFrames} fps={fps} from={impactF}>
+            <EditorialCard card={scene.card} style={style} variant={motion.cardVariant} />
+          </OverlayWindow>
         ) : null}
         {mode === 'glass' && scene.glass && (scene.glass.headline || scene.glass.label || scene.glass.location || scene.glass.chapter || scene.glass.value != null) ? (
-          <GlassCard data={scene.glass} style={style} variant={motion.glassVariant} />
+          <OverlayWindow frames={overlayFrames} fps={fps} from={impactF}>
+            <GlassCard data={scene.glass} style={style} variant={motion.glassVariant} />
+          </OverlayWindow>
         ) : null}
         <SceneFrame variant={motion.frameVariant} style={style} sceneN={scene.n} />
       </TransitionSeries.Sequence>
