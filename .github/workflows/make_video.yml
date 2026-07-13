@@ -96,6 +96,7 @@ jobs:
             "$OUTDIR/thumbnail.jpg" \
             "$OUTDIR/script.json" \
             "$OUTDIR/run_summary.json" \
+            "$OUTDIR/quality_report.json" \
             --title "$title" \
             --notes-file "$OUTDIR/metadata.md" \
             "${draft[@]}"
