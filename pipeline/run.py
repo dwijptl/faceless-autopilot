@@ -447,6 +447,8 @@ def main() -> None:
         "outroSeconds": float(cfg["video"].get("outro_seconds", 4)),
         "title": script["title"],
         "thumbText": script.get("thumb_text", script["title"][:24]),
+        "thumbHeadline": script.get("thumb_headline", ""),
+        "thumbQuestion": script.get("thumb_question", ""),
         "thumbAiPath": thumb_ai,
         "motionSeed": motion_seed,
         "cta": cta_event,

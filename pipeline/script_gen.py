@@ -318,6 +318,8 @@ def _normalize(script: dict, min_scenes: int) -> dict:
     assert script["title"].strip()
     script.setdefault("thumb_text", script["title"][:30])
     script.setdefault("thumb_prompt", "")
+    script["thumb_headline"] = str(script.get("thumb_headline", ""))[:60]
+    script["thumb_question"] = str(script.get("thumb_question", ""))[:40]
     script["premise"] = str(script.get("premise", ""))[:200]
     cv = script.get("changing_variable") or {}
     script["changing_variable"] = {"label": str(cv.get("label", ""))[:18],
@@ -367,7 +369,8 @@ DRAFT:
             for field in ("stat", "card", "glass", "map", "milestone"):
                 after[field] = before.get(field, {})
         for field in ("premise", "changing_variable", "hero_prompt",
-                      "title_options", "thumb_options"):
+                      "title_options", "thumb_options", "thumb_headline",
+                      "thumb_question"):
             if not revised.get(field):
                 revised[field] = script.get(field, revised.get(field))
         revised["topic"] = script.get("topic", "")
@@ -517,6 +520,8 @@ Write a scene-segmented script and return ONLY valid JSON with this exact shape:
   "title": "click-worthy but honest YouTube title, <= 70 chars",
   "title_options": ["5 alternative Hindi titles, strongest first: one conservative, one high-curiosity, one number-driven among them"],
   "thumb_text": "3-5 bold ENGLISH/Hinglish keywords for the thumbnail (Latin script)",
+  "thumb_headline": "4-7 word DRAMATIC Hindi headline (Devanagari) — the emotional hook of the thumbnail, high intensity but 100% provable by the video (e.g. 'मारियाना ट्रेंच का खूनी सच!'); never a fabricated claim",
+  "thumb_question": "3-5 word Hindi curiosity question for a small thumbnail annotation (e.g. 'शरीर का क्या होगा?'); empty string if none fits",
   "thumb_prompt": "ENGLISH text-to-image prompt for the thumbnail. NON-NEGOTIABLE: ONE dramatic subject FILLING 50-70% of the frame, strong rim light separating it clearly from the background, at least one vivid color accent; mid-dark background WITH visible depth — NEVER a mostly-black or murky image (it must read instantly at 160px feed size); keep the bottom third relatively empty for the title text",
   "thumb_options": [{{"text": "2-4 Latin punch words", "concept": "one-line alternative visual idea"}}, {{"text": "...", "concept": "..."}}, {{"text": "...", "concept": "..."}}],
   "premise": "ONE Hindi sentence: the impossible rule / continuous journey of this episode",
