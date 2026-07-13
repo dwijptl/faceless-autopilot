@@ -285,6 +285,17 @@ def _normalize_glass(raw) -> dict:
     return result
 
 
+def _normalize_milestone(raw) -> dict:
+    """Bound the per-scene simulation milestone for the story HUD."""
+    data = raw if isinstance(raw, dict) else {}
+    value = _num_or_none(data.get("value"))
+    if value is None:
+        return {}
+    return {"value": value,
+            "label": str(data.get("label", ""))[:18],
+            "unit": str(data.get("unit", ""))[:8]}
+
+
 def _normalize(script: dict, min_scenes: int) -> dict:
     """Validate + default-fill a script dict. Raises on structural problems."""
     assert isinstance(script["scenes"], list) and len(script["scenes"]) >= min_scenes
@@ -300,12 +311,27 @@ def _normalize(script: dict, min_scenes: int) -> dict:
         s["glass"] = _normalize_glass(s.get("glass"))
         s.setdefault("card", {})
         s.setdefault("map", {})
+        s["milestone"] = _normalize_milestone(s.get("milestone"))
         d = str(s.get("delivery", "calm")).lower().strip()
         s["delivery"] = d if d in ("hook", "calm", "reveal", "urgent") else "calm"
     script["scenes"][0]["delivery"] = "hook"
     assert script["title"].strip()
     script.setdefault("thumb_text", script["title"][:30])
     script.setdefault("thumb_prompt", "")
+    script["premise"] = str(script.get("premise", ""))[:200]
+    cv = script.get("changing_variable") or {}
+    script["changing_variable"] = {"label": str(cv.get("label", ""))[:18],
+                                   "unit": str(cv.get("unit", ""))[:8]}
+    script["hero_prompt"] = str(script.get("hero_prompt", ""))[:500]
+    script["title_options"] = [str(t)[:90] for t in
+                               (script.get("title_options") or [])
+                               if str(t).strip()][:5]
+    thumbs = []
+    for item in (script.get("thumb_options") or [])[:3]:
+        if isinstance(item, dict) and str(item.get("text", "")).strip():
+            thumbs.append({"text": str(item.get("text", ""))[:30],
+                           "concept": str(item.get("concept", ""))[:120]})
+    script["thumb_options"] = thumbs
     return script
 
 
@@ -338,8 +364,12 @@ DRAFT:
         # first pass's structured visual data so a rewrite cannot silently turn
         # a stat/glass/map scene into an empty overlay.
         for before, after in zip(script["scenes"], revised["scenes"]):
-            for field in ("stat", "card", "glass", "map"):
+            for field in ("stat", "card", "glass", "map", "milestone"):
                 after[field] = before.get(field, {})
+        for field in ("premise", "changing_variable", "hero_prompt",
+                      "title_options", "thumb_options"):
+            if not revised.get(field):
+                revised[field] = script.get(field, revised.get(field))
         revised["topic"] = script.get("topic", "")
         print("[script] critique pass applied")
         return revised
@@ -383,21 +413,40 @@ Already-covered topics (NEVER repeat or closely paraphrase these, in any
 language):
 {json.dumps(done[-100:], indent=0, ensure_ascii=False)}
 
-Invent ONE new video topic with strong curiosity-gap appeal that can be
-illustrated with stock footage of landscapes, cities, nature, aerials and
+Invent THREE candidate video topics with strong curiosity-gap appeal that can
+be illustrated with stock footage of landscapes, cities, nature, aerials and
 oceans plus occasional AI-generated stills (no specific people, no events
 needing news footage, nothing requiring licensed material). If the analytics
 digest above shows a topic family performing well, lean into that family
 without repeating covered topics.
+
+THE VISUAL JOURNEY TEST — score each candidate 1-10 on ALL of:
+- journey: is there ONE changing variable the viewer travels along
+  (depth, speed, time, temperature, scale)?
+- escalation: can it produce 6+ visibly escalating milestones?
+- number_hook: does it contain one concrete, quotable number?
+- human_stakes: is there a consequence a viewer can feel on their own body/city?
+- visual: does something VISIBLY change on screen every 30 seconds?
+- thumbnail: can it be drawn as ONE dramatic image?
+A topic that is a list of facts ("types of X") must score low on journey.
 {lang_note}
-Return JSON exactly: {{"topic": "<the topic as a working title>"}}"""
+Return JSON exactly:
+{{"candidates": [{{"topic": "...", "scores": {{"journey": 0, "escalation": 0,
+"number_hook": 0, "human_stakes": 0, "visual": 0, "thumbnail": 0}},
+"total": 0}}],
+"topic": "<the candidate with the highest total>"}}"""
     last_err = None
     for attempt in range(3):
         try:
-            topic = _parse_json(_llm(prompt, cfg, api_key))["topic"].strip()
-            print(f"[script] auto-picked topic: {topic}")
+            parsed = _parse_json(_llm(prompt, cfg, api_key))
+            topic = str(parsed.get("topic") or "").strip()
+            if not topic:
+                cands = parsed.get("candidates") or []
+                cands = sorted(cands, key=lambda c: -float(c.get("total", 0)))
+                topic = str(cands[0]["topic"]).strip()
+            print(f"[script] auto-picked topic (journey-tested): {topic}")
             return topic
-        except (json.JSONDecodeError, KeyError) as e:
+        except (json.JSONDecodeError, KeyError, IndexError, TypeError) as e:
             last_err = e
             print(f"[script] bad topic JSON (attempt {attempt + 1}): {e}")
     raise RuntimeError(f"Could not pick a topic after 3 attempts: {last_err}")
@@ -466,8 +515,13 @@ AUDIENCE: {cfg['channel']['audience']}
 Write a scene-segmented script and return ONLY valid JSON with this exact shape:
 {{
   "title": "click-worthy but honest YouTube title, <= 70 chars",
+  "title_options": ["5 alternative Hindi titles, strongest first: one conservative, one high-curiosity, one number-driven among them"],
   "thumb_text": "3-5 bold ENGLISH/Hinglish keywords for the thumbnail (Latin script)",
   "thumb_prompt": "ENGLISH text-to-image prompt for the thumbnail: ONE dramatic subject, extreme close-up or epic scale, strong rim light, dark moody background, left third relatively empty for text overlay",
+  "thumb_options": [{{"text": "2-4 Latin punch words", "concept": "one-line alternative visual idea"}}, {{"text": "...", "concept": "..."}}, {{"text": "...", "concept": "..."}}],
+  "premise": "ONE Hindi sentence: the impossible rule / continuous journey of this episode",
+  "changing_variable": {{"label": "SHORT ENGLISH metric the viewer watches change (DEPTH, SPEED, TIME, TEMP, SIZE)", "unit": "km"}},
+  "hero_prompt": "ENGLISH text-to-image prompt for the episode's recurring HERO subject — one person/object/place the video returns to as conditions change: subject + setting + light + camera angle",
   "description": "2-3 sentence YouTube description ending with 3 relevant hashtags",
   "tags": ["8-12 YouTube tags"],
   "scenes": [
@@ -477,6 +531,7 @@ Write a scene-segmented script and return ONLY valid JSON with this exact shape:
       "narration": "60-150 words of spoken narration",
       "visual_mode": "broll | ai_image | kinetic | stat | card | map | glass",
       "delivery": "hook | calm | reveal | urgent",
+      "milestone": {{"value": 0, "label": "optional ENGLISH override of the metric label", "unit": "km"}},
       "search_terms": ["stock video search term", "alternative term", "broader fallback term"],
       "ai_prompt": "detailed text-to-image prompt (only when visual_mode is ai_image, else empty string)",
       "kinetic_text": "3-6 word punch phrase (only when visual_mode is kinetic, else empty string)",
@@ -529,14 +584,25 @@ Visual mode rules (variety is the goal — videos must not feel stock-only):
   rewrite the narration generically instead of showing a misleading substitute.
 
 Script rules:
-- NARRATIVE SPINE (most important rule): the whole video follows ONE concrete
-  thread — a journey, a single tightening question, or one entity moving
-  through the story (one drop of rain travelling underground; one signal
-  crossing space; one degree of warming rippling outward). Every scene must
-  visibly advance THAT thread. If any scene reads like an encyclopedia entry
-  that could be reordered without anyone noticing, rewrite it so it continues
-  the thread. Introduce the spine inside the cold open and pay it off in the
+- SIMULATION ENGINE (most important rule): the video is a guided simulation.
+  "premise" states one impossible/curious rule; "changing_variable" is the ONE
+  number the viewer watches move. EVERY scene gets a milestone.value along
+  that variable, and the values must escalate monotonically (deeper, faster,
+  hotter, bigger) from scene 1 to the climax. The narration of each scene must
+  actually SAY its milestone value. A viewer should be able to answer "where
+  are we now?" at any second. If a scene has no meaningful position on the
+  variable, it does not belong in the video.
+- NARRATIVE SPINE: the whole video follows ONE concrete thread — a journey, a
+  single tightening question, or one entity moving through the story (one
+  drop of rain travelling underground; one signal crossing space). The
+  "hero_prompt" subject is that entity: the video returns to it as conditions
+  change. Introduce the spine inside the cold open and pay it off in the
   final scene — the ending should resolve the exact image the video opened on.
+- SCALE ANCHORING: every large number gets exactly ONE familiar comparison the
+  audience can feel — for this Hindi channel prefer Indian anchors (Delhi to
+  Jaipur distance, Burj Khalifa/Himalaya heights, a Rajdhani train's speed,
+  monsoon rainfall, Mumbai's population). One vivid anchor beats three vague
+  ones; never force it.
 - VISUAL PACING MIX (how a human editor cuts): ~60% of scenes are slow,
   majestic b-roll moments that breathe; ~20% are rapid intercut stretches
   (short beats, quick cuts, urgency); ~20% are graphic moments (kinetic /

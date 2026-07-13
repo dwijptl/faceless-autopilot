@@ -17,6 +17,8 @@ import subprocess
 import sys
 import time
 
+import numpy as np
+import soundfile as sf
 import yaml
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -104,6 +106,39 @@ def _asset_manifest(asset: dict) -> dict:
         "duration": round(asset["duration"], 2) if asset.get("duration") else None,
         "ai": bool(asset.get("ai")),
     }
+
+
+def _pad_reveal_pause(wav_path: str, seconds: float = 0.35) -> float:
+    """Insert leading silence — the breath before the reveal. Fail-open."""
+    try:
+        data, sr = sf.read(wav_path, dtype="float32")
+        shape = (int(seconds * sr), data.shape[1]) if getattr(data, "ndim", 1) > 1 \
+            else int(seconds * sr)
+        sf.write(wav_path, np.concatenate([np.zeros(shape, dtype="float32"), data]), sr)
+        return seconds
+    except Exception as exc:
+        print(f"[tts] reveal pad skipped ({exc})")
+        return 0.0
+
+
+def _attach_hero(scenes: list[dict], hero_path: str) -> None:
+    """Pin the episode's recurring hero still to the hook, the reveal and the
+    payoff scenes (first beat; last beat on the final scene) so the video
+    keeps returning to one consistent subject as conditions change."""
+    targets = {scenes[0]["n"], scenes[-1]["n"]}
+    reveal_n = next((sc["n"] for sc in scenes
+                     if sc.get("delivery") == "reveal"), None)
+    if reveal_n is not None:
+        targets.add(reveal_n)
+    for sc in scenes:
+        if sc["n"] not in targets:
+            continue
+        beats = sc.get("visual_beats") or []
+        bi = max(len(beats) - 1, 0) if sc["n"] == scenes[-1]["n"] else 0
+        sc["assets"].insert(0, {"path": hero_path, "kind": "image",
+                                "ai": True, "duration": None,
+                                "beat_index": bi})
+    print(f"[hero] attached to scenes {sorted(targets)}")
 
 
 def _chapters_block(scenes: list[dict]) -> str:
@@ -239,6 +274,15 @@ def main() -> None:
     with open(os.path.join(outdir, "script.json"), "w", encoding="utf-8") as f:
         json.dump(script, f, indent=2, ensure_ascii=False)
 
+    # recurring hero still — one consistent subject the episode returns to
+    hero_path = None
+    hp = (script.get("hero_prompt") or "").strip()
+    if hp:
+        p = os.path.join(workdir, "hero.png")
+        if ai_images.generate(hp, p, gemini_key, cfg, aspect="16:9 wide"):
+            hero_path = p
+            print("[hero] recurring hero still generated")
+
     # 2) voiceover -----------------------------------------------------------
     fps = int(cfg["video"]["fps"])
     xfade = float(cfg["video"].get("crossfade", 0.4))
@@ -247,6 +291,8 @@ def main() -> None:
         wav = os.path.join(workdir, f"vo_s{sc['n']:02d}.wav")
         dur = tts_mod.synth_scene(sc["narration"], wav, cfg,
                                   sc.get("delivery", "calm"))
+        if sc.get("delivery") == "reveal":
+            dur += _pad_reveal_pause(wav)  # the breath before the punchline
         scenes.append({**sc, "audio_path": wav, "audio_duration": dur,
                        "start": max(offset, 0.0)})
         offset += dur - xfade
@@ -311,6 +357,8 @@ def main() -> None:
     usage_log["pexels"] = sorted(used)
     usage_log["prompts"] = sorted(used_prompts)
     assets_mod.save_usage_log(log_path, usage_log)
+    if hero_path:
+        _attach_hero(scenes, hero_path)
 
     # 4) captions ------------------------------------------------------------
     events, srt = captions_mod.build_captions(scenes, cfg["captions"]["max_chars"])
@@ -350,6 +398,10 @@ def main() -> None:
         "maxShotSeconds": float(cfg["video"].get("max_shot_seconds", 5)),
         "overlaySeconds": overlay_seconds,
         "style": style,
+        "variableLabel": str((script.get("changing_variable") or {})
+                             .get("label", "")).upper()[:18],
+        "variableUnit": str((script.get("changing_variable") or {})
+                            .get("unit", ""))[:8],
         "accent": rcfg.get("accent", "#FFB020"),
         "progressBar": bool(rcfg.get("progress_bar", True)),
         "brandName": brand_cfg.get("name", ""),
@@ -378,6 +430,7 @@ def main() -> None:
             "start": round(sc["start"], 3),
             "impactStart": sc.get("impact_start", 0.0),
             "delivery": sc.get("delivery", "calm"),
+            "milestone": sc.get("milestone") or {},
             "title": sc.get("title", ""),
             "visualMode": sc.get("visual_mode", "broll"),
             "kineticText": sc.get("kinetic_text", ""),
@@ -467,6 +520,12 @@ def main() -> None:
 ### Tags
 
 {', '.join(script.get('tags', []))}
+
+### Title & thumbnail alternates (pick your favourite before uploading)
+
+{chr(10).join(f"{i + 1}. {t}" for i, t in enumerate(script.get('title_options') or [])) or "_none generated_"}
+
+{chr(10).join(f"- **{o.get('text', '')}** — {o.get('concept', '')}" for o in (script.get('thumb_options') or []))}
 
 ### Reliability report
 
