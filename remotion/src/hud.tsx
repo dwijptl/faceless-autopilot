@@ -14,6 +14,73 @@ import {
 const MONO =
   '"SF Mono", "Cascadia Mono", "JetBrains Mono", "Roboto Mono", monospace';
 
+// ── Story metric readout — the simulation's changing variable ──────────
+// Interpolates between per-scene milestone values so the number the viewer
+// watches (depth, speed, time, temperature) moves continuously with the
+// narrative. Renders nothing when the script provides no milestones.
+
+export type Milestone = {
+  start: number;
+  value?: number | null;
+  label?: string;
+  unit?: string;
+};
+
+const fmtMetric = (v: number) =>
+  Math.abs(v) >= 100 || Number.isInteger(v)
+    ? Math.round(v).toLocaleString('en-IN')
+    : v.toFixed(1);
+
+export const MetricReadout: React.FC<{
+  milestones: Milestone[];
+  label: string;
+  unit: string;
+  accent: string;
+  bottom?: number; // offset in 1080p-scale px
+}> = ({milestones, label, unit, accent, bottom}) => {
+  const frame = useCurrentFrame();
+  const {fps, width, height} = useVideoConfig();
+  const s = Math.max(width, height) / 1920;
+  const t = frame / fps;
+  const pts = milestones.filter(
+    (m) => typeof m.value === 'number' && isFinite(m.value as number));
+  if (pts.length === 0) return null;
+  let i = 0;
+  pts.forEach((p, idx) => {
+    if (t >= p.start) i = idx;
+  });
+  const cur = pts[i];
+  const nxt = pts[Math.min(i + 1, pts.length - 1)];
+  const value =
+    nxt.start > cur.start
+      ? interpolate(t, [cur.start, nxt.start],
+          [cur.value as number, nxt.value as number],
+          {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'})
+      : (cur.value as number);
+  const lbl = (cur.label || label || '').toUpperCase();
+  const un = cur.unit || unit || '';
+  return (
+    <div style={{
+      position: 'absolute', left: 40 * s, bottom: (bottom ?? 44) * s,
+      fontFamily: MONO, letterSpacing: 2, pointerEvents: 'none',
+      textShadow: '0 2px 12px rgba(0,0,0,0.85)',
+    }}>
+      {lbl ? (
+        <div style={{fontSize: 19 * s, color: 'rgba(244,247,251,0.55)'}}>
+          {lbl}
+        </div>
+      ) : null}
+      <div style={{fontSize: 42 * s, fontWeight: 700, color: accent}}>
+        {fmtMetric(value)}
+        {un ? (
+          <span style={{fontSize: 22 * s, color: 'rgba(244,247,251,0.75)',
+            marginLeft: 8 * s}}>{un}</span>
+        ) : null}
+      </div>
+    </div>
+  );
+};
+
 const Corner: React.FC<{
   pos: 'tl' | 'tr' | 'bl' | 'br';
   s: number;
@@ -33,7 +100,10 @@ export const TelemetryHUD: React.FC<{
   starts: number[];
   accent: string;
   accent2: string;
-}> = ({starts, accent, accent2}) => {
+  milestones?: Milestone[];
+  metricLabel?: string;
+  metricUnit?: string;
+}> = ({starts, accent, accent2, milestones, metricLabel, metricUnit}) => {
   const frame = useCurrentFrame();
   const {fps, width, height, durationInFrames} = useVideoConfig();
   const s = Math.max(width, height) / 1920;
@@ -103,6 +173,10 @@ export const TelemetryHUD: React.FC<{
         T·I // SCN {String(idx + 1).padStart(2, '0')}/{String(starts.length).padStart(2, '0')}
         {' '}· <span style={{color: accent}}>{pct}%</span>
       </div>
+
+      {/* the simulation's changing variable, above the instrument ring */}
+      <MetricReadout milestones={milestones ?? []} label={metricLabel ?? ''}
+        unit={metricUnit ?? ''} accent={accent} bottom={172} />
 
       {/* faint horizon tick rail, right edge */}
       <div style={{position: 'absolute', right: 30 * s, top: '30%', bottom: '30%',

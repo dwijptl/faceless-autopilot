@@ -36,7 +36,8 @@ import {
 } from './motion-library';
 import type {MotionSpec} from './motion-library';
 import {GlassCard} from './glass';
-import {TelemetryHUD} from './hud';
+import {MetricReadout, TelemetryHUD} from './hud';
+import type {Milestone} from './hud';
 import {blurWhip, zoomPunch} from './transitions';
 
 // Deterministic transition choice, biased by the video's style pack.
@@ -173,6 +174,16 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
   const style = getStyle(m.style);
   const chapterMarks = m.scenes.slice(1).map(
     (sc) => ((sc.start ?? 0) * fps) / Math.max(durationInFrames, 1));
+  const metricLabel = String((m as any).variableLabel ?? '');
+  const metricUnit = String((m as any).variableUnit ?? '');
+  const milestones: Milestone[] = m.scenes.map((sc) => ({
+    start: sc.start ?? 0,
+    value: (sc as any).milestone?.value as number | undefined,
+    label: (sc as any).milestone?.label as string | undefined,
+    unit: (sc as any).milestone?.unit as string | undefined,
+  }));
+  const hasMetric = milestones.some(
+    (p) => typeof p.value === 'number' && isFinite(p.value));
   const maxShotSeconds = m.maxShotSeconds ?? 5;
   const overlaySeconds = Math.min(
     Math.max(Number((m as any).overlaySeconds ?? 5), 2.5), 12);
@@ -278,7 +289,12 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
       <CinematicOverlay />
       {style.hud ? (
         <TelemetryHUD starts={m.scenes.map((sc) => sc.start ?? 0)}
-          accent={style.accent} accent2={style.accent2} />
+          accent={style.accent} accent2={style.accent2}
+          milestones={milestones} metricLabel={metricLabel}
+          metricUnit={metricUnit} />
+      ) : hasMetric ? (
+        <MetricReadout milestones={milestones} label={metricLabel}
+          unit={metricUnit} accent={style.accent} />
       ) : null}
       <CtaLayer event={m.cta} style={style} fps={fps} />
       {m.watermarkPath ? (
