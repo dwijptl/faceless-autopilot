@@ -170,5 +170,7 @@ captions:
 
 factcheck:
   enabled: true            # Gemini Google Search review before TTS
-  max_claims: 8            # keeps grounded requests cheap and focused
-  gate: false              # true = claims marked unsupported produce a draft release
+  max_claims: 10           # narration + packaging (title/thumb/tease) claims
+  gate: high_risk          # high_risk = unsupported HIGH-RISK claims mark the
+                           # release DRAFT-DO-NOT-PUBLISH · true = any
+                           # unsupported claim blocks · false = advisory only
