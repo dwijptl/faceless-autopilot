@@ -52,6 +52,7 @@ longform_quality:
     gate: false            # report problems; set true only after several clean runs
     min_semantic_coverage: 0.90
     max_asset_uses: 2
+  overlay_seconds: 5.0     # impact window for kinetic/stat/card/glass graphics
 
 tts:
   engine: "sarvam"         # "sarvam" = your cloned Hindi voice (bulbul:v3).
@@ -108,11 +109,16 @@ ai_images:
 short:                     # vertical Shorts/Reels (Make Short workflow, Tue/Thu/Sat)
   target_seconds: 28       # sweet spot: long enough to feel complete,
                            # short enough to keep completion rate + loops
+  wpm: 100                 # REAL Sarvam Hindi pace incl. pauses (measured ~95-105;
+                           # the 130 planning rate produced 38s shorts from 28s targets)
   scenes_min: 4
   scenes_max: 6
   crossfade: 0.25          # faster cuts than long-form
   max_shot_seconds: 2.4    # fast novelty; renderer now treats this as a hard ceiling
-  captions_max_chars: 14   # 2-3 word caption pops (Devanagari runs wider)
+  overlay_seconds: 3.5     # impact window: graphics land on the spoken word,
+                           # hold ~3.5s, then hand the frame back to footage
+  captions_max_chars: 24   # 3-5 word thought groups (fragments hurt comprehension;
+                           # karaoke word-pops keep the energy)
   caption_y: 0.62          # centered-low, inside the Shorts UI safe zone
   music_volume: 0.18       # music matters more in shorts
   loop_tail_seconds: 0.06  # minimal final VO tail so replay feeds the hook
