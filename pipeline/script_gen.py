@@ -325,6 +325,9 @@ def _normalize(script: dict, min_scenes: int) -> dict:
     script["changing_variable"] = {"label": str(cv.get("label", ""))[:18],
                                    "unit": str(cv.get("unit", ""))[:8]}
     script["hero_prompt"] = str(script.get("hero_prompt", ""))[:500]
+    script["forbidden_visuals"] = [str(t)[:40] for t in
+                                   (script.get("forbidden_visuals") or [])
+                                   if str(t).strip()][:6]
     script["title_options"] = [str(t)[:90] for t in
                                (script.get("title_options") or [])
                                if str(t).strip()][:5]
@@ -369,8 +372,8 @@ DRAFT:
             for field in ("stat", "card", "glass", "map", "milestone"):
                 after[field] = before.get(field, {})
         for field in ("premise", "changing_variable", "hero_prompt",
-                      "title_options", "thumb_options", "thumb_headline",
-                      "thumb_question"):
+                      "forbidden_visuals", "title_options", "thumb_options",
+                      "thumb_headline", "thumb_question"):
             if not revised.get(field):
                 revised[field] = script.get(field, revised.get(field))
         revised["topic"] = script.get("topic", "")
@@ -382,13 +385,23 @@ DRAFT:
 
 
 def load_learnings(repo_root: str) -> str:
-    path = os.path.join(repo_root, "learnings.md")
+    """Analytics learnings + the permanent failure registry — both are
+    injected into every topic/script prompt so past mistakes become rules."""
+    text = ""
     try:
-        with open(path, encoding="utf-8") as f:
-            text = f.read().strip()
-        return text[:6000]
+        with open(os.path.join(repo_root, "learnings.md"), encoding="utf-8") as f:
+            text = f.read().strip()[:6000]
     except Exception:
-        return ""
+        pass
+    try:
+        with open(os.path.join(repo_root, "FAILURES.md"), encoding="utf-8") as f:
+            failures = f.read().strip()[:3000]
+        if failures:
+            text += ("\n\nPAST PRODUCTION FAILURES — HARD RULES, never repeat "
+                     "any of these:\n" + failures)
+    except Exception:
+        pass
+    return text.strip()
 
 
 def pick_topic(cfg: dict, api_key: str, done_file: str = "topics_done.txt",
@@ -467,8 +480,20 @@ def _plan_visual_beats(script: dict, cfg: dict, api_key: str) -> dict:
     if not settings.get("enabled", True):
         return script
     payload = visual_beats_mod.planner_payload(script, cfg)
+    forbidden = script.get("forbidden_visuals") or []
+    contract = ""
+    if forbidden or script.get("hero_prompt"):
+        contract = f"""
+CONTINUITY CONTRACT (breaking it ruins the episode):
+- FORBIDDEN VISUALS: {json.dumps(forbidden)} — never write a query that could
+  return any of these; they contradict the premise.
+- The episode has ONE recurring hero ({str(script.get('hero_prompt', ''))[:120]}).
+  Beats about the protagonist are carried by that hero image — write those
+  beats' queries for the surrounding ENVIRONMENT, never for stock humans.
+"""
     prompt = f"""You are the visual editor of a premium science documentary.
 Turn the FINAL Hindi narration below into a sentence-level visual beat sheet.
+{contract}
 
 Return ONLY JSON:
 {{"scenes":[{{"n":1,"visual_beats":[{{
@@ -512,6 +537,10 @@ def generate_script(cfg: dict, topic: str, api_key: str, learnings: str = "") ->
 
 TOPIC: {topic}
 TARGET: ~{words} spoken words total (about {v['target_minutes']} minutes at {wpm} wpm)
+HARD RANGE: {int(words * 0.92)}-{int(words * 1.08)} spoken words across all
+scenes. Under {int(words * 0.92)} produces a video shorter than promised;
+count your words before returning and expand thin scenes with concrete
+material (never filler).
 TONE: {cfg['channel']['tone']}
 AUDIENCE: {cfg['channel']['audience']}
 {learn_block}{_lang_rules(cfg)}{_style_rules()}
@@ -527,6 +556,7 @@ Write a scene-segmented script and return ONLY valid JSON with this exact shape:
   "premise": "ONE Hindi sentence: the impossible rule / continuous journey of this episode",
   "changing_variable": {{"label": "SHORT ENGLISH metric the viewer watches change (DEPTH, SPEED, TIME, TEMP, SIZE)", "unit": "km"}},
   "hero_prompt": "ENGLISH text-to-image prompt for the episode's recurring HERO subject — one person/object/place the video returns to as conditions change: subject + setting + light + camera angle",
+  "forbidden_visuals": ["3-6 short ENGLISH phrases describing footage that would BREAK the premise and must never appear (e.g. for an unprotected-human deep-sea premise: 'scuba diver', 'diving suit', 'oxygen tank', 'snorkeler')"],
   "description": "2-3 sentence YouTube description ending with 3 relevant hashtags",
   "tags": ["8-12 YouTube tags"],
   "scenes": [
@@ -587,6 +617,10 @@ Visual mode rules (variety is the goal — videos must not feel stock-only):
 - If narration names a real landmark, machine, animal or anatomical structure,
   search_terms[0] MUST name the exact subject. When exact footage is unlikely,
   rewrite the narration generically instead of showing a misleading substitute.
+- CONTINUITY CONTRACT: no search term may describe (or be likely to return)
+  anything in forbidden_visuals. When a scene needs the protagonist/hero,
+  do not request stock humans — the recurring hero image carries those beats;
+  write search_terms for the ENVIRONMENT instead.
 
 Script rules:
 - SCENARIO LOCK (scientific integrity): if the premise is a hypothetical with

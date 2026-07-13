@@ -11,6 +11,7 @@ def master_delivery(path: str, cfg: dict) -> bool:
     target = float(settings.get("target_lufs", -14.0))
     true_peak = float(settings.get("true_peak_db", -1.5))
     lra = float(settings.get("lra", 7.0))
+    sample_rate = int(settings.get("sample_rate", 48000))
     stem, ext = os.path.splitext(path)
     temp = f"{stem}.mastered{ext or '.mp4'}"
     cmd = [
@@ -19,6 +20,7 @@ def master_delivery(path: str, cfg: dict) -> bool:
         "-bsf:v", ("h264_metadata=video_full_range_flag=0:colour_primaries=1:"
                    "transfer_characteristics=1:matrix_coefficients=1"),
         "-af", f"loudnorm=I={target}:TP={true_peak}:LRA={lra}",
+        "-ar", str(sample_rate),  # 48 kHz delivery — 96 kHz wastes bitrate
         "-c:a", "aac", "-b:a", "256k", "-movflags", "+faststart",
         "-color_primaries", "bt709", "-color_trc", "bt709",
         "-colorspace", "bt709", "-color_range", "tv", temp,
@@ -28,7 +30,8 @@ def master_delivery(path: str, cfg: dict) -> bool:
         if not os.path.exists(temp) or os.path.getsize(temp) < 200_000:
             raise RuntimeError("mastered output missing or too small")
         os.replace(temp, path)
-        print(f"[master] {target:g} LUFS, {true_peak:g} dBTP, Rec.709 metadata")
+        print(f"[master] {target:g} LUFS, {true_peak:g} dBTP, "
+              f"{sample_rate} Hz, Rec.709 metadata")
         return True
     except Exception as exc:
         print(f"[master] skipped ({exc}) — preserving original render")
