@@ -366,12 +366,15 @@ const CaptionChunk: React.FC<{
         borderBottom: `${3 * s}px solid ${style.accent}`, paddingBottom: 8 * s,
       }}>{text}</div>
     ) : v === 'chip' ? (
+      // Premium high-contrast chip: calm dark scrim + white karaoke words,
+      // accent only on the active word and a thin rule. A solid accent box
+      // on every caption line reads as cheap and kills the accent's meaning.
       <div style={{
-        background: style.accent, color: '#0A1428', fontSize: 54 * captionScale * s,
-        fontWeight: 900, textAlign: 'center', lineHeight: 1.35,
-        padding: `${8 * s}px ${24 * s}px`, borderRadius: 8 * s,
-        boxShadow: '0 8px 30px rgba(0,0,0,0.55)',
-      }}>{text}</div>
+        background: 'rgba(8,13,26,0.82)', textAlign: 'center',
+        padding: `${10 * s}px ${26 * s}px`, borderRadius: 10 * s,
+        borderBottom: `${4 * s}px solid ${style.accent}`,
+        boxShadow: '0 8px 30px rgba(0,0,0,0.45)',
+      }}>{kineticWords(54 * captionScale, 'white')}</div>
     ) : (
       <div style={{textAlign: 'center'}}>
         {kineticWords(58 * captionScale, 'white', stroke)}
