@@ -51,9 +51,14 @@ export const MetricReadout: React.FC<{
   });
   const cur = pts[i];
   const nxt = pts[Math.min(i + 1, pts.length - 1)];
+  // Hold the milestone value while the narration discusses it (~35% of the
+  // span), then resume the journey — the counter states, pauses, explains,
+  // moves on, instead of free-running past the number being spoken.
+  const span = Math.max(nxt.start - cur.start, 0.001);
+  const holdEnd = cur.start + span * 0.35;
   const value =
     nxt.start > cur.start
-      ? interpolate(t, [cur.start, nxt.start],
+      ? interpolate(t, [holdEnd, nxt.start],
           [cur.value as number, nxt.value as number],
           {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'})
       : (cur.value as number);
