@@ -7,6 +7,12 @@ from dashboard.sarvam.ai; any preset name like "amit" also works).
 FALLBACK: Kokoro-82M (Apache 2.0, runs free on the runner) with its Hindi
 voices — a Sarvam outage or empty credits never kills a scheduled run.
 Set TTS_NO_FALLBACK=1 to fail hard instead (the Test Voice workflow does).
+
+PRONUNCIATION DICTIONARY: brand/pronunciations.yaml maps terms the voice
+mispronounces (English scientific names, units, symbols) to phonetic Hindi
+spellings. Applied to TTS text only — captions come from STT of the audio,
+so they stay consistent automatically. Add an entry whenever a render
+mispronounces something; fail-open if the file is absent.
 """
 import base64
 import io
@@ -39,6 +45,33 @@ DELIVERY = {
     "reveal": {"pace_mul": 0.88, "temperature": 0.62, "pre": 0.5},
     "urgent": {"pace_mul": 1.12, "temperature": 0.75, "pre": 0.0},
 }
+
+_PRON: dict | None = None
+
+
+def _apply_pronunciations(text: str) -> str:
+    """Replace terms from brand/pronunciations.yaml (longest keys first so
+    'Mariana Trench' wins over 'Mariana'). Plain substring replacement keeps
+    Devanagari-safe behaviour; fail-open on any problem."""
+    global _PRON
+    if _PRON is None:
+        _PRON = {}
+        try:
+            import yaml
+            path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                "..", "brand", "pronunciations.yaml")
+            with open(path, encoding="utf-8") as f:
+                data = yaml.safe_load(f) or {}
+            _PRON = {str(k): str(v) for k, v in (data.get("terms") or {}).items()
+                     if str(k).strip() and str(v).strip()}
+            if _PRON:
+                print(f"[tts] pronunciation dictionary loaded ({len(_PRON)} terms)")
+        except Exception:
+            _PRON = {}
+    for key in sorted(_PRON, key=len, reverse=True):
+        if key in text:
+            text = text.replace(key, _PRON[key])
+    return text
 
 
 # ── sentence-aware chunking (Hindi danda । + Latin punctuation) ──────────
@@ -203,6 +236,7 @@ def synth_scene(text: str, wav_path: str, cfg: dict,
     """Synthesize one scene's narration to wav_path. Returns duration (s).
     delivery: hook | calm | reveal | urgent (per-scene voice direction)."""
     global ENGINE_USED, FALLBACK_USED
+    text = _apply_pronunciations(text)
     dlv = DELIVERY.get(str(delivery).lower().strip(), DELIVERY["calm"])
     engine = str(cfg.get("tts", {}).get("engine", "sarvam")).lower()
     audio = None

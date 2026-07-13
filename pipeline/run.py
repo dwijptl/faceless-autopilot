@@ -300,6 +300,8 @@ def main() -> None:
                                   learnings)
     script = script_gen.generate_script(cfg, topic, gemini_key, learnings)
     fact_report = factcheck.check_script(script, cfg, gemini_key)
+    with open(os.path.join(outdir, "claims.json"), "w", encoding="utf-8") as f:
+        json.dump(fact_report, f, indent=2, ensure_ascii=False)  # claim ledger
     with open(os.path.join(outdir, "script.json"), "w", encoding="utf-8") as f:
         json.dump(script, f, indent=2, ensure_ascii=False)
 
@@ -377,6 +379,7 @@ def main() -> None:
     log_path = os.path.join(REPO_ROOT, "assets_used.json")
     usage_log = assets_mod.load_usage_log(log_path)
     vision_qc.begin_run(cfg)
+    assets_mod.reset_episode_state()  # fresh luma/duplicate guards per video
     used: set = set(usage_log["pexels"])
     used_prompts: set = set(usage_log["prompts"])
     aicfg = cfg.get("ai_images", {})
@@ -531,12 +534,42 @@ def main() -> None:
                           "kind": "image"}] if thumb_ai else []) + scenes[0]["assets"]
         thumb_mod.make_thumbnail(thumb_assets, script["thumb_text"], thumb_path)
 
+    # 7b) thumbnail variants — same hero, alternate text, for YouTube's native
+    # Test & Compare (upload all; YouTube picks the winner by watch-time share)
+    try:
+        seen = {manifest["manifest"]["thumbText"]}
+        letter = ord("b")
+        for opt in (script.get("thumb_options") or [])[:3]:
+            text = str(opt.get("text", "")).strip()[:24]
+            if not text or text in seen:
+                continue
+            seen.add(text)
+            variant = json.loads(json.dumps(manifest, ensure_ascii=False))
+            variant["manifest"]["thumbText"] = text
+            vpath = os.path.join(workdir, f"props_thumb_{chr(letter)}.json")
+            with open(vpath, "w", encoding="utf-8") as f:
+                json.dump(variant, f, ensure_ascii=False)
+            vout = os.path.join(outdir, f"thumbnail_{chr(letter)}.jpg")
+            thumbnail_remotion(vpath, workdir, vout)
+            print(f"[thumb] Test & Compare variant: {os.path.basename(vout)} "
+                  f"({text})")
+            letter += 1
+    except Exception as exc:
+        print(f"[thumb] variants skipped ({exc})")
+
     # 8) metadata ----------------------------------------------------------------
     n_ai = sum(1 for sc in scenes for a in sc["assets"] if a.get("ai"))
     voice_line = tts_mod.ENGINE_USED or "unknown"
     fact_line = factcheck.markdown(fact_report)
-    fact_requires_review = (bool(cfg.get("factcheck", {}).get("gate", False))
-                            and fact_report.get("unsupported", 0) > 0)
+    # gate modes: false = advisory · high_risk = block on unsupported
+    # high-risk claims only · true/all = block on any unsupported claim
+    gate_mode = str(cfg.get("factcheck", {}).get("gate", False)).strip().lower()
+    if gate_mode in ("true", "1", "all"):
+        fact_requires_review = fact_report.get("unsupported", 0) > 0
+    elif gate_mode == "high_risk":
+        fact_requires_review = bool(fact_report.get("high_risk_unsupported"))
+    else:
+        fact_requires_review = False
     quality_requires_review = (
         bool(cfg.get("longform_quality", {}).get("render_qc", {}).get("gate", False))
         and not quality_report.get("passed", False))
@@ -549,9 +582,13 @@ def main() -> None:
     voice_banner = ("> ⚠️ **VOICE FALLBACK — DO NOT PUBLISH.** This run used Kokoro, "
                     "not your cloned Sarvam voice. Re-run when Sarvam is available.\n\n"
                     if voice_fallback else "")
+    fact_banner = ("> ⚠️ **UNSUPPORTED HIGH-RISK CLAIMS — DO NOT PUBLISH** until "
+                   "verified/removed: "
+                   + "; ".join(fact_report.get("high_risk_unsupported", [])[:3])
+                   + "\n\n" if fact_requires_review else "")
     meta = f"""## {script['title']}
 
-{voice_banner}**Reliability:** Voice: {status_voice} | Captions: {caption_status} | Fact-check: {status_fact} | Quality: {status_quality}
+{voice_banner}{fact_banner}**Reliability:** Voice: {status_voice} | Captions: {caption_status} | Fact-check: {status_fact} | Quality: {status_quality}
 
 **Duration:** {duration / 60:.1f} min · **Scenes:** {len(scenes)} · **Style:** {style} ·
 **AI visuals:** {n_ai} · **Run:** {stamp} · **Renderer:** {used_engine} ·
@@ -586,6 +623,8 @@ def main() -> None:
 - [ ] SCHEDULE the publish for 16:00–17:30 IST — Hindi long-form viewing
       peaks 6–8 PM IST; going live 2-3h early lets YouTube index + test it
 - [ ] Set the video language to **Hindi** in YouTube Studio (Details → Video language)
+- [ ] Upload ALL thumbnails (thumbnail.jpg + thumbnail_b/c.jpg if present) via
+      Studio's **Test & Compare** — YouTube picks the winner by watch-time
 - [ ] If your music track is CC-BY, add the artist credit to the description
 - [ ] Upload `captions.srt` in YouTube Studio → Subtitles (language: Hindi)
 - [ ] Occasionally drop fresh Studio analytics CSVs into analytics/ so the
@@ -609,6 +648,19 @@ Remotion. Brand: Terra Incognita.*
                        "scene_variants": [sc.get("motion", {}) for sc in scenes],
                        "sound_events": len(sfx_events),
                    }}, f, indent=2, ensure_ascii=False)
+
+    # beat-timestamp map — lets future analytics map retention dips to the
+    # exact scene, visual mode and asset choice that was on screen
+    with open(os.path.join(outdir, "beats.json"), "w", encoding="utf-8") as f:
+        json.dump([{"n": sc["n"], "title": sc.get("title", ""),
+                    "start": round(sc["start"], 2),
+                    "end": round(sc["start"] + sc["audio_duration"], 2),
+                    "visualMode": sc.get("visual_mode", "broll"),
+                    "visualRole": sc.get("visual_role", ""),
+                    "delivery": sc.get("delivery", "calm"),
+                    "assets": [f"{a['kind']}:{'ai' if a.get('ai') else 'stock'}"
+                               for a in sc["assets"]]}
+                   for sc in scenes], f, indent=2, ensure_ascii=False)
 
     script_gen.log_topic_done(topic, os.path.join(REPO_ROOT, "topics_done.txt"))
     tease = str(script.get("next_tease_topic", "")).strip()

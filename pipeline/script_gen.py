@@ -314,6 +314,11 @@ def _normalize(script: dict, min_scenes: int) -> dict:
         s["milestone"] = _normalize_milestone(s.get("milestone"))
         d = str(s.get("delivery", "calm")).lower().strip()
         s["delivery"] = d if d in ("hook", "calm", "reveal", "urgent") else "calm"
+        role = str(s.get("visual_role", "")).lower().strip()
+        s["visual_role"] = (role if role in ("experience", "explanation",
+                                             "measurement") else "")
+        s["must_show"] = [str(t)[:40] for t in (s.get("must_show") or [])
+                          if str(t).strip()][:3]
     script["scenes"][0]["delivery"] = "hook"
     assert script["title"].strip()
     script.setdefault("thumb_text", script["title"][:30])
@@ -370,8 +375,9 @@ DRAFT:
         # first pass's structured visual data so a rewrite cannot silently turn
         # a stat/glass/map scene into an empty overlay.
         for before, after in zip(script["scenes"], revised["scenes"]):
-            for field in ("stat", "card", "glass", "map", "milestone"):
-                after[field] = before.get(field, {})
+            for field in ("stat", "card", "glass", "map", "milestone",
+                          "must_show", "visual_role"):
+                after[field] = before.get(field, after.get(field, {}))
         for field in ("premise", "changing_variable", "hero_prompt",
                       "forbidden_visuals", "title_options", "thumb_options",
                       "thumb_headline", "thumb_question", "next_tease_topic"):
@@ -456,11 +462,21 @@ THE VISUAL JOURNEY TEST — score each candidate 1-10 on ALL of:
 - human_stakes: is there a consequence a viewer can feel on their own body/city?
 - visual: does something VISIBLY change on screen every 30 seconds?
 - thumbnail: can it be drawn as ONE dramatic image?
+- feasibility: can stock footage + AI stills TRUTHFULLY illustrate it
+  (no reenactments, no specific people, no news footage)?
+- source_confidence: are its core facts well-established and easy to verify
+  with primary scientific/government sources?
+- sequel: does it naturally open an obvious next-episode question?
 A topic that is a list of facts ("types of X") must score low on journey.
+REJECT any candidate that is interesting but cannot be shown truthfully
+(feasibility <= 4) or whose central claim cannot be verified
+(source_confidence <= 4) — an accurate, filmable topic beats a viral,
+unfilmable one.
 {lang_note}
 Return JSON exactly:
 {{"candidates": [{{"topic": "...", "scores": {{"journey": 0, "escalation": 0,
-"number_hook": 0, "human_stakes": 0, "visual": 0, "thumbnail": 0}},
+"number_hook": 0, "human_stakes": 0, "visual": 0, "thumbnail": 0,
+"feasibility": 0, "source_confidence": 0, "sequel": 0}},
 "total": 0}}],
 "topic": "<the candidate with the highest total>"}}"""
     last_err = None
@@ -578,7 +594,9 @@ Write a scene-segmented script and return ONLY valid JSON with this exact shape:
       "title": "3-6 word scene title",
       "narration": "60-150 words of spoken narration",
       "visual_mode": "broll | ai_image | kinetic | stat | card | map | glass",
+      "visual_role": "experience | explanation | measurement",
       "delivery": "hook | calm | reveal | urgent",
+      "must_show": ["1-2 short ENGLISH phrases naming what MUST be visible on screen for this scene's narration to be true"],
       "milestone": {{"value": 0, "label": "optional ENGLISH override of the metric label", "unit": "km"}},
       "search_terms": ["stock video search term", "alternative term", "broader fallback term"],
       "ai_prompt": "detailed text-to-image prompt (only when visual_mode is ai_image, else empty string)",
@@ -634,6 +652,20 @@ Visual mode rules (variety is the goal — videos must not feel stock-only):
   anything in forbidden_visuals. When a scene needs the protagonist/hero,
   do not request stock humans — the recurring hero image carries those beats;
   write search_terms for the ENVIRONMENT instead.
+- MUST-SHOW CONTRACT: each scene's must_show names the 1-2 concrete things
+  the footage must actually depict for the narration to be true (e.g.
+  "deep ocean darkness", "volcanic vent"). Keep them findable in stock —
+  the pipeline rejects footage that misses them, so never demand the
+  impossible; leave the list empty for abstract/graphic scenes.
+- VISUAL ROLE ROTATION (anti-montage rule): tag every scene's visual_role —
+  "experience" (what the viewer would see/feel there), "explanation" (why it
+  happens — cards/diagrams/cutaways), "measurement" (how deep/hot/fast —
+  stat/glass/HUD moments). Never let three consecutive scenes share one
+  role; this rotation is what separates a documentary from a stock montage.
+- SHOT RHYTHM (the idea sets the cut, not a timer): the hook cuts fast —
+  write it in short punchy sentences; normal scenes breathe; give the single
+  most beautiful or emotional scene FEWER words so its visual can hold for
+  8-10 seconds; the reveal keeps its beat of silence.
 
 Script rules:
 - SCENARIO LOCK (scientific integrity): if the premise is a hypothetical with

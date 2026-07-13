@@ -106,7 +106,27 @@ def main() -> None:
     print(f"=== Shorts run {stamp} · style: {style} ===")
 
     # 1) topic + short script ------------------------------------------------
-    topic = script_gen.pick_topic(cfg, gemini_key, DONE_FILE, learnings)
+    # Shorts are trailers: bias the topic toward the latest long-form episode
+    # so each Short funnels viewers into it (set it as the Short's related
+    # video in Studio). Never a full summary — ONE shocking fact/mechanism.
+    trailer_hint = ""
+    try:
+        with open(os.path.join(REPO_ROOT, "topics_done.txt"),
+                  encoding="utf-8") as f:
+            long_topics = [ln.strip() for ln in f
+                           if ln.strip() and not ln.startswith(("#", "NEXT:"))]
+        if long_topics:
+            trailer_hint = (
+                "\n\nTRAILER PRIORITY: the channel's newest long-form episode "
+                f"is '{long_topics[-1]}'. STRONGLY prefer a Short that "
+                "extracts ONE shocking fact or mechanism from that episode — "
+                "a trailer that makes viewers open the full video. Never "
+                "summarize the whole episode, and never repeat a covered "
+                "Short topic.")
+    except Exception:
+        pass
+    topic = script_gen.pick_topic(cfg, gemini_key, DONE_FILE,
+                                  (learnings or "") + trailer_hint)
     script = script_gen.generate_short_script(cfg, topic, gemini_key, learnings)
     fact_report = factcheck.check_script(script, cfg, gemini_key)
     with open(os.path.join(outdir, "script.json"), "w", encoding="utf-8") as f:
@@ -287,8 +307,13 @@ def main() -> None:
     # 7) metadata ---------------------------------------------------------------
     voice_line = tts_mod.ENGINE_USED or "unknown"
     fact_line = factcheck.markdown(fact_report)
-    fact_requires_review = (bool(cfg.get("factcheck", {}).get("gate", False))
-                            and fact_report.get("unsupported", 0) > 0)
+    gate_mode = str(cfg.get("factcheck", {}).get("gate", False)).strip().lower()
+    if gate_mode in ("true", "1", "all"):
+        fact_requires_review = fact_report.get("unsupported", 0) > 0
+    elif gate_mode == "high_risk":
+        fact_requires_review = bool(fact_report.get("high_risk_unsupported"))
+    else:
+        fact_requires_review = False
     draft_release = voice_fallback or fact_requires_review
     status_voice = "⚠️ FALLBACK — DO NOT PUBLISH" if voice_fallback else "OK (cloned)"
     status_fact = (f"⚠️ REVIEW CLAIMS ({fact_report.get('unsupported', 0)} unsupported)"

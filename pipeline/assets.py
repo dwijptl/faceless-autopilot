@@ -115,11 +115,84 @@ def _orientation(cfg) -> str:
     return "portrait" if cfg["video"]["height"] > cfg["video"]["width"] else "landscape"
 
 
+# ── zero-cost local guards: darkness + episode-level duplicate detection ──
+_EPISODE_HASHES: set = set()
+
+
+def reset_episode_state() -> None:
+    """Called once per video so luma/duplicate guards start fresh."""
+    _EPISODE_HASHES.clear()
+
+
+def _probe_frame(path: str, kind: str):
+    """PIL image of the asset's representative frame; None on any failure."""
+    try:
+        if kind == "image":
+            return Image.open(path).convert("RGB")
+        import subprocess
+        tmp = path + ".probe.jpg"
+        subprocess.run(["ffmpeg", "-v", "error", "-ss", "1", "-i", path,
+                        "-frames:v", "1", "-q:v", "3", "-y", tmp],
+                       capture_output=True, timeout=60, check=True)
+        img = Image.open(tmp).convert("RGB")
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        return img
+    except Exception:
+        return None
+
+
+def _dhash(img, size: int = 8) -> str:
+    """Perceptual difference hash — catches near-identical shots this episode."""
+    try:
+        g = img.convert("L").resize((size + 1, size))
+        px = list(g.getdata())
+        bits = "".join(
+            "1" if px[r * (size + 1) + c] > px[r * (size + 1) + c + 1] else "0"
+            for r in range(size) for c in range(size))
+        return f"{int(bits, 2):016x}"
+    except Exception:
+        return ""
+
+
+def _visual_ok(path: str, kind: str, label: str) -> bool:
+    """Reject near-black footage (reads as dead air at feed size) and visual
+    duplicates within the same episode. Local, free, fail-open."""
+    img = _probe_frame(path, kind)
+    if img is None:
+        return True
+    try:
+        from PIL import ImageStat
+        if ImageStat.Stat(img.convert("L")).mean[0] < 26.0:
+            print(f"[assets] {label}: rejected (near-black footage)")
+            return False
+    except Exception:
+        pass
+    h = _dhash(img)
+    if h and h in _EPISODE_HASHES:
+        print(f"[assets] {label}: rejected (visual duplicate this episode)")
+        return False
+    if h:
+        _EPISODE_HASHES.add(h)
+    return True
+
+
+def _qc_desc(scene: dict) -> str:
+    """Narration plus the scene's must-show contract for the vision check."""
+    desc = str(scene.get("narration", ""))
+    must = [str(m) for m in (scene.get("must_show") or []) if str(m).strip()]
+    if must:
+        desc += " | MUST SHOW (reject footage missing these): " + ", ".join(must[:3])
+    return desc
+
+
 def _stock_videos(scene, need_seconds, outdir, cfg, api_key, used, max_clips,
                   gemini_key=""):
     w = cfg["video"]["width"]
     assets, covered, qc_budget = [], 0.0, 6  # cap vision checks per scene
-    desc = scene.get("narration", "")
+    desc = _qc_desc(scene)
     forbidden = scene.get("forbidden_visuals") or []
     for term in _shaped_queries(scene.get("search_terms", []), scene["n"]):
         if covered >= need_seconds or len(assets) >= max_clips:
@@ -145,11 +218,20 @@ def _stock_videos(scene, need_seconds, outdir, cfg, api_key, used, max_clips,
             except Exception as e:
                 print(f"[assets] download failed ({vid['id']}): {e}")
                 continue
+            if not _visual_ok(path, "video",
+                              f"scene {scene['n']} video {vid['id']}"):
+                used.add(vid_key)
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
+                continue
             if qc_budget > 0:  # visual sanity check before accepting
                 qc_budget -= 1
                 if not vision_qc.frame_ok(path, "video", desc, term,
                                           gemini_key, cfg,
-                                          forbidden=forbidden):
+                                          forbidden=forbidden,
+                                          source="stock"):
                     used.add(vid_key)  # never try this clip again
                     try:
                         os.remove(path)
@@ -182,12 +264,20 @@ def _stock_photo(scene, outdir, api_key, used, orientation="landscape",
                 _download(ph["src"]["large2x"], path)
             except Exception:
                 continue
+            if not _visual_ok(path, "image", f"scene {scene['n']} photo {ph['id']}"):
+                used.add(key)
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
+                continue
             if cfg is not None and qc_budget > 0:
                 qc_budget -= 1
                 if not vision_qc.frame_ok(path, "image",
-                                          scene.get("narration", ""), term,
+                                          _qc_desc(scene), term,
                                           gemini_key, cfg,
-                                          forbidden=forbidden):
+                                          forbidden=forbidden,
+                                          source="stock"):
                     used.add(key)
                     try:
                         os.remove(path)

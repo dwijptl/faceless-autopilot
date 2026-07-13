@@ -73,15 +73,24 @@ def _frame_jpegs_b64(media_path: str, kind: str, frames: int) -> list[str]:
 
 
 def frame_ok(media_path: str, kind: str, scene_desc: str, search_term: str,
-             api_key: str, cfg: dict, forbidden: list | None = None) -> bool:
-    """True = accept the asset. Fail-open on any problem."""
+             api_key: str, cfg: dict, forbidden: list | None = None,
+             source: str = "generated") -> bool:
+    """True = accept the asset. Fail-open on transient errors — EXCEPT stock
+    assets once the budget is exhausted: unchecked stock is the top source of
+    contradiction failures (FAILURES.md), so those are rejected and the scene
+    routes to the truthful fallback hierarchy (AI still -> card -> gradient)
+    instead of shipping an unverified clip."""
     global _requests_remaining
     if not cfg.get("qc", {}).get("visual_check", True) or not api_key:
         return True
     if _requests_remaining is None:
         begin_run(cfg)
     if _requests_remaining <= 0:
-        print("[qc] budget exhausted; accepting without vision check")
+        if source == "stock":
+            print("[qc] budget exhausted; rejecting unchecked stock "
+                  "(truthful fallback will be used instead)")
+            return False
+        print("[qc] budget exhausted; accepting generated asset unchecked")
         return True
     images = _frame_jpegs_b64(media_path, kind, int(cfg.get("qc", {}).get("frames", 3)))
     if not images:
