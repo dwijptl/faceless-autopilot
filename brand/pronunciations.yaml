@@ -1,0 +1,23 @@
+# Pronunciation dictionary — applied to narration text just before TTS
+# (pipeline/tts.py). Captions are made by STT of the audio, so they follow
+# automatically. Add an entry whenever a render mispronounces something.
+# Longest keys win (e.g. "Mariana Trench" is replaced before "Mariana").
+# Keys are matched as plain substrings — keep them specific.
+terms:
+  # symbols & units the voice can't read
+  "°C": " डिग्री सेल्सियस"
+  "°F": " डिग्री फ़ारेनहाइट"
+  "km/h": "किलोमीटर प्रति घंटा"
+  "CO2": "कार्बन डाइऑक्साइड"
+  "H2O": "पानी"
+  # English scientific names -> phonetic Hindi
+  "Mariana Trench": "मारियाना ट्रेंच"
+  "Venus": "वीनस"
+  "Jupiter": "जुपिटर"
+  "NASA": "नासा"
+  "ISRO": "इसरो"
+  "Everest": "एवरेस्ट"
+  "Pacific": "पैसिफ़िक"
+  "Antarctica": "अंटार्कटिका"
+  "Sahara": "सहारा"
+  "Amazon": "अमेज़न"
