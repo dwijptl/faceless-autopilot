@@ -766,6 +766,7 @@ Return ONLY valid JSON:
       "search_terms": ["concrete visual term", "alternative", "broader fallback"],
       "ai_prompt": "text-to-image prompt (only for ai_image, else empty)",
       "kinetic_text": "3-6 word punch phrase (only for kinetic, else empty)",
+      "forbidden_visuals-note": "also return a top-level \"forbidden_visuals\" array: 3-6 ENGLISH phrases of footage that would break this premise (e.g. 'scuba diver', 'oxygen tank')",
       "stat": {{"value": 0, "suffix": "", "label": "", "max": null, "baseline": null, "bars": [{{"label": "short label", "value": 0}}]}},
       "card": {{"kicker": "category", "headline": "short headline", "body": "under 12 words"}},
       "glass": {{"kicker": "category", "headline": "short Hindi line", "body": "under 10 words", "value": null, "suffix": "", "label": "", "delta": null, "delta_direction": "up | down | flat", "location": "", "coordinates": "", "chapter": ""}}

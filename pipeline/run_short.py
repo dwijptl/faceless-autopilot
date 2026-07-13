@@ -176,6 +176,7 @@ def main() -> None:
     used_prompts: set = set(usage_log["prompts"])
     ai_budget = [int(cfg["ai_images"].get("max_per_video", 1))]
     for sc in scenes:
+        sc["forbidden_visuals"] = script.get("forbidden_visuals") or []
         sc["assets"] = assets_mod.fetch_scene_assets(
             sc, sc["audio_duration"], workdir, cfg, pexels_key, gemini_key,
             used, used_prompts, ai_budget)

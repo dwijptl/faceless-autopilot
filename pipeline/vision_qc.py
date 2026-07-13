@@ -4,6 +4,9 @@ Before a downloaded stock clip/photo is accepted, one frame goes to Gemini
 vision (free tier) with the scene's narration: does this footage plausibly
 illustrate it for a nature/space documentary? Rejects studio, commercial,
 product, zoo-enclosure and metaphor shots that keyword search sneaks in.
+When the episode declares forbidden_visuals (its continuity contract), any
+frame showing them is rejected even if it matches the scene semantically —
+this is what keeps a scuba diver out of an unprotected-human premise.
 
 FAIL-OPEN by design: any error/timeout accepts the asset — QC must never
 block a scheduled run.
@@ -70,7 +73,7 @@ def _frame_jpegs_b64(media_path: str, kind: str, frames: int) -> list[str]:
 
 
 def frame_ok(media_path: str, kind: str, scene_desc: str, search_term: str,
-             api_key: str, cfg: dict) -> bool:
+             api_key: str, cfg: dict, forbidden: list | None = None) -> bool:
     """True = accept the asset. Fail-open on any problem."""
     global _requests_remaining
     if not cfg.get("qc", {}).get("visual_check", True) or not api_key:
@@ -83,11 +86,19 @@ def frame_ok(media_path: str, kind: str, scene_desc: str, search_term: str,
     images = _frame_jpegs_b64(media_path, kind, int(cfg.get("qc", {}).get("frames", 3)))
     if not images:
         return True
+    contract = ""
+    if forbidden:
+        contract = (
+            "EPISODE CONTINUITY CONTRACT — REJECT IMMEDIATELY if ANY frame "
+            f"shows any of: {', '.join(str(f) for f in forbidden[:6])}. "
+            "These break this episode's premise even when they otherwise "
+            "match the scene.\n")
     prompt = (
         "You are the visual editor of a premium nature/space documentary "
         "channel. These frames were fetched for the scene below.\n"
         f'SCENE NARRATION (Hindi): "{scene_desc[:280]}"\n'
         f'SEARCH INTENT: "{search_term}"\n'
+        + contract +
         "ACCEPT only if the footage plausibly belongs in this documentary "
         "scene. If the narration or search intent names a real landmark, "
         "machine, animal, planet or anatomical structure, REJECT lookalikes "

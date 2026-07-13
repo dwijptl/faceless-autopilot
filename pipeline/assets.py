@@ -10,6 +10,11 @@ term is first searched with a rotating cinematic modifier ("aerial", "macro",
 "drone"…) so results skew toward the moody, professional b-roll buried in
 Pexels; the raw term follows as a recall fallback.
 
+CONTINUITY CONTRACT: scenes carry the episode's forbidden_visuals list; the
+vision QC rejects any candidate showing them even when it matches the scene
+semantically (a scuba diver is "underwater human" to keyword search, but it
+breaks an unprotected-human premise).
+
 A persistent usage log (assets_used.json, committed back to the repo) makes
 sure no Pexels clip/photo or AI prompt ever repeats across videos.
 """
@@ -115,6 +120,7 @@ def _stock_videos(scene, need_seconds, outdir, cfg, api_key, used, max_clips,
     w = cfg["video"]["width"]
     assets, covered, qc_budget = [], 0.0, 6  # cap vision checks per scene
     desc = scene.get("narration", "")
+    forbidden = scene.get("forbidden_visuals") or []
     for term in _shaped_queries(scene.get("search_terms", []), scene["n"]):
         if covered >= need_seconds or len(assets) >= max_clips:
             break
@@ -142,7 +148,8 @@ def _stock_videos(scene, need_seconds, outdir, cfg, api_key, used, max_clips,
             if qc_budget > 0:  # visual sanity check before accepting
                 qc_budget -= 1
                 if not vision_qc.frame_ok(path, "video", desc, term,
-                                          gemini_key, cfg):
+                                          gemini_key, cfg,
+                                          forbidden=forbidden):
                     used.add(vid_key)  # never try this clip again
                     try:
                         os.remove(path)
@@ -159,6 +166,7 @@ def _stock_videos(scene, need_seconds, outdir, cfg, api_key, used, max_clips,
 def _stock_photo(scene, outdir, api_key, used, orientation="landscape",
                  cfg=None, gemini_key=""):
     qc_budget = 3
+    forbidden = scene.get("forbidden_visuals") or []
     for term in _shaped_queries(scene.get("search_terms", []), scene["n"]):
         try:
             data = _get(PHOTO_API, {"query": term, "per_page": 8,
@@ -178,7 +186,8 @@ def _stock_photo(scene, outdir, api_key, used, orientation="landscape",
                 qc_budget -= 1
                 if not vision_qc.frame_ok(path, "image",
                                           scene.get("narration", ""), term,
-                                          gemini_key, cfg):
+                                          gemini_key, cfg,
+                                          forbidden=forbidden):
                     used.add(key)
                     try:
                         os.remove(path)
