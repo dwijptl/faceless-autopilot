@@ -31,3 +31,9 @@
 
 6. **Undelivered runtime** (6:00 target rendered 4:38; 28s short rendered 38s).
    Rule: respect the HARD RANGE word budgets; the word count IS the runtime.
+
+7. **Solid accent-colored caption boxes on every line** (noir chip captions:
+   bright amber box + black text throughout the Mariana video and shorts).
+   Rule: captions default CALM — white karaoke words on a translucent dark
+   scrim; the brand accent appears only on the active word, thin rules, the
+   metric counter and impact graphics. When everything shouts, nothing does.
