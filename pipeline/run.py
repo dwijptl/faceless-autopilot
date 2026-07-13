@@ -102,7 +102,20 @@ def _asset_manifest(asset: dict) -> dict:
         "path": os.path.basename(asset["path"]),
         "kind": asset["kind"],
         "duration": round(asset["duration"], 2) if asset.get("duration") else None,
+        "ai": bool(asset.get("ai")),
     }
+
+
+def _chapters_block(scenes: list[dict]) -> str:
+    """YouTube chapter timestamps from scene starts (first must be 0:00)."""
+    if len(scenes) < 3:
+        return ""
+    lines = []
+    for i, sc in enumerate(scenes):
+        t = 0 if i == 0 else int(round(sc["start"]))
+        title = str(sc.get("title", "")).strip() or f"Scene {sc['n']}"
+        lines.append(f"{t // 60}:{t % 60:02d} {title}")
+    return "\n".join(lines)
 
 
 def _impact_start(sc: dict, overlay_seconds: float) -> float:
@@ -364,6 +377,7 @@ def main() -> None:
             "n": sc["n"],
             "start": round(sc["start"], 3),
             "impactStart": sc.get("impact_start", 0.0),
+            "delivery": sc.get("delivery", "calm"),
             "title": sc.get("title", ""),
             "visualMode": sc.get("visual_mode", "broll"),
             "kineticText": sc.get("kinetic_text", ""),
@@ -445,6 +459,10 @@ def main() -> None:
 ### Description (paste into YouTube)
 
 {script['description']}
+
+### Chapters (paste at the END of the description — enables YouTube chapters)
+
+{_chapters_block(scenes) or "_not enough scenes for chapters_"}
 
 ### Tags
 
