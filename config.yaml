@@ -99,7 +99,8 @@ render:
 # hook's first beat and the reveal scene (docs/HERO_SHOTS_SPEC.md).
 # QC-gated (vision_qc, free); a rejected clip ships its source still instead.
 hero_shots:
-  enabled: false           # flip after one clean workflow_dispatch run
+  enabled: true            # live on the scheduled Make Video runs (fail-open:
+                           # any hero failure ships the still; $ cap below)
   model: "fal-ai/kling-video/v2.6/pro/image-to-video"
   fallback_model: "fal-ai/kling-video/v2.5-turbo/pro/image-to-video"
   max_per_video: 2         # hook + reveal
