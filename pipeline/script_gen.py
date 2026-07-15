@@ -352,8 +352,8 @@ def _critique(script: dict, cfg: dict, api_key: str, kind: str,
     Fail-open: any problem returns the original draft."""
     if not cfg["llm"].get("critique", True):
         return script
-    fmt = ("a ~28-second vertical Short (hook <= 12 words; full PAYOFF, then "
-           "a loop-friendly final line)" if kind == "short"
+    fmt = ("a 40-55 second vertical Short (hook <= 12 words; full PAYOFF, "
+           "a meaningful close, and no dangling final fragment)" if kind == "short"
            else "a 6-minute documentary (30s hook, mid-video re-hook, payoff ending)")
     prompt = f"""You are a ruthless retention editor for a Hindi faceless
 YouTube channel. Below is a draft script for {fmt}.
@@ -808,7 +808,7 @@ Return ONLY valid JSON:
   "delivery-note": "each scene also gets \"delivery\": hook | calm | reveal | urgent (scene 1 = hook; the twist scene = reveal); and may use visual_mode \"map\" with \"map\": {{\"lat\": 0.0, \"lon\": 0.0, \"label\": \"हिन्दी\"}} when one specific place is the star (0-1 map scenes)",
   "payoff": "ONE declarative Hindi sentence that ANSWERS the hook's question",
   "meaning": "ONE Hindi sentence: why that answer matters to the viewer",
-  "loop_bridge": "optional short fragment that flows into the hook on replay ('' if none)",
+  "loop_bridge": "optional COMPLETE Hindi sentence that points back to the hook on replay ('' if none; never end on a connector)",
   "description": "1-2 lines, end with hashtags including #shorts",
   "tags": ["6-10 tags"],
   "scenes": [
@@ -848,17 +848,19 @@ Shorts rules:
 - Scene 1 = the hook: <= 12 words, the single most jolting fact/question.
   No greetings, no context, no "did you know".
 - ENDING CONTRACT (critical — order is law): the final scene's narration is
-  built payoff -> meaning -> loop_bridge, in that order.
+  built payoff -> meaning -> optional replay cue, in that order.
   * payoff FIRST: a complete declarative sentence answering the hook. A
     question is NOT a payoff. A new topic is NOT a payoff.
-  * meaning SECOND: one sentence of why it matters ("सीमा हमारी है, अंतरिक्ष
-    की नहीं") — this is what the viewer takes away.
-  * loop_bridge LAST and OPTIONAL: a fragment that grammatically flows into
-    the hook line on replay. It comes AFTER the story is complete — a loop
-    tease before the payoff is a broken video, not a loop.
-  * BANNED as final words: "लेकिन...", "और अगर...", "तो?", "क्या होगा?",
-    "...साबित करते हैं", "तो अगली बार", "इसीलिए" — any construction that
-    leaves the sentence hanging. The video must never feel cut off.
+  * meaning SECOND: one complete sentence of why it matters ("सीमा हमारी है,
+    अंतरिक्ष की नहीं") — this is what the viewer takes away.
+  * loop_bridge LAST and OPTIONAL: it must be a COMPLETE standalone sentence
+    that points back to the opening without requiring the replay to finish its
+    grammar (for example "सवाल फिर वहीं लौटता है।"). The visual loop supplies
+    replay energy; never force it with an unfinished spoken fragment.
+  * BANNED as final words: "लेकिन...", "लेकिन अगर...", "और अगर...", "तो?",
+    "क्या होगा?", "...साबित करते हैं", "तो अगली बार", "इसीलिए" — any
+    construction that leaves the sentence hanging. The video must feel
+    complete even when autoplay does not replay it.
 - Exactly 1-2 "kinetic" scenes, 0-1 "stat", 0-{short_ai_max} "ai_image"
   (put an ai_image on the hook when the topic's strongest visual doesn't
   exist as stock), rest "broll".
@@ -905,29 +907,47 @@ _DANGLING_END = re.compile(
 
 
 def _enforce_short_payoff(script: dict) -> None:
-    """Deterministic ending contract (fail-open): the last scene must close
-    with payoff -> meaning -> loop_bridge. If the model left the final line
-    dangling on a connective/question, rebuild it from the structured fields
-    so the video never ends mid-thought."""
+    """Deterministic ending contract: payoff and meaning must finish before an
+    optional COMPLETE replay cue. Dangling connectors are removed so the Short
+    still feels finished when a platform does not autoplay the loop."""
     scenes = script.get("scenes") or []
     if not scenes:
         return
     payoff = str(script.get("payoff") or "").strip()
     meaning = str(script.get("meaning") or "").strip()
     bridge = str(script.get("loop_bridge") or "").strip()
+    if bridge and _DANGLING_END.search(bridge):
+        print("[script] ending contract: dropped dangling loop bridge")
+        bridge = ""
+        script["loop_bridge"] = ""
+
     last = scenes[-1]
     narration = str(last.get("narration") or "").strip()
     dangling = bool(_DANGLING_END.search(narration))
     has_payoff = bool(payoff) and payoff[:24] in narration
-    if payoff and (dangling or not has_payoff):
+    has_meaning = not meaning or meaning[:24] in narration
+    has_bridge = not bridge or bridge[:18] in narration
+    needs_rebuild = dangling or not has_payoff or not has_meaning or not has_bridge
+
+    if payoff and needs_rebuild:
         rebuilt = " ".join(x for x in (payoff, meaning, bridge) if x).strip()
         if rebuilt:
-            print(f"[script] ending contract: rebuilt final scene "
-                  f"({'dangling' if dangling else 'payoff missing'})")
+            print("[script] ending contract: rebuilt complete final scene")
             last["narration"] = rebuilt
-    elif dangling:
-        print("[script] WARNING: final line dangles and no payoff field — "
-              "shipping as-is (fail-open)")
+            return
+
+    if dangling:
+        # Last-resort repair for older model responses without structured
+        # payoff fields: peel off every dangling connector, not just the last
+        # word ("लेकिन अगर" needs two passes).
+        cleaned = narration
+        while cleaned and _DANGLING_END.search(cleaned):
+            cleaned = _DANGLING_END.sub("", cleaned).rstrip(" .…?!")
+        if cleaned:
+            last["narration"] = cleaned + ("" if cleaned.endswith("।") else "।")
+            print("[script] ending contract: trimmed dangling final fragment")
+        else:
+            print("[script] WARNING: could not repair empty final line")
 
 
 def log_topic_done(topic: str, done_file: str = "topics_done.txt") -> None:

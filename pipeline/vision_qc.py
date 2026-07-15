@@ -111,9 +111,13 @@ def frame_ok(media_path: str, kind: str, scene_desc: str, search_term: str,
         "ACCEPT only if the footage plausibly belongs in this documentary "
         "scene. If the narration or search intent names a real landmark, "
         "machine, animal, planet or anatomical structure, REJECT lookalikes "
-        "and generic substitutes that could mislead the viewer. REJECT if it is: studio/commercial/product imagery, food or "
-        "beverages, offices, hands/typing, captive animals (zoo, enclosure, "
-        "fences), text-heavy graphics, or clearly unrelated to the scene.\n"
+        "and generic substitutes that could mislead the viewer. REJECT if "
+        "it is blurry, out of focus, visibly pixelated/upscaled/compressed, "
+        "vertically stretched, a screen recording/photo of a screen, or has "
+        "unrelated embedded English subtitles, captions, watermarks or UI. "
+        "Also REJECT studio/commercial/product imagery, food or beverages, "
+        "offices, hands/typing, captive animals (zoo, enclosure, fences), "
+        "text-heavy graphics, or anything clearly unrelated to the scene.\n"
         'Answer ONLY JSON: {"match": true} or {"match": false, "reason": "<5 words>"}')
     parts = [{"inline_data": {"mime_type": "image/jpeg", "data": image}}
              for image in images]
@@ -187,8 +191,10 @@ def pick_best(candidates: list, scene_desc: str, search_term: str,
         f'SCENE NARRATION (Hindi): "{scene_desc[:280]}"\n'
         f'SEARCH INTENT: "{search_term}"\n' + contract +
         "Pick the candidate that best and most TRUTHFULLY illustrates this "
-        "scene (semantic accuracy first, then composition, light, and how "
-        "well it reads behind captions). "
+        "scene. Reject blurry, pixelated/upscaled, stretched, screen-recorded "
+        "or unrelated text/watermarked footage. Rank semantic accuracy first, "
+        "then clean native-looking resolution, composition, light, and how "
+        "well it reads behind captions. "
         'Answer ONLY JSON: {"best": <1-based candidate number, or 0 if NONE '
         'is acceptable>, "reason": "<5 words>"}')})
     body = {"contents": [{"parts": parts}],
@@ -229,9 +235,12 @@ def audit_render(final_path: str, cfg: dict, api_key: str,
         if not api_key or not cfg.get("qc", {}).get("render_audit", True):
             return _write_audit(report, out_path)
         duration = _duration(final_path) or 0.0
-        if duration < 30:
+        portrait = cfg["video"]["height"] > cfg["video"]["width"]
+        if duration < (10 if portrait else 30):
             return _write_audit(report, out_path)
-        step = max(duration / 24.0, 12.0)
+        # A 40-55s Short needs roughly ten samples; long-form stays capped at 24.
+        step = max(duration / (10.0 if portrait else 24.0),
+                   4.0 if portrait else 12.0)
         positions, pos = [], step / 2
         while pos < duration and len(positions) < 24:
             positions.append(pos)
@@ -243,15 +252,16 @@ def audit_render(final_path: str, cfg: dict, api_key: str,
                  "-frames:v", "1", "-f", "image2pipe", "-vcodec", "mjpeg", "pipe:1"],
                 check=True, timeout=60, capture_output=True)
             img = Image.open(io.BytesIO(r.stdout)).convert("RGB")
-            img.thumbnail((320, 180))
+            tile_w, tile_h = ((180, 320) if portrait else (320, 180))
+            img.thumbnail((tile_w, tile_h))
             tiles.append(img)
         if not tiles:
             return _write_audit(report, out_path)
         cols = 4
         rows = (len(tiles) + cols - 1) // cols
-        sheet = Image.new("RGB", (cols * 320, rows * 180), (0, 0, 0))
+        sheet = Image.new("RGB", (cols * tile_w, rows * tile_h), (0, 0, 0))
         for i, im in enumerate(tiles):
-            sheet.paste(im, ((i % cols) * 320, (i // cols) * 180))
+            sheet.paste(im, ((i % cols) * tile_w, (i // cols) * tile_h))
         buf = io.BytesIO()
         sheet.save(buf, format="JPEG", quality=70)
         b64 = base64.b64encode(buf.getvalue()).decode()
@@ -265,8 +275,10 @@ def audit_render(final_path: str, cfg: dict, api_key: str,
             "documentary. " + contract +
             "Audit it as the final publish reviewer. Flag ONLY real problems: "
             "(1) a frame contradicting the premise/forbidden list, "
-            "(2) near-black unreadable frames, (3) obviously identical "
-            "repeated shots, (4) broken/overlapping text. Severity `serious` "
+            "(2) near-black, blurry, pixelated, upscaled or stretched footage, "
+            "(3) a screen recording or unrelated embedded English text/UI, "
+            "(4) obviously identical repeated shots, (5) broken/overlapping "
+            "captions. Severity serious "
             "means a viewer would notice and lose trust; else `minor`. "
             'Return ONLY JSON: {"issues":[{"severity":"serious","note":'
             '"<10 words>","frame":3}]} — empty list when clean.')
