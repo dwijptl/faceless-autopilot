@@ -145,7 +145,7 @@ short:                     # vertical Shorts/Reels (Make Short workflow, Tue/Thu
                            # karaoke word-pops keep the energy)
   caption_y: 0.62          # centered-low, inside the Shorts UI safe zone
   music_volume: 0.18       # music matters more in shorts
-  loop_tail_seconds: 0.06  # minimal final VO tail so replay feeds the hook
+  loop_tail_seconds: 0.20  # brief completed-sentence breath before replay
   tts_speed: 1.0
   ai_images_max: 1
   ai_images_max_flux: 2    # when FAL_KEY is set
