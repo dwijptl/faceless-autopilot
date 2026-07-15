@@ -523,6 +523,19 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
             if photo:
                 assets.append(photo)
 
+    if not assets and rescue_budget and rescue_budget[0] > 0:
+        # AI rescue still (non-beat path, e.g. shorts): stock produced nothing
+        # for this scene — a generated still beats an off-topic substitute or
+        # a gradient card (docs/HERO_SHOTS_SPEC.md).
+        rp = (scene.get("ai_prompt") or scene.get("narration") or "").strip()
+        if rp:
+            path = os.path.join(outdir, f"s{scene['n']:02d}_rescue.png")
+            aspect = ("9:16 tall vertical" if _orientation(cfg) == "portrait"
+                      else "16:9 wide")
+            if ai_images.generate(rp, path, gemini_key, cfg, aspect):
+                rescue_budget[0] -= 1
+                assets.append({"path": path, "kind": "image", "ai": True})
+                print(f"[assets] scene {scene['n']}: AI rescue still")
     if not assets:  # absolute fallback — never fail
         path = os.path.join(outdir, f"s{scene['n']:02d}_card.jpg")
         _gradient_card(path, cfg["video"]["width"], cfg["video"]["height"], scene["n"])

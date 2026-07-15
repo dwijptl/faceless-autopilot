@@ -195,11 +195,12 @@ def main() -> None:
     used: set = set(usage_log["pexels"])
     used_prompts: set = set(usage_log["prompts"])
     ai_budget = [int(cfg["ai_images"].get("max_per_video", 1))]
+    rescue_budget = [int(cfg.get("short", {}).get("rescue_budget", 3))]
     for sc in scenes:
         sc["forbidden_visuals"] = script.get("forbidden_visuals") or []
         sc["assets"] = assets_mod.fetch_scene_assets(
             sc, sc["audio_duration"], workdir, cfg, pexels_key, gemini_key,
-            used, used_prompts, ai_budget)
+            used, used_prompts, ai_budget, rescue_budget=rescue_budget)
         for a in sc["assets"]:
             a["duration"] = probe_duration(a["path"]) if a["kind"] == "video" else None
     usage_log["pexels"] = sorted(used)

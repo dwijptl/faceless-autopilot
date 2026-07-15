@@ -762,13 +762,20 @@ DRAFT:
 
 def generate_short_script(cfg: dict, topic: str, api_key: str,
                           learnings: str = "") -> dict:
-    """Script for a vertical Short/Reel: one idea, ~25s, loop-friendly."""
+    """Script for a vertical Short/Reel: one idea, loop-friendly. Length is
+    ADAPTIVE inside [min_seconds, max_seconds]: the story's promise decides,
+    not a fixed clock — a checkpoint journey needs more runway than one fact
+    (the #1 viewer complaint on fixed-length shorts was "feels cut off")."""
     scfg = cfg.get("short", {})
-    seconds = int(scfg.get("target_seconds", 25))
+    min_seconds = int(scfg.get("min_seconds", scfg.get("target_seconds", 30)))
+    max_seconds = int(scfg.get("max_seconds",
+                               max(55, int(scfg.get("target_seconds", 30)))))
     # shorts word budget calibrates to the REAL spoken pace (Sarvam Hindi with
     # pauses runs ~95-105 wpm, well below the long-form planning rate)
     wpm = int(scfg.get("wpm", min(_wpm(cfg), 105)))
-    words = int(seconds / 60 * wpm)
+    min_words = int(min_seconds / 60 * wpm)
+    words = int(max_seconds / 60 * wpm)
+    seconds = max_seconds
     short_ai_max = min(_ai_max(cfg), 2)
     learn_block = (f"\nCHANNEL LEARNINGS — apply to hook and pacing:\n{learnings}\n"
                    if learnings else "")
@@ -776,10 +783,22 @@ def generate_short_script(cfg: dict, topic: str, api_key: str,
 faceless channel (vertical video: voiceover + b-roll + big captions).
 
 TOPIC: {topic}
-TARGET: ~{words} spoken words TOTAL (~{seconds} seconds — shorts are ruthless)
-HARD RANGE: {int(words * 0.9)}-{int(words * 1.15)} words. Under {int(words * 0.9)}
-feels incomplete and cheap; over {int(words * 1.15)} kills completion rate.
-Count your words before returning.
+LENGTH — the story decides, inside a hard band:
+HARD RANGE: {min_words}-{int(words * 1.05)} spoken words TOTAL
+({min_seconds}-{max_seconds} seconds). Use the FEWEST words that COMPLETELY
+pay off the title's promise — one crisp fact fits the bottom of the band;
+a journey/timeline/checkpoint topic ("हर 1000 मीटर पर...", "minute by
+minute...") needs the top of the band, because every promised checkpoint
+must actually appear. Never stretch a small idea and never amputate a big
+one. Count your words before returning.
+
+PROMISE AUDIT (do this BEFORE writing scenes): list to yourself the 3-5
+questions your title makes the viewer expect. Every one of them must be
+answered on screen. If the title promises N checkpoints/minutes/stages, all
+N appear — a video that answers 2 of 5 expected questions feels cut off and
+gets swiped into oblivion. The second-to-last scene must resolve the CENTRAL
+question with a clear verdict (what it means / who survives / what remains),
+not just another fact.
 TONE: {cfg['channel']['tone']}, but faster and punchier than long-form
 {learn_block}{_lang_rules(cfg)}{_style_rules()}
 Return ONLY valid JSON:
