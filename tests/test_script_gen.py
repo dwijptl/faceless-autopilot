@@ -76,3 +76,32 @@ def test_critique_preserves_structured_visual_payload(monkeypatch):
                                   "key", "short", 1)
     assert result["scenes"][0]["glass"]["value"] == 42
     assert result["scenes"][0]["narration"] == "better words"
+
+
+def test_short_ending_drops_dangling_loop_bridge():
+    script = {
+        "payoff": "जीवन गहराई में बच सकता है।",
+        "meaning": "जीवन हार नहीं मानता।",
+        "loop_bridge": "लेकिन अगर…",
+        "scenes": [{"narration": (
+            "जीवन गहराई में बच सकता है। जीवन हार नहीं मानता। लेकिन अगर…"
+        )}],
+    }
+    script_gen._enforce_short_payoff(script)
+    assert script["loop_bridge"] == ""
+    assert script["scenes"][-1]["narration"] == (
+        "जीवन गहराई में बच सकता है। जीवन हार नहीं मानता।"
+    )
+
+
+def test_short_ending_keeps_complete_replay_cue():
+    script = {
+        "payoff": "जीवन गहराई में बच सकता है।",
+        "meaning": "जीवन हार नहीं मानता।",
+        "loop_bridge": "सवाल फिर वहीं लौटता है।",
+        "scenes": [{"narration": "bad"}],
+    }
+    script_gen._enforce_short_payoff(script)
+    assert script["scenes"][-1]["narration"].endswith(
+        "सवाल फिर वहीं लौटता है।"
+    )
