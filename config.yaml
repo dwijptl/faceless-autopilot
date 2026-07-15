@@ -170,6 +170,7 @@ qc:
   visual_check: true       # Gemini vision sanity-checks every stock clip
                            # (free tier; fail-open — never blocks a run)
   frames: 3                # sample 20/50/80% of each stock clip, not just one frame
+  max_upscale: 1.25        # reject obvious blur after portrait crop/upscale
   max_requests_per_video: 20  # hard cost/rate-limit ceiling for vision QC
 
 maps:
