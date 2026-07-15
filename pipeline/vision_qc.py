@@ -235,9 +235,12 @@ def audit_render(final_path: str, cfg: dict, api_key: str,
         if not api_key or not cfg.get("qc", {}).get("render_audit", True):
             return _write_audit(report, out_path)
         duration = _duration(final_path) or 0.0
-        if duration < 30:
+        portrait = cfg["video"]["height"] > cfg["video"]["width"]
+        if duration < (10 if portrait else 30):
             return _write_audit(report, out_path)
-        step = max(duration / 24.0, 12.0)
+        # A 40-55s Short needs roughly ten samples; long-form stays capped at 24.
+        step = max(duration / (10.0 if portrait else 24.0),
+                   4.0 if portrait else 12.0)
         positions, pos = [], step / 2
         while pos < duration and len(positions) < 24:
             positions.append(pos)
@@ -249,15 +252,16 @@ def audit_render(final_path: str, cfg: dict, api_key: str,
                  "-frames:v", "1", "-f", "image2pipe", "-vcodec", "mjpeg", "pipe:1"],
                 check=True, timeout=60, capture_output=True)
             img = Image.open(io.BytesIO(r.stdout)).convert("RGB")
-            img.thumbnail((320, 180))
+            tile_w, tile_h = ((180, 320) if portrait else (320, 180))
+            img.thumbnail((tile_w, tile_h))
             tiles.append(img)
         if not tiles:
             return _write_audit(report, out_path)
         cols = 4
         rows = (len(tiles) + cols - 1) // cols
-        sheet = Image.new("RGB", (cols * 320, rows * 180), (0, 0, 0))
+        sheet = Image.new("RGB", (cols * tile_w, rows * tile_h), (0, 0, 0))
         for i, im in enumerate(tiles):
-            sheet.paste(im, ((i % cols) * 320, (i // cols) * 180))
+            sheet.paste(im, ((i % cols) * tile_w, (i // cols) * tile_h))
         buf = io.BytesIO()
         sheet.save(buf, format="JPEG", quality=70)
         b64 = base64.b64encode(buf.getvalue()).decode()
