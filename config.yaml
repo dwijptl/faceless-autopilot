@@ -129,7 +129,7 @@ short:                     # vertical Shorts/Reels (Make Short workflow, Tue/Thu
   # ADAPTIVE length: the script decides inside this band — one crisp fact
   # lands near min; journey/checkpoint topics use the top. Fixed 28s cut
   # stories off mid-promise (viewer: "feels incomplete").
-  min_seconds: 32
+  min_seconds: 40          # verdict after 25-32s tests: under 40s never satisfies
   max_seconds: 55
   target_seconds: 45       # midpoint; used for overrun warning + loop tail
   rescue_budget: 3         # AI stills for scenes where stock found nothing
