@@ -767,7 +767,7 @@ def generate_short_script(cfg: dict, topic: str, api_key: str,
     not a fixed clock — a checkpoint journey needs more runway than one fact
     (the #1 viewer complaint on fixed-length shorts was "feels cut off")."""
     scfg = cfg.get("short", {})
-    min_seconds = int(scfg.get("min_seconds", scfg.get("target_seconds", 30)))
+    min_seconds = int(scfg.get("min_seconds", scfg.get("target_seconds", 40)))
     max_seconds = int(scfg.get("max_seconds",
                                max(55, int(scfg.get("target_seconds", 30)))))
     # shorts word budget calibrates to the REAL spoken pace (Sarvam Hindi with
@@ -806,6 +806,9 @@ Return ONLY valid JSON:
   "title": "<= 80 chars, curiosity gap, no clickbait lies",
   "thumb_text": "2-4 bold ENGLISH/Hinglish punch words (Latin script)",
   "delivery-note": "each scene also gets \"delivery\": hook | calm | reveal | urgent (scene 1 = hook; the twist scene = reveal); and may use visual_mode \"map\" with \"map\": {{\"lat\": 0.0, \"lon\": 0.0, \"label\": \"हिन्दी\"}} when one specific place is the star (0-1 map scenes)",
+  "payoff": "ONE declarative Hindi sentence that ANSWERS the hook's question",
+  "meaning": "ONE Hindi sentence: why that answer matters to the viewer",
+  "loop_bridge": "optional short fragment that flows into the hook on replay ('' if none)",
   "description": "1-2 lines, end with hashtags including #shorts",
   "tags": ["6-10 tags"],
   "scenes": [
@@ -844,16 +847,18 @@ Shorts rules:
   adjectives and merge scenes. Shorter beats complete.
 - Scene 1 = the hook: <= 12 words, the single most jolting fact/question.
   No greetings, no context, no "did you know".
-- PAYOFF + LOOP (critical): the middle scenes must FULLY deliver what the
-  hook promises — never withhold the core answer; a viewer who watches once
-  must feel they got the complete story. THEN the final scene (8-15 words)
-  opens a NEW, related tension instead of concluding. Banned: "...prove
-  that", "so next time", "that's why" (and their Hindi equivalents:
-  "...साबित करते हैं", "तो अगली बार", "इसीलिए"). Best version: the last line
-  is a complete thought that ALSO ends on a connective ("जानने के लिए...",
-  "और अगर...") which grammatically flows into the hook line on replay, so
-  the loop reads as one continuous sentence — but it must never feel like
-  the video was cut off mid-sentence.
+- ENDING CONTRACT (critical — order is law): the final scene's narration is
+  built payoff -> meaning -> loop_bridge, in that order.
+  * payoff FIRST: a complete declarative sentence answering the hook. A
+    question is NOT a payoff. A new topic is NOT a payoff.
+  * meaning SECOND: one sentence of why it matters ("सीमा हमारी है, अंतरिक्ष
+    की नहीं") — this is what the viewer takes away.
+  * loop_bridge LAST and OPTIONAL: a fragment that grammatically flows into
+    the hook line on replay. It comes AFTER the story is complete — a loop
+    tease before the payoff is a broken video, not a loop.
+  * BANNED as final words: "लेकिन...", "और अगर...", "तो?", "क्या होगा?",
+    "...साबित करते हैं", "तो अगली बार", "इसीलिए" — any construction that
+    leaves the sentence hanging. The video must never feel cut off.
 - Exactly 1-2 "kinetic" scenes, 0-1 "stat", 0-{short_ai_max} "ai_image"
   (put an ai_image on the hook when the topic's strongest visual doesn't
   exist as stock), rest "broll".
@@ -883,12 +888,46 @@ Shorts rules:
             script = _normalize(_parse_json(_llm(prompt, cfg, api_key)), 3)
             script["topic"] = topic
             script = _critique(script, cfg, api_key, "short", 3)
+            _enforce_short_payoff(script)
             print(f"[script] SHORT '{script['title']}' — "
                   f"{[s['visual_mode'] for s in script['scenes']]}")
             return script
         except (KeyError, AssertionError, json.JSONDecodeError) as e:
             print(f"[script] invalid short JSON (attempt {attempt + 1}): {e}")
     raise RuntimeError("Could not obtain a valid short script after 3 attempts")
+
+
+
+# Final constructions that leave a short feeling cut off mid-sentence.
+_DANGLING_END = re.compile(
+    r"(लेकिन|और अगर|अगर|तो|क्या होगा|जानने के लिए|इसीलिए|तो अगली बार)"
+    r"[\s.…?!]*$")
+
+
+def _enforce_short_payoff(script: dict) -> None:
+    """Deterministic ending contract (fail-open): the last scene must close
+    with payoff -> meaning -> loop_bridge. If the model left the final line
+    dangling on a connective/question, rebuild it from the structured fields
+    so the video never ends mid-thought."""
+    scenes = script.get("scenes") or []
+    if not scenes:
+        return
+    payoff = str(script.get("payoff") or "").strip()
+    meaning = str(script.get("meaning") or "").strip()
+    bridge = str(script.get("loop_bridge") or "").strip()
+    last = scenes[-1]
+    narration = str(last.get("narration") or "").strip()
+    dangling = bool(_DANGLING_END.search(narration))
+    has_payoff = bool(payoff) and payoff[:24] in narration
+    if payoff and (dangling or not has_payoff):
+        rebuilt = " ".join(x for x in (payoff, meaning, bridge) if x).strip()
+        if rebuilt:
+            print(f"[script] ending contract: rebuilt final scene "
+                  f"({'dangling' if dangling else 'payoff missing'})")
+            last["narration"] = rebuilt
+    elif dangling:
+        print("[script] WARNING: final line dangles and no payoff field — "
+              "shipping as-is (fail-open)")
 
 
 def log_topic_done(topic: str, done_file: str = "topics_done.txt") -> None:
