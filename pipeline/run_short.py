@@ -1,4 +1,4 @@
-"""Faceless Autopilot — SHORTS orchestrator (vertical 1080x1920, ~25s, Hindi).
+"""Faceless Autopilot — SHORTS orchestrator (vertical 1080x1920, 40-55s, Hindi).
 
 Same machinery as run.py, tuned for Shorts/Reels: portrait assets, micro-scene
 pacing, big centered captions, loop-friendly ending, no outro card. Shares the
@@ -304,6 +304,11 @@ def main() -> None:
         raise RuntimeError("Remotion produced no/too-small output")
     postprocess.master_delivery(final_path, cfg)
     duration = probe_duration(final_path)
+    visual_report = vision_qc.audit_render(
+        final_path, cfg, gemini_key,
+        forbidden=script.get("forbidden_visuals") or [],
+        out_path=os.path.join(outdir, "visual_audit.json"))
+    visual_requires_review = not visual_report.get("publishable", True)
 
     # 7) metadata ---------------------------------------------------------------
     voice_line = tts_mod.ENGINE_USED or "unknown"
@@ -315,16 +320,20 @@ def main() -> None:
         fact_requires_review = bool(fact_report.get("high_risk_unsupported"))
     else:
         fact_requires_review = False
-    draft_release = voice_fallback or fact_requires_review
+    draft_release = (voice_fallback or fact_requires_review
+                     or visual_requires_review)
     status_voice = "⚠️ FALLBACK — DO NOT PUBLISH" if voice_fallback else "OK (cloned)"
     status_fact = (f"⚠️ REVIEW CLAIMS ({fact_report.get('unsupported', 0)} unsupported)"
                    if fact_requires_review else fact_report.get("status", "unknown"))
+    status_visual = ("⚠️ REVIEW VISUALS"
+                     if visual_requires_review else
+                     visual_report.get("status", "unknown"))
     voice_banner = ("> ⚠️ **VOICE FALLBACK — DO NOT PUBLISH.** This run used Kokoro, "
                     "not your cloned Sarvam voice. Re-run when Sarvam is available.\n\n"
                     if voice_fallback else "")
     meta = f"""## {script['title']}
 
-{voice_banner}**Reliability:** Voice: {status_voice} | Captions: {caption_status} | Fact-check: {status_fact}
+{voice_banner}**Reliability:** Voice: {status_voice} | Captions: {caption_status} | Fact-check: {status_fact} | Visuals: {status_visual}
 
 **SHORT** · {duration:.0f}s · {len(scenes)} scenes · style: {style} ·
 voice: {voice_line} · run {stamp}
@@ -359,6 +368,7 @@ voice: {voice_line} · run {stamp}
         json.dump({"draft_release": draft_release, "voice_fallback": voice_fallback,
                    "voice": voice_line, "captions": caption_status,
                    "factcheck": fact_report,
+                   "visual_audit": visual_report,
                    "motion_library": {
                        "seed": motion_seed,
                        "cta": cta_event,
