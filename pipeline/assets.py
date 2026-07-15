@@ -401,7 +401,8 @@ def _stock_photo(scene, outdir, api_key, used, orientation="landscape",
 
 def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
                        pexels_key: str, gemini_key: str, used: set,
-                       used_prompts: set, ai_budget: list) -> list[dict]:
+                       used_prompts: set, ai_budget: list,
+                       rescue_budget: list | None = None) -> list[dict]:
     """Returns [{path, kind, ai(optional)}]. `used`/`used_prompts` are mutated;
     ai_budget is a single-element list acting as a mutable counter."""
     os.makedirs(outdir, exist_ok=True)
@@ -452,6 +453,23 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
                         beat_scene, need, outdir, cfg, pexels_key, used,
                         max_clips=1, gemini_key=gemini_key)
                     beat_assets.extend(stock)
+                if not beat_assets and rescue_budget and rescue_budget[0] > 0:
+                    # FLUX rescue still — stock failed exactly where the
+                    # narration binding matters most (docs/HERO_SHOTS_SPEC.md)
+                    rp = " ".join(x for x in (beat.get("cue", ""),
+                                              beat.get("purpose", "")) if x).strip()
+                    if rp:
+                        path = os.path.join(
+                            outdir, f"s{scene['n']:02d}_b{index:02d}_rescue.png")
+                        aspect = ("9:16 tall vertical"
+                                  if _orientation(cfg) == "portrait"
+                                  else "16:9 wide")
+                        if ai_images.generate(rp, path, gemini_key, cfg, aspect):
+                            rescue_budget[0] -= 1
+                            beat_assets.append({"path": path, "kind": "image",
+                                                "ai": True})
+                            print(f"[assets] scene {scene['n']} beat "
+                                  f"{index + 1}: AI rescue still")
                 if not beat_assets:
                     photo = _stock_photo(beat_scene, outdir, pexels_key, used,
                                          _orientation(cfg), cfg, gemini_key)

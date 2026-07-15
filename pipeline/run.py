@@ -28,6 +28,7 @@ import analytics as analytics_mod   # noqa: E402
 import assets as assets_mod         # noqa: E402
 import captions as captions_mod     # noqa: E402
 import factcheck                    # noqa: E402
+import hero_shots                   # noqa: E402
 import mapgen                       # noqa: E402
 import motion as motion_mod         # noqa: E402
 import postprocess                  # noqa: E402
@@ -143,6 +144,71 @@ def _attach_hero(scenes: list[dict], poses: dict) -> None:
                                 "ai": True, "duration": None,
                                 "beat_index": bi})
     print(f"[hero] attached {len(poses)} pose(s) to scenes {sorted(wanted)}")
+
+
+
+def _animate_hero_shots(scenes: list[dict], workdir: str, cfg: dict,
+                        gemini_key: str) -> None:
+    """3b) Kling i2v on the hook + reveal stills (docs/HERO_SHOTS_SPEC.md).
+    Fail-open: any failure leaves the beat's existing still untouched."""
+    hcfg = cfg.get("hero_shots", {})
+    if not hcfg.get("enabled", False) or not os.environ.get("FAL_KEY", "").strip():
+        return
+    hero_shots.begin_run()
+    seconds = int(hcfg.get("seconds", 5))
+    retries = max(0, int(hcfg.get("max_retries", 1)))
+    targets = hero_shots.select_targets(scenes, int(hcfg.get("max_per_video", 2)))
+    for sc, bi in targets:
+        beats = sc.get("visual_beats") or []
+        cue = ((beats[bi].get("cue") if bi < len(beats) else "")
+               or sc.get("narration", "")[:160])
+        if hero_shots.should_skip(cue):
+            print(f"[hero] scene {sc['n']}: cue needs faces/text — keeping still")
+            continue
+        beat_assets = [a for a in sc.get("assets", [])
+                       if a.get("beat_index") == bi]
+        still = next((a for a in beat_assets
+                      if a["kind"] == "image" and a.get("ai")),
+                     next((a for a in beat_assets if a["kind"] == "image"),
+                          None))
+        if still is None:
+            prompt = (sc.get("ai_prompt") or cue).strip()
+            path = os.path.join(workdir, f"s{sc['n']:02d}_hero_still.png")
+            if prompt and ai_images.generate(prompt, path, gemini_key, cfg,
+                                             aspect="16:9 wide"):
+                still = {"path": path, "kind": "image", "ai": True,
+                         "duration": None, "beat_index": bi}
+                sc["assets"].insert(0, still)
+            else:
+                continue  # nothing worth animating — beat keeps stock
+        clip = os.path.join(workdir, f"s{sc['n']:02d}_hero.mp4")
+        mprompt = hero_shots.motion_prompt(cue, cfg)
+        ok, extra = False, ""
+        for attempt in range(1 + retries):
+            if attempt:
+                hero_shots.note_retry()
+            if not hero_shots.animate(still["path"], mprompt, clip, cfg,
+                                      seconds, extra_negative=extra):
+                break  # budget / network — a retry cannot change the verdict
+            if vision_qc.frame_ok(
+                    clip, "video", cue or sc.get("title", ""),
+                    "cinematic hero shot", gemini_key, cfg,
+                    forbidden=(sc.get("forbidden_visuals") or []) + [
+                        "warped or morphing objects", "garbled or fake text",
+                        "broken anatomy, extra limbs"],
+                    source="generated"):
+                ok = True
+                break
+            extra = "deformed geometry, unstable shapes"
+            print(f"[hero] scene {sc['n']}: QC rejected the clip"
+                  + (" — retrying" if attempt < retries
+                     else " — shipping the still"))
+        if ok:
+            sc["assets"].insert(0, {"path": clip, "kind": "video", "ai": True,
+                                    "hero": True, "beat_index": bi,
+                                    "duration": probe_duration(clip)})
+            print(f"[hero] scene {sc['n']} beat {bi}: animated hero shot live")
+    print(f"[hero] {hero_shots.usage_summary()}")
 
 
 def _thumb_mean_luma(path: str) -> float:
@@ -407,11 +473,12 @@ def main() -> None:
         ai_budget = [int(aicfg.get("max_per_video_flux", 4))]
     else:
         ai_budget = [int(aicfg.get("max_per_video", 2))]
+    rescue_budget = [int(aicfg.get("rescue_budget", 0))]
     for sc in scenes:
         sc["forbidden_visuals"] = script.get("forbidden_visuals") or []
         sc["assets"] = assets_mod.fetch_scene_assets(
             sc, sc["audio_duration"], workdir, cfg, pexels_key, gemini_key,
-            used, used_prompts, ai_budget)
+            used, used_prompts, ai_budget, rescue_budget=rescue_budget)
         for a in sc["assets"]:
             a["duration"] = probe_duration(a["path"]) if a["kind"] == "video" else None
     usage_log["pexels"] = sorted(used)
@@ -419,6 +486,9 @@ def main() -> None:
     assets_mod.save_usage_log(log_path, usage_log)
     if hero_poses:
         _attach_hero(scenes, hero_poses)
+
+    # 3b) animated hero shots — hook + reveal come alive (fail-open) --------
+    _animate_hero_shots(scenes, workdir, cfg, gemini_key)
 
     # 4) captions ------------------------------------------------------------
     events, srt = captions_mod.build_captions(scenes, cfg["captions"]["max_chars"])
@@ -541,6 +611,13 @@ def main() -> None:
     quality_report = quality_mod.audit_delivery(
         final_path, manifest["manifest"], cfg,
         os.path.join(outdir, "quality_report.json"))
+    try:  # hero telemetry travels with the audit (docs/HERO_SHOTS_SPEC.md)
+        quality_report.setdefault("metrics", {}).update(hero_shots.metrics())
+        with open(os.path.join(outdir, "quality_report.json"), "w",
+                  encoding="utf-8") as f:
+            json.dump(quality_report, f, indent=2, ensure_ascii=False)
+    except Exception:
+        pass
     # G11 — one-vision-call contact-sheet audit of the ACTUAL render
     render_audit = vision_qc.audit_render(
         final_path, cfg, gemini_key,
