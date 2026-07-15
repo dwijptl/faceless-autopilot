@@ -95,6 +95,20 @@ render:
   # visual styles rotate automatically per video: documentary -> kinetic
   # -> editorial -> noir -> repeat (see remotion/src/styles.ts)
 
+# Animated hero shots — Kling 2.6 Pro image-to-video on fal animates the
+# hook's first beat and the reveal scene (docs/HERO_SHOTS_SPEC.md).
+# QC-gated (vision_qc, free); a rejected clip ships its source still instead.
+hero_shots:
+  enabled: false           # flip after one clean workflow_dispatch run
+  model: "fal-ai/kling-video/v2.6/pro/image-to-video"
+  fallback_model: "fal-ai/kling-video/v2.5-turbo/pro/image-to-video"
+  max_per_video: 2         # hook + reveal
+  seconds: 5               # fits max_shot_seconds: 5 — no renderer change
+  max_retries: 1           # ONE regenerate after QC reject, then keep the still
+  audio: false             # sfx.py + mastering own the soundtrack
+  in_shorts: false         # long-form only for now
+  max_usd_per_video: 1.20  # hard cost gate: 2 shots + 1 retry + margin
+
 ai_images:
   enabled: true            # AI-generated stills for scenes stock can't cover
   # FLUX via fal.ai — used automatically when the FAL_KEY secret is set.
@@ -104,6 +118,9 @@ ai_images:
   max_per_video_flux: 4    # richer AI visuals when FLUX is on
   # Gemini image API — free fallback (~500/day) when no FAL_KEY:
   max_per_video: 2
+  # FLUX rescue stills for beats whose stock video failed or was QC-rejected —
+  # targeted spend exactly where the narration binding is weakest:
+  rescue_budget: 6
   model: "gemini-2.5-flash-image"
   fallback_models: ["gemini-3-flash-image", "gemini-2.0-flash-preview-image-generation"]
 
