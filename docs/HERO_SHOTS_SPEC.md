@@ -151,4 +151,3 @@ Follow existing test conventions (fixtures in `tests/fixtures/`):
 2. Watch `quality_report.json` + run-log `usage_summary` lines for 3–4 videos.
 3. Then enable on schedule. Keep `render_qc.gate: false` until hero-era runs are clean.
 4. v2 (optional, later): 10s reveal hero ($0.70) — needs a per-beat `duration` override past `max_shot_seconds` in `visual_beats.target_beat_count` + renderer beat trim; not worth it until 5s heroes prove retention lift in YouTube analytics (compare avg-view-duration on hero vs pre-hero videos, `analytics/`).
-```
