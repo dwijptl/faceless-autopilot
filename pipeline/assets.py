@@ -90,12 +90,32 @@ def _download(url: str, path: str) -> str:
     return path
 
 
-def _best_video_file(video: dict, want_w: int) -> dict | None:
-    files = [f for f in video.get("video_files", []) if f.get("width")]
+def _best_video_file(video: dict, want_w: int, want_h: int | None = None,
+                     max_upscale: float = 1.25) -> dict | None:
+    """Pick a source that can cover the target without obvious upscaling."""
+    files = [
+        f for f in video.get("video_files", [])
+        if f.get("width") and f.get("height") and f.get("link")
+    ]
     if not files:
         return None
-    geq = sorted((f for f in files if f["width"] >= want_w), key=lambda f: f["width"])
-    return geq[0] if geq else max(files, key=lambda f: f["width"])
+    if want_h is None:
+        geq = sorted((f for f in files if f["width"] >= want_w),
+                     key=lambda f: f["width"])
+        return geq[0] if geq else max(files, key=lambda f: f["width"])
+
+    eligible = [
+        f for f in files
+        if max(want_w / float(f["width"]), want_h / float(f["height"]))
+        <= max_upscale
+    ]
+    if not eligible:
+        return None
+    target_ratio = want_w / float(want_h)
+    return min(eligible, key=lambda f: (
+        abs((f["width"] / float(f["height"])) - target_ratio),
+        f["width"] * f["height"],
+    ))
 
 
 def _gradient_card(path: str, w: int, h: int, seed: int) -> str:
@@ -157,12 +177,21 @@ def _dhash(img, size: int = 8) -> str:
         return ""
 
 
-def _visual_ok(path: str, kind: str, label: str) -> bool:
-    """Reject near-black footage (reads as dead air at feed size) and visual
-    duplicates within the same episode. Local, free, fail-open."""
+def _visual_ok(path: str, kind: str, label: str,
+               cfg: dict | None = None) -> bool:
+    """Reject unusable resolution, darkness and episode-level duplicates."""
     img = _probe_frame(path, kind)
     if img is None:
         return True
+    if cfg is not None:
+        target_w = float(cfg["video"]["width"])
+        target_h = float(cfg["video"]["height"])
+        max_upscale = float(cfg.get("qc", {}).get("max_upscale", 1.25))
+        cover_scale = max(target_w / img.width, target_h / img.height)
+        if cover_scale > max_upscale:
+            print(f"[assets] {label}: rejected "
+                  f"(needs {cover_scale:.2f}x upscale after crop)")
+            return False
     try:
         from PIL import ImageStat
         if ImageStat.Stat(img.convert("L")).mean[0] < 26.0:
@@ -201,9 +230,10 @@ def _nasa_relevant(terms: list) -> bool:
     return any(h in joined for h in NASA_HINTS)
 
 
-def _nasa_asset(scene: dict, outdir: str, used: set) -> dict | None:
-    """One exact-entity NASA asset for the scene, video preferred.
-    Public domain (keep NASA credit in the description); never repeats."""
+def _nasa_asset(scene: dict, outdir: str, used: set, cfg: dict,
+                gemini_key: str = "") -> dict | None:
+    """One exact-entity NASA asset, quality-checked like all other footage."""
+    qc_budget = 3
     for term in list(scene.get("search_terms", []))[:2]:
         for media in ("video", "image"):
             try:
@@ -229,8 +259,12 @@ def _nasa_asset(scene: dict, outdir: str, used: set) -> dict | None:
                 except Exception:
                     continue
                 if media == "video":
-                    cands = ([h for h in hrefs if h.endswith("~mobile.mp4")]
-                             or [h for h in hrefs if h.endswith(".mp4")])
+                    mp4s = [h for h in hrefs if h.endswith(".mp4")]
+                    cands = sorted(mp4s, key=lambda h: (
+                        "~large.mp4" not in h,
+                        "~orig.mp4" not in h,
+                        "~mobile.mp4" in h,
+                    ))
                 else:
                     cands = ([h for h in hrefs
                               if h.endswith(("~large.jpg", "~orig.jpg"))]
@@ -247,7 +281,18 @@ def _nasa_asset(scene: dict, outdir: str, used: set) -> dict | None:
                     continue
                 kind = "video" if media == "video" else "image"
                 if not _visual_ok(path, kind,
-                                  f"scene {scene['n']} NASA {nasa_id}"):
+                                  f"scene {scene['n']} NASA {nasa_id}", cfg):
+                    used.add(f"n{nasa_id}")
+                    _rm(path)
+                    continue
+                if qc_budget <= 0:
+                    _rm(path)
+                    return None
+                qc_budget -= 1
+                if not vision_qc.frame_ok(
+                        path, kind, _qc_desc(scene), term, gemini_key, cfg,
+                        forbidden=scene.get("forbidden_visuals") or [],
+                        source="stock"):
                     used.add(f"n{nasa_id}")
                     _rm(path)
                     continue
@@ -270,6 +315,8 @@ def _qc_desc(scene: dict) -> str:
 def _stock_videos(scene, need_seconds, outdir, cfg, api_key, used, max_clips,
                   gemini_key=""):
     w = cfg["video"]["width"]
+    h = cfg["video"]["height"]
+    max_upscale = float(cfg.get("qc", {}).get("max_upscale", 1.25))
     assets, covered, qc_budget = [], 0.0, 6  # cap vision checks per scene
     desc = _qc_desc(scene)
     forbidden = scene.get("forbidden_visuals") or []
@@ -297,7 +344,7 @@ def _stock_videos(scene, need_seconds, outdir, cfg, api_key, used, max_clips,
             vid_key = f"v{vid['id']}"
             if vid_key in used or vid.get("duration", 0) < 4:
                 continue
-            vf = _best_video_file(vid, w)
+            vf = _best_video_file(vid, w, h, max_upscale)
             if not vf:
                 continue
             path = os.path.join(outdir, f"s{scene['n']:02d}_{vid['id']}.mp4")
@@ -307,7 +354,7 @@ def _stock_videos(scene, need_seconds, outdir, cfg, api_key, used, max_clips,
                 print(f"[assets] download failed ({vid['id']}): {e}")
                 continue
             if not _visual_ok(path, "video",
-                              f"scene {scene['n']} video {vid['id']}"):
+                              f"scene {scene['n']} video {vid['id']}", cfg):
                 used.add(vid_key)
                 _rm(path)
                 continue
@@ -373,7 +420,8 @@ def _stock_photo(scene, outdir, api_key, used, orientation="landscape",
                 _download(ph["src"]["large2x"], path)
             except Exception:
                 continue
-            if not _visual_ok(path, "image", f"scene {scene['n']} photo {ph['id']}"):
+            if not _visual_ok(path, "image",
+                              f"scene {scene['n']} photo {ph['id']}", cfg):
                 used.add(key)
                 try:
                     os.remove(path)
@@ -445,7 +493,7 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
                 }
                 need = min(max(float(beat.get("duration", max_shot)), 1.0), max_shot)
                 if _nasa_relevant(beat_scene["search_terms"]):
-                    nasa = _nasa_asset(beat_scene, outdir, used)
+                    nasa = _nasa_asset(beat_scene, outdir, used, cfg, gemini_key)
                     if nasa:
                         beat_assets.append(nasa)
                 if not beat_assets:
@@ -507,7 +555,7 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
                 assets.append(photo)
     else:
         if _nasa_relevant(scene.get("search_terms", [])):
-            nasa = _nasa_asset(scene, outdir, used)
+            nasa = _nasa_asset(scene, outdir, used, cfg, gemini_key)
             if nasa:
                 assets.append(nasa)
         covered = 6.0 * len(assets)
