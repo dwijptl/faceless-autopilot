@@ -26,6 +26,7 @@ import ai_images                    # noqa: E402
 import align                         # noqa: E402
 import analytics as analytics_mod   # noqa: E402
 import assets as assets_mod         # noqa: E402
+import calibration                  # noqa: E402
 import captions as captions_mod     # noqa: E402
 import factcheck                    # noqa: E402
 import hero_shots                   # noqa: E402
@@ -364,11 +365,43 @@ def main() -> None:
     cfg.setdefault("render", {})["style_pack"] = base_style  # steers AI-image look
     print(f"=== Faceless Autopilot run {stamp} · style: {style} ===")
 
+    # narration-pace calibration: word budgets use the MEASURED wpm of past
+    # runs (calibration.json) instead of the static channel.wpm guess
+    measured_wpm = calibration.measured_wpm(
+        REPO_ROOT, int(cfg["channel"].get("wpm", 130)), kind="long")
+    if measured_wpm:
+        cfg["channel"]["wpm_measured"] = measured_wpm
+        print(f"[calib] word budget uses measured pace: {measured_wpm} wpm "
+              f"(configured: {cfg['channel'].get('wpm', 130)})")
+
     # 1) topic + script ------------------------------------------------------
     topic = script_gen.pick_topic(cfg, gemini_key,
                                   os.path.join(REPO_ROOT, "topics_done.txt"),
                                   learnings)
     script = script_gen.generate_script(cfg, topic, gemini_key, learnings)
+
+    # retention gate "block": stop BEFORE any voice/asset spend when the
+    # story audit or word budget still fails after repairs. Default is
+    # "draft" (proceed, mark the release for review) per the repo's
+    # never-block-a-scheduled-render philosophy.
+    retention_report = script.get("retention_report") or {"passed": True,
+                                                          "violations": []}
+    word_budget = script.get("word_budget") or {"ok": True}
+    r_gate = str(cfg.get("retention", {}).get("gate", "draft")).strip().lower()
+    story_failed = (not retention_report.get("passed", True)
+                    or not word_budget.get("ok", True))
+    if r_gate == "block" and story_failed:
+        with open(os.path.join(outdir, "retention_report.json"), "w",
+                  encoding="utf-8") as f:
+            json.dump({"retention": retention_report,
+                       "word_budget": word_budget}, f, indent=2,
+                      ensure_ascii=False)
+        raise RuntimeError(
+            "retention.gate=block: story audit failed after repairs "
+            f"({len(retention_report.get('violations', []))} violations, "
+            f"word budget ok={word_budget.get('ok')}) — stopped before TTS. "
+            "See retention_report.json; lower the gate to 'draft' to render "
+            "anyway.")
     fact_report = factcheck.check_script(script, cfg, gemini_key)
     with open(os.path.join(outdir, "claims.json"), "w", encoding="utf-8") as f:
         json.dump(fact_report, f, indent=2, ensure_ascii=False)  # claim ledger
@@ -419,11 +452,21 @@ def main() -> None:
     print(f"[tts] {tts_mod.usage_summary()}")
     total_speech = scenes[-1]["start"] + scenes[-1]["audio_duration"]
     target_s = float(cfg["video"]["target_minutes"]) * 60
-    if not 0.85 * target_s <= total_speech <= 1.15 * target_s:
+    # close the calibration loop: measure the ACTUAL pace of this run so the
+    # next run's word budget is grounded in reality
+    narration_words = sum(len(str(sc.get("narration", "")).split())
+                          for sc in script["scenes"])
+    narration_seconds = sum(sc["audio_duration"] for sc in scenes)
+    realized_wpm = calibration.record(REPO_ROOT, "long", narration_words,
+                                      narration_seconds, stamp)
+    duration_tol = float(cfg.get("retention", {}).get("duration_tolerance",
+                                                      0.10))
+    runtime_ok = abs(total_speech - target_s) <= duration_tol * target_s
+    if not runtime_ok:
         print(f"[warn] narration runs {total_speech / 60:.1f} min vs "
               f"{target_s / 60:.1f} min target "
-              f"({total_speech / target_s * 100:.0f}%) — check word budget "
-              f"and channel.wpm calibration")
+              f"({total_speech / target_s * 100:.0f}%) — outside the "
+              f"±{duration_tol:.0%} band; release will be flagged for review")
     voice_fallback = (str(cfg.get("tts", {}).get("engine", "")).lower() == "sarvam"
                       and tts_mod.fallback_used())
 
@@ -623,6 +666,16 @@ def main() -> None:
         final_path, cfg, gemini_key,
         forbidden=script.get("forbidden_visuals") or [],
         out_path=os.path.join(outdir, "render_audit.json"))
+    # a skipped/errored audit is INDETERMINATE, not clean — when the owner
+    # requires a completed audit, absence of review blocks publication
+    if (cfg.get("qc", {}).get("render_audit_required", False)
+            and str(render_audit.get("status", "skipped")) != "ok"):
+        render_audit["publishable"] = False
+        render_audit.setdefault("issues", []).append(
+            {"severity": "serious",
+             "note": f"render audit did not complete "
+                     f"(status: {render_audit.get('status')}) and "
+                     "qc.render_audit_required is enabled"})
 
     # 7) thumbnail ---------------------------------------------------------------
     thumb_path = os.path.join(outdir, "thumbnail.jpg")
@@ -676,8 +729,13 @@ def main() -> None:
         bool(cfg.get("longform_quality", {}).get("render_qc", {}).get("gate", False))
         and not quality_report.get("passed", False))
     audit_requires_review = not render_audit.get("publishable", True)
+    # story audit + runtime contract (retention.gate: off | draft | block)
+    retention_requires_review = (
+        r_gate not in ("off", "false", "0", "")
+        and (story_failed or not runtime_ok))
     draft_release = (voice_fallback or fact_requires_review
-                     or quality_requires_review or audit_requires_review)
+                     or quality_requires_review or audit_requires_review
+                     or retention_requires_review)
     status_voice = "⚠️ FALLBACK — DO NOT PUBLISH" if voice_fallback else "OK (cloned)"
     status_fact = (f"⚠️ REVIEW CLAIMS ({fact_report.get('unsupported', 0)} unsupported)"
                    if fact_requires_review else fact_report.get("status", "unknown"))
@@ -697,9 +755,25 @@ def main() -> None:
                     + "\n\n" if audit_requires_review else "")
     status_audit = ("⚠️ REVIEW" if audit_requires_review
                     else render_audit.get("status", "skipped"))
+    status_retention = (
+        "⚠️ REVIEW ("
+        + "; ".join(([f"{len(retention_report.get('violations', []))} story "
+                      "violations"] if not retention_report.get("passed", True)
+                     else [])
+                    + ([f"words {word_budget.get('actual')}/"
+                        f"{word_budget.get('target')}"]
+                       if not word_budget.get("ok", True) else [])
+                    + ([f"runtime {total_speech / 60:.1f}/"
+                        f"{target_s / 60:.1f} min"] if not runtime_ok else []))
+        + ")" if retention_requires_review else "OK")
+    retention_banner = (
+        "> ⚠️ **STORY/RUNTIME AUDIT — REVIEW BEFORE PUBLISHING:** "
+        + "; ".join(v["detail"][:90] for v in
+                    retention_report.get("violations", [])[:3])
+        + "\n\n" if retention_requires_review else "")
     meta = f"""## {script['title']}
 
-{voice_banner}{fact_banner}{audit_banner}**Reliability:** Voice: {status_voice} | Captions: {caption_status} | Fact-check: {status_fact} | Quality: {status_quality} | Render audit: {status_audit}
+{voice_banner}{fact_banner}{audit_banner}{retention_banner}**Reliability:** Voice: {status_voice} | Captions: {caption_status} | Fact-check: {status_fact} | Quality: {status_quality} | Render audit: {status_audit} | Story: {status_retention}
 
 **Duration:** {duration / 60:.1f} min · **Scenes:** {len(scenes)} · **Style:** {style} ·
 **AI visuals:** {n_ai} · **Run:** {stamp} · **Renderer:** {used_engine} ·
@@ -754,6 +828,16 @@ Remotion. Brand: Terra Incognita.*
                    "factcheck": fact_report,
                    "quality": quality_report,
                    "render_audit": render_audit,
+                   "retention": {
+                       "report": retention_report,
+                       "word_budget": word_budget,
+                       "runtime": {"target_s": round(target_s, 1),
+                                   "actual_s": round(total_speech, 1),
+                                   "ok": runtime_ok},
+                       "wpm_measured_used": measured_wpm,
+                       "wpm_realized": realized_wpm,
+                       "gate": r_gate,
+                   },
                    "motion_library": {
                        "seed": motion_seed,
                        "cta": cta_event,
@@ -762,17 +846,36 @@ Remotion. Brand: Terra Incognita.*
                    }}, f, indent=2, ensure_ascii=False)
 
     # beat-timestamp map — lets future analytics map retention dips to the
-    # exact scene, visual mode and asset choice that was on screen
+    # exact scene, narrative role, visual mode and asset choice on screen.
+    # A copy is committed to analytics/beats/ so the weekly learnings digest
+    # can join it against exported audience-retention CSVs.
+    beats_payload = [{"n": sc["n"], "title": sc.get("title", ""),
+                      "start": round(sc["start"], 2),
+                      "end": round(sc["start"] + sc["audio_duration"], 2),
+                      "visualMode": sc.get("visual_mode", "broll"),
+                      "visualRole": sc.get("visual_role", ""),
+                      "narrativeRole": sc.get("narrative_role", ""),
+                      "rewardType": (sc.get("reward") or {}).get("type", ""),
+                      "rewardStrength": (sc.get("reward") or {}).get("strength", 0),
+                      "questionOut": sc.get("question_out", ""),
+                      "delivery": sc.get("delivery", "calm"),
+                      "assets": [f"{a['kind']}:{'ai' if a.get('ai') else 'stock'}"
+                                 for a in sc["assets"]]}
+                     for sc in scenes]
     with open(os.path.join(outdir, "beats.json"), "w", encoding="utf-8") as f:
-        json.dump([{"n": sc["n"], "title": sc.get("title", ""),
-                    "start": round(sc["start"], 2),
-                    "end": round(sc["start"] + sc["audio_duration"], 2),
-                    "visualMode": sc.get("visual_mode", "broll"),
-                    "visualRole": sc.get("visual_role", ""),
-                    "delivery": sc.get("delivery", "calm"),
-                    "assets": [f"{a['kind']}:{'ai' if a.get('ai') else 'stock'}"
-                               for a in sc["assets"]]}
-                   for sc in scenes], f, indent=2, ensure_ascii=False)
+        json.dump(beats_payload, f, indent=2, ensure_ascii=False)
+    try:
+        beats_dir = os.path.join(REPO_ROOT, "analytics", "beats")
+        os.makedirs(beats_dir, exist_ok=True)
+        with open(os.path.join(beats_dir, f"{stamp}.json"), "w",
+                  encoding="utf-8") as f:
+            json.dump({"stamp": stamp, "title": script["title"],
+                       "style": style,
+                       "retention_plan": script.get("retention_plan", {}),
+                       "beats": beats_payload}, f, indent=2,
+                      ensure_ascii=False)
+    except Exception as exc:
+        print(f"[beats] analytics copy skipped ({exc})")
 
     script_gen.log_topic_done(topic, os.path.join(REPO_ROOT, "topics_done.txt"))
     tease = str(script.get("next_tease_topic", "")).strip()

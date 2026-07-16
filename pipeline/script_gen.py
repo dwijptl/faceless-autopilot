@@ -15,6 +15,7 @@ import time
 
 import requests
 
+import retention_lint
 import visual_beats as visual_beats_mod
 
 API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
@@ -168,7 +169,12 @@ def _is_hindi(cfg: dict) -> bool:
 
 
 def _wpm(cfg: dict) -> int:
-    # Hindi documentary narration runs slower than English (~130 vs 150 wpm)
+    # Prefer the pace MEASURED from previous runs' actual TTS (run.py sets
+    # channel.wpm_measured from calibration.json) — the static guess produced
+    # 4:08 videos against 6:15 targets. Falls back to the configured value.
+    measured = cfg["channel"].get("wpm_measured")
+    if measured:
+        return int(measured)
     return int(cfg["channel"].get("wpm", 130 if _is_hindi(cfg) else 150))
 
 
@@ -195,17 +201,41 @@ LANGUAGE — this channel speaks HINDI:
 
 def _style_rules() -> str:
     return """
-WRITING STYLE — the script must feel human-written, never AI-generated:
-- BANNED openers/phrases (any language): "have you ever wondered", "did you
-  know", "imagine a world", "let's dive in", "in conclusion", "क्या आप जानते
-  हैं", "आइए जानते हैं", "कल्पना कीजिए" as a stock opener, "निष्कर्ष".
-- Rhythm: alternate short punch sentences (3-6 words) with medium ones.
-  Every scene ends on a concrete image, place or number — never an
+WRITING STYLE — the narration must sound like a PERSON, not a language model.
+Read every line aloud in your head; if a Hindi speaker could not say it
+naturally in one breath to a friend, rewrite it.
+
+BANNED (any language) — these instantly mark a script as AI:
+- Stock openers: "have you ever wondered", "did you know", "imagine a world",
+  "let's dive in", "क्या आप जानते हैं", "आइए जानते हैं", "कल्पना कीजिए" as an
+  opener, "चलिए शुरू करते हैं".
+- Stock transitions: "in conclusion", "निष्कर्ष", "अब बात करते हैं", "गौर करने
+  वाली बात यह है", "यह ध्यान रखना ज़रूरी है", "दिलचस्प बात यह है कि" (more than
+  once), robotic enumeration ("पहला... दूसरा... तीसरा...").
+- Symmetric AI sentence templates repeated across scenes: "यह न सिर्फ X बल्कि
+  Y भी", "X ही नहीं, Y भी", every scene starting with "लेकिन".
+- Empty intensity: "हैरान कर देने वाला", "चौंकाने वाला" without a concrete
+  fact attached in the SAME sentence.
+
+HOW A HUMAN NARRATOR ACTUALLY SOUNDS (write like this):
+- Rhythm is uneven ON PURPOSE: a 3-word punch. Then a longer flowing sentence
+  that carries the viewer somewhere. Then a fragment. फिर एक सवाल।
+- The viewer is IN the story — address them as the traveller, repeatedly:
+  "अब आप 4,000 मीटर नीचे हैं। आपकी छाती पर 400 हाथियों का वज़न है।"
+  Use "आप" naturally several times per scene, not once per video.
+- One breath before the big moment: a short quiet line right before a reveal
+  ("और फिर... सिग्नल बदल गया।").
+- Small human asides are allowed once or twice per video ("सच कहूं तो मुझे भी
+  यहीं यकीन नहीं हुआ था").
+- Numbers speak like a person: "करीब 92 बार" not "लगभग 92.0 बार का दबाव
+  अनुभव होता है". Attach every big number to ONE thing the viewer can feel.
+- Real scientists, probes and missions may be NAMED in narration as
+  characters (कहानी के किरदार) — a named person makes evidence human. Never
+  show them via stock lookalikes; visuals stay environment/archive/AI.
+- Every scene ends on a concrete image, place, number or question — never an
   abstraction or a summary.
-- Specificity beats breadth: one vivid, named fact per scene (a place, a
-  number, a comparison a viewer can picture) instead of three vague claims.
-- Voice: a person telling a friend a secret — confident, a little amused,
-  zero lecture tone.
+- Specificity beats breadth: one vivid, named fact per scene instead of three
+  vague claims. Voice: confident, a little amused, zero lecture tone.
 """
 
 
@@ -296,6 +326,39 @@ def _normalize_milestone(raw) -> dict:
             "unit": str(data.get("unit", ""))[:8]}
 
 
+def _int_or_none(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _normalize_retention_plan(raw, n_scenes: int) -> dict:
+    """Bound the machine-readable story contract (see retention_lint.py)."""
+    data = raw if isinstance(raw, dict) else {}
+    loops = []
+    for lp in (data.get("open_loops") or [])[:4]:
+        if not isinstance(lp, dict) or not str(lp.get("question", "")).strip():
+            continue
+        loops.append({
+            "question": str(lp.get("question", ""))[:140],
+            "opens_scene": _int_or_none(lp.get("opens_scene")),
+            "partial_scene": _int_or_none(lp.get("partial_scene")),
+            "closes_scene": _int_or_none(lp.get("closes_scene")),
+        })
+    reveal_scene = _int_or_none(data.get("main_reveal_scene"))
+    if reveal_scene is not None and not 1 <= reveal_scene <= n_scenes:
+        reveal_scene = None
+    return {
+        "core_question": str(data.get("core_question", ""))[:160],
+        "viewer_assumption": str(data.get("viewer_assumption", ""))[:160],
+        "first_reversal": str(data.get("first_reversal", ""))[:160],
+        "main_reveal": str(data.get("main_reveal", ""))[:200],
+        "main_reveal_scene": reveal_scene,
+        "open_loops": loops,
+    }
+
+
 def _normalize(script: dict, min_scenes: int) -> dict:
     """Validate + default-fill a script dict. Raises on structural problems."""
     assert isinstance(script["scenes"], list) and len(script["scenes"]) >= min_scenes
@@ -319,7 +382,19 @@ def _normalize(script: dict, min_scenes: int) -> dict:
                                              "measurement") else "")
         s["must_show"] = [str(t)[:40] for t in (s.get("must_show") or [])
                           if str(t).strip()][:3]
+        nrole = str(s.get("narrative_role", "")).lower().strip()
+        s["narrative_role"] = nrole if nrole in retention_lint.ROLES else ""
+        reward = s.get("reward") if isinstance(s.get("reward"), dict) else {}
+        strength = _num_or_none(reward.get("strength"))
+        s["reward"] = {"type": str(reward.get("type", ""))[:24],
+                       "strength": (min(max(strength, 0.0), 1.0)
+                                    if strength is not None else 0.0)}
+        s["question_out"] = str(s.get("question_out", ""))[:140]
     script["scenes"][0]["delivery"] = "hook"
+    if not script["scenes"][0]["narrative_role"]:
+        script["scenes"][0]["narrative_role"] = "hook"
+    script["retention_plan"] = _normalize_retention_plan(
+        script.get("retention_plan"), len(script["scenes"]))
     assert script["title"].strip()
     script.setdefault("thumb_text", script["title"][:30])
     script.setdefault("thumb_prompt", "")
@@ -358,12 +433,24 @@ def _critique(script: dict, cfg: dict, api_key: str, kind: str,
     prompt = f"""You are a ruthless retention editor for a Hindi faceless
 YouTube channel. Below is a draft script for {fmt}.
 
-Grade every scene 1-10 on: hook strength, specificity (named places and
-numbers a viewer can picture), curiosity pull into the NEXT scene, and
-sentence rhythm. Then REWRITE any scene scoring below 8 — sharper verbs,
-more concrete nouns, tighter sentences, zero filler. Keep the same JSON
-schema, scene count, visual_mode and search_terms (you may improve
-narration, titles, kinetic_text, delivery and thumb_text).
+Grade every scene 1-10 on ALL of:
+- hook strength and specificity (named places and numbers a viewer can picture);
+- curiosity pull into the NEXT scene (would a viewer predict the next line?
+  if yes, the scene fails — break the prediction);
+- HUMAN VOICE: read the narration aloud in your head. AI tells that force a
+  rewrite: uniform sentence rhythm across scenes, stock transitions ("अब बात
+  करते हैं", "गौर करने वाली बात"), symmetric templates ("X ही नहीं, Y भी")
+  repeated, empty intensity words without a concrete fact, zero direct
+  address. A human narrator talks TO the viewer ("आप"), varies rhythm on
+  purpose, and lands each scene on something you can see or feel;
+- emotion: the strongest fact of the scene must produce a nameable feeling
+  (awe / fear / scale / disbelief) — "interesting" is not a feeling.
+
+REWRITE any scene scoring below 8 — sharper verbs, more concrete nouns,
+tighter sentences, zero filler, natural spoken Hindi. Keep the same JSON
+schema, scene count, visual_mode, search_terms, narrative_role and
+retention_plan (you may improve narration, titles, kinetic_text, delivery,
+question_out, reward and thumb_text).
 {_lang_rules(cfg)}
 Return ONLY the full revised JSON — no scores, no commentary.
 
@@ -376,13 +463,18 @@ DRAFT:
         # a stat/glass/map scene into an empty overlay.
         for before, after in zip(script["scenes"], revised["scenes"]):
             for field in ("stat", "card", "glass", "map", "milestone",
-                          "must_show", "visual_role"):
+                          "must_show", "visual_role", "narrative_role"):
                 after[field] = before.get(field, after.get(field, {}))
+            if not str(after.get("question_out", "")).strip():
+                after["question_out"] = before.get("question_out", "")
         for field in ("premise", "changing_variable", "hero_prompt",
                       "forbidden_visuals", "title_options", "thumb_options",
                       "thumb_headline", "thumb_question", "next_tease_topic"):
             if not revised.get(field):
                 revised[field] = script.get(field, revised.get(field))
+        if not (revised.get("retention_plan") or {}).get("core_question"):
+            revised["retention_plan"] = script.get("retention_plan",
+                                                   revised.get("retention_plan"))
         revised["topic"] = script.get("topic", "")
         print("[script] critique pass applied")
         return revised
@@ -553,6 +645,53 @@ SCENES:
         return visual_beats_mod.normalize_plan(script, None, cfg)
 
 
+def _retention_pass(script: dict, cfg: dict, api_key: str, topic: str) -> dict:
+    """Deterministic story audit + bounded repair loop (pre-TTS, so repairs
+    are free). Fail-open: the final report travels on the script and run.py
+    decides whether a failure drafts or blocks the release."""
+    rcfg = cfg.get("retention", {})
+    if not rcfg.get("enabled", True):
+        return script
+    report = retention_lint.lint(script, cfg)
+    revisions = int(rcfg.get("max_revisions", 2))
+    for attempt in range(revisions):
+        if report["passed"]:
+            break
+        print(f"[retention] {len(report['violations'])} violation(s) — "
+              f"repair pass {attempt + 1}/{revisions}: "
+              + ", ".join(sorted({v["code"] for v in report["violations"]})))
+        try:
+            fixed = _normalize(_parse_json(_llm(
+                retention_lint.repair_prompt(script, report, cfg,
+                                             _lang_rules(cfg)),
+                cfg, api_key)), 4)
+            # keep visual payloads unless the repair legitimately changed them
+            # (engine_flat repairs MUST rewrite milestones, so no blanket copy)
+            for before, after in zip(script["scenes"], fixed["scenes"]):
+                for field in ("stat", "card", "glass", "map"):
+                    if not after.get(field) and before.get(field):
+                        after[field] = before[field]
+            for field in ("premise", "changing_variable", "hero_prompt",
+                          "forbidden_visuals", "title_options", "thumb_options",
+                          "thumb_headline", "thumb_question",
+                          "next_tease_topic", "word_budget"):
+                if not fixed.get(field):
+                    fixed[field] = script.get(field)
+            fixed["topic"] = topic
+            script = fixed
+        except Exception as exc:
+            print(f"[retention] repair pass failed ({exc}) — keeping draft")
+            break
+        report = retention_lint.lint(script, cfg)
+    status = "PASSED" if report["passed"] else "FAILED"
+    print(f"[retention] story audit {status} — "
+          f"reveal at {report['metrics'].get('reveal_fraction')}, "
+          f"{report['metrics'].get('open_loops', 0)} loops, "
+          f"{len(report['violations'])} open violation(s)")
+    script["retention_report"] = report
+    return script
+
+
 def generate_script(cfg: dict, topic: str, api_key: str, learnings: str = "") -> dict:
     v = cfg["video"]
     wpm = _wpm(cfg)
@@ -586,6 +725,14 @@ Write a scene-segmented script and return ONLY valid JSON with this exact shape:
   "hero_prompt": "ENGLISH text-to-image prompt for the episode's recurring HERO subject — one person/object/place the video returns to as conditions change: subject + setting + light + camera angle",
   "forbidden_visuals": ["3-6 short ENGLISH phrases describing footage that would BREAK the premise and must never appear (e.g. for an unprotected-human deep-sea premise: 'scuba diver', 'diving suit', 'oxygen tank', 'snorkeler')"],
   "next_tease_topic": "the EXACT topic teased in the final scene, as a Hindi working title — the pipeline will make it the next episode, so it must be a producible topic (stock+AI illustrable) and the tease itself must be factually accurate",
+  "retention_plan": {{
+    "core_question": "the ONE Hindi question the whole video exists to answer — the title's promise, sharpened",
+    "viewer_assumption": "what the target viewer already believes about this topic (Hindi)",
+    "first_reversal": "one Hindi line: the moment that assumption breaks",
+    "main_reveal": "the single strongest answer/fact, held for the climax (Hindi) — the exact content of the main_reveal scene",
+    "main_reveal_scene": 0,
+    "open_loops": [{{"question": "a Hindi question the viewer is left holding", "opens_scene": 1, "partial_scene": 4, "closes_scene": 7}}]
+  }},
   "description": "2-3 sentence YouTube description ending with 3 relevant hashtags",
   "tags": ["8-12 YouTube tags"],
   "scenes": [
@@ -595,6 +742,9 @@ Write a scene-segmented script and return ONLY valid JSON with this exact shape:
       "narration": "60-150 words of spoken narration",
       "visual_mode": "broll | ai_image | kinetic | stat | card | map | glass",
       "visual_role": "experience | explanation | measurement",
+      "narrative_role": "hook | question | context | discovery | explanation | comparison | reversal | evidence | escalation | partial_answer | mini_reveal | main_reveal | implication | conclusion | next_curiosity",
+      "reward": {{"type": "fact | comparison | visual_reveal | partial_answer | contradiction | consequence | scale | evidence", "strength": 0.7}},
+      "question_out": "the Hindi question this scene leaves OPEN that pulls the viewer into the next scene ('' only for the final scene)",
       "delivery": "hook | calm | reveal | urgent",
       "must_show": ["1-2 short ENGLISH phrases naming what MUST be visible on screen for this scene's narration to be true"],
       "milestone": {{"value": 0, "label": "optional ENGLISH override of the metric label", "unit": "km"}},
@@ -668,6 +818,32 @@ Visual mode rules (variety is the goal — videos must not feel stock-only):
   8-10 seconds; the reveal keeps its beat of silence.
 
 Script rules:
+- PROMISE LADDER (the retention engine — a deterministic audit enforces this):
+  the video is NOT one giant withheld secret. It rewards early, then deepens:
+  hook conflict -> partial answer -> deeper question -> mechanism/evidence ->
+  reversal -> main reveal -> implication.
+  * Scene 1 frames retention_plan.core_question but NEVER answers it. If the
+    topic's headline fact is unavoidable in the hook (the title already says
+    it), state it and immediately make the REAL question deeper: "क्यों",
+    "कैसे", "सबसे पहले क्या फेल होगा", "इससे क्या बदलता है".
+  * A partial answer/reward lands within the first 2 scenes.
+  * The main_reveal scene sits at 55-85% of the total words — never earlier,
+    and its content (retention_plan.main_reveal) must not be stated or
+    paraphrased by ANY earlier scene.
+  * Keep 1-2 major open_loops active at all times; close one before opening
+    a third; every loop closes before the video ends.
+  * Every scene changes at least one of: knowledge, stakes, certainty, scale,
+    direction or emotion. A scene that only restates an earlier idea with new
+    footage does not belong in the video.
+  * No more than two consecutive scenes share a narrative_role.
+  * After the main reveal: one implication scene (what this means for the
+    viewer/world), then the tease. The tease is short and never replaces the
+    conclusion.
+- ENGINE NEVER GOES FLAT: milestone values must keep moving until at least
+  ~75-80% of the script. If the changing_variable naturally reaches its
+  destination earlier, hand the story to a SECOND engine (an investigation,
+  a failure chain, a countdown) and let the milestones track that instead —
+  never repeat the same milestone value for 3 scenes in a row.
 - SCENARIO LOCK (scientific integrity): if the premise is a hypothetical with
   multiple interpretations, CHOOSE ONE in the cold open and derive every
   consequence from that single scenario — never mix consequences from
@@ -720,10 +896,15 @@ Script rules:
             script["topic"] = topic
             script = _critique(script, cfg, api_key, "long", 4)
             # enforce the word budget BEFORE TTS — a short script is a short
-            # video, and expanding here is free (no wasted voice credits)
-            wc = _word_count(script)
-            if wc < int(words * 0.88):
-                print(f"[script] undershoot ({wc}/{words} words) — expansion pass")
+            # video, and expanding here is free (no wasted voice credits).
+            # Two attempts; a persistent miss is recorded as a FAILURE (not a
+            # warning) and run.py drafts the release (retention.gate).
+            for _pass in range(2):
+                wc = _word_count(script)
+                if wc >= int(words * 0.88):
+                    break
+                print(f"[script] undershoot ({wc}/{words} words) — "
+                      f"expansion pass {_pass + 1}")
                 exp = f"""The draft below runs {wc} spoken words but must run
 {int(words * 0.95)}-{int(words * 1.05)} words. Expand the THINNEST scenes with
 concrete, specific material — mechanisms, named places, numbers, consequences
@@ -737,12 +918,14 @@ DRAFT:
                 try:
                     expanded = _normalize(_parse_json(_llm(exp, cfg, api_key)), 4)
                     for before, after in zip(script["scenes"], expanded["scenes"]):
-                        for field in ("stat", "card", "glass", "map", "milestone"):
+                        for field in ("stat", "card", "glass", "map", "milestone",
+                                      "narrative_role"):
                             after[field] = before.get(field, {})
                     for field in ("premise", "changing_variable", "hero_prompt",
                                   "forbidden_visuals", "title_options",
                                   "thumb_options", "thumb_headline",
-                                  "thumb_question", "next_tease_topic"):
+                                  "thumb_question", "next_tease_topic",
+                                  "retention_plan"):
                         if not expanded.get(field):
                             expanded[field] = script.get(field)
                     expanded["topic"] = topic
@@ -751,6 +934,17 @@ DRAFT:
                         print(f"[script] expanded to {_word_count(script)} words")
                 except Exception as exc:
                     print(f"[script] expansion skipped ({exc})")
+                    break
+            wc = _word_count(script)
+            script["word_budget"] = {
+                "target": words, "min": int(words * 0.92),
+                "max": int(words * 1.08), "actual": wc,
+                "wpm_used": wpm, "ok": wc >= int(words * 0.88),
+            }
+            if not script["word_budget"]["ok"]:
+                print(f"[script] WORD BUDGET MISS: {wc}/{words} — the release "
+                      "will be flagged for review")
+            script = _retention_pass(script, cfg, api_key, topic)
             script = _plan_visual_beats(script, cfg, api_key)
             modes = [s["visual_mode"] for s in script["scenes"]]
             print(f"[script] '{script['title']}' — {len(modes)} scenes, modes: {modes}")
