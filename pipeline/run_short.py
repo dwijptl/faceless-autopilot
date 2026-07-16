@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import analytics as analytics_mod   # noqa: E402
 import align                         # noqa: E402
 import assets as assets_mod         # noqa: E402
+import calibration                  # noqa: E402
 import captions as captions_mod     # noqa: E402
 import factcheck                    # noqa: E402
 import mapgen                       # noqa: E402
@@ -127,6 +128,12 @@ def main() -> None:
         pass
     topic = script_gen.pick_topic(cfg, gemini_key, DONE_FILE,
                                   (learnings or "") + trailer_hint)
+    measured_wpm = calibration.measured_wpm(
+        REPO_ROOT, int(cfg.get("short", {}).get("wpm", 100)), kind="short")
+    if measured_wpm:
+        cfg.setdefault("short", {})["wpm"] = measured_wpm
+        print(f"[calib] short word budget uses measured pace: "
+              f"{measured_wpm} wpm")
     script = script_gen.generate_short_script(cfg, topic, gemini_key, learnings)
     fact_report = factcheck.check_script(script, cfg, gemini_key)
     with open(os.path.join(outdir, "script.json"), "w", encoding="utf-8") as f:
@@ -152,6 +159,11 @@ def main() -> None:
     scenes[0]["start"] = 0.0
     print(f"[tts] {tts_mod.usage_summary()}")
     total_speech = scenes[-1]["start"] + scenes[-1]["audio_duration"]
+    calibration.record(
+        REPO_ROOT, "short",
+        sum(len(str(sc.get("narration", "")).split())
+            for sc in script["scenes"]),
+        sum(sc["audio_duration"] for sc in scenes), stamp)
     target_s = float(short_settings.get("target_seconds", 25))
     if total_speech > target_s * 1.25:
         print(f"[warn] short runs {total_speech:.1f}s vs {target_s:.0f}s target "

@@ -32,6 +32,26 @@ video:
   max_shot_seconds: 5      # normal long-form visual beat ceiling
   outro_seconds: 4         # branded end card appended to every video
 
+# Retention story engine — deterministic pre-TTS audit of the script's
+# curiosity architecture (promise ladder, reveal placement, open loops,
+# reward gaps, flat progress, claim/display sync). Failures trigger up to
+# max_revisions free repair calls; what happens after that is `gate`:
+#   off   = report only
+#   draft = render normally, mark the release ⚠️ REVIEW   (default)
+#   block = stop BEFORE voice spend (strictest; skips that day's video)
+retention:
+  enabled: true
+  gate: "draft"
+  max_revisions: 2
+  reveal_min_frac: 0.55      # main reveal lands at 55-85% of the words —
+  reveal_max_frac: 0.85      # reward early, then deepen (reference-channel study)
+  max_open_loops: 2          # concurrent major open questions
+  max_reward_gap_words: 60   # ≈25s at real pace without a meaningful reward
+  max_same_role_run: 2       # no 3 consecutive scenes with one narrative role
+  engine_active_until: 0.75  # milestone variable must keep moving until here
+  rehook_tolerance: 0.12     # re-hook must exist near 25/50/75% (±12%)
+  duration_tolerance: 0.10   # rendered narration within ±10% of target
+
 # Six-minute quality system. The free Gemini beat-planning pass binds each
 # spoken idea to a concrete visual instead of rotating loosely related assets.
 longform_quality:
@@ -172,6 +192,9 @@ qc:
   frames: 3                # sample 20/50/80% of each stock clip, not just one frame
   max_upscale: 1.25        # reject obvious blur after portrait crop/upscale
   max_requests_per_video: 20  # hard cost/rate-limit ceiling for vision QC
+  render_audit_required: false  # true = a skipped/errored post-render audit is
+                                # INDETERMINATE and drafts the release (enable
+                                # after several clean scheduled runs)
 
 maps:
   enabled: true            # animated map-zoom scenes for place-based topics
