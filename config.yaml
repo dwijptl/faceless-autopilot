@@ -170,6 +170,12 @@ short:                     # vertical Shorts/Reels (Make Short workflow, Tue/Thu
   ai_images_max: 1
   ai_images_max_flux: 2    # when FAL_KEY is set
   progress_bar: false      # Shorts player has its own progress bar
+  visual_beats:            # semantic beats for shorts: imagery changes with
+    enabled: true          # the spoken idea, not a rotation timer
+    hook_max_seconds: 1.6  # faster semantic changes on the hook scene
+    max_seconds: 2.4       # matches the portrait shot ceiling
+    min_per_scene: 1
+    max_per_scene: 6
 
 music:
   volume: 0.12             # 0 disables music even if files exist
