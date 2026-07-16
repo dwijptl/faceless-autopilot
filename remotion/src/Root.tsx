@@ -58,6 +58,15 @@ const FALLBACK = {
         markerRegion?: number[];
         label?: string;
       },
+      compare: {} as {
+        value?: number; unit?: string; label?: string;
+        anchorLabel?: string; anchorValue?: number; anchorUnit?: string;
+      },
+      causal: {} as {headline?: string; steps?: string[]},
+      evidence: {} as {
+        kicker?: string; headline?: string; source?: string;
+        date?: string; confidence?: string;
+      },
       motion: {
         statVariant: 'glass', kineticVariant: 'word-pop', cardVariant: 'definition',
         frameVariant: 'corners', lowerThirdVariant: 'rail',

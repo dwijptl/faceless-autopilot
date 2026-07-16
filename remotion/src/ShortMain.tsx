@@ -114,6 +114,7 @@ export const ShortMain: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
         ) : (
           <SceneVisual
             assets={scene.assets}
+            visualBeats={scene.visualBeats ?? []}
             sceneFrames={sceneFrames}
             fps={fps}
             maxShotSeconds={maxShotSeconds}
