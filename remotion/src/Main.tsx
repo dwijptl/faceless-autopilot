@@ -36,6 +36,7 @@ import {
 } from './motion-library';
 import type {MotionSpec} from './motion-library';
 import {GlassCard} from './glass';
+import {CausalDiagram, EvidenceFrame, ScaleComparator} from './explainers';
 import {MetricReadout, TelemetryHUD} from './hud';
 import type {Milestone} from './hud';
 import {blurWhip, zoomPunch} from './transitions';
@@ -200,7 +201,8 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
   m.scenes.forEach((scene, i) => {
     const sceneFrames = Math.round(scene.audioDuration * fps);
     const mode = scene.visualMode ?? 'broll';
-    const overlayScene = mode === 'kinetic' || mode === 'stat' || mode === 'card' || mode === 'glass';
+    const overlayScene = mode === 'kinetic' || mode === 'stat' || mode === 'card'
+      || mode === 'glass' || mode === 'scale' || mode === 'causal';
     // word-synced impact: the graphic enters on the spoken keyword
     const impactF = Math.max(0, Math.min(
       Math.round(Number((scene as any).impactStart ?? 0) * fps),
@@ -253,7 +255,22 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
             <GlassCard data={scene.glass} style={style} variant={motion.glassVariant} />
           </OverlayWindow>
         ) : null}
-        {!overlayScene && !isMap && scene.title ? (
+        {mode === 'scale' && (scene as any).compare && (scene as any).compare.anchorLabel ? (
+          <OverlayWindow frames={overlayFrames} fps={fps} from={impactF}>
+            <ScaleComparator data={(scene as any).compare} style={style} />
+          </OverlayWindow>
+        ) : null}
+        {mode === 'causal' && (scene as any).causal && ((scene as any).causal.steps ?? []).length >= 2 ? (
+          <OverlayWindow frames={overlayFrames} fps={fps} from={impactF}>
+            <CausalDiagram data={(scene as any).causal} style={style} />
+          </OverlayWindow>
+        ) : null}
+        {mode === 'evidence' && (scene as any).evidence && (scene as any).evidence.source ? (
+          <OverlayWindow frames={overlayFrames} fps={fps} from={impactF}>
+            <EvidenceFrame data={(scene as any).evidence} style={style} />
+          </OverlayWindow>
+        ) : null}
+        {!overlayScene && !isMap && mode !== 'evidence' && scene.title ? (
           <AnimatedLowerThird title={scene.title} style={style}
             variant={motion.lowerThirdVariant} index={scene.n} />
         ) : null}

@@ -463,7 +463,8 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
 
     # AI-generated hero image (for ai_image scenes, or as bg for kinetic/stat)
     wants_ai = mode == "ai_image" or (
-        mode in ("kinetic", "stat", "card", "glass") and not scene.get("search_terms"))
+        mode in ("kinetic", "stat", "card", "glass", "scale", "causal")
+        and not scene.get("search_terms"))
     prompt = (scene.get("ai_prompt") or "").strip()
     if wants_ai and prompt and ai_budget[0] > 0:
         ph = hashlib.sha1(prompt.lower().encode()).hexdigest()[:16]
@@ -537,7 +538,7 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
         return assets
 
     # Overlay scenes need one strong background; the graphic carries the beat.
-    if mode in ("kinetic", "stat", "card", "glass"):
+    if mode in ("kinetic", "stat", "card", "glass", "scale", "causal"):
         if not assets:
             # Long overlay scenes still need visual development behind the
             # graphic. Cap at three free stock clips to prevent a 30-second
