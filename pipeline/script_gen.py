@@ -248,7 +248,8 @@ def _ai_max(cfg: dict) -> int:
     return int(aicfg.get("max_per_video", 2))
 
 
-VALID_MODES = ("broll", "ai_image", "kinetic", "stat", "card", "map", "glass")
+VALID_MODES = ("broll", "ai_image", "kinetic", "stat", "card", "map", "glass",
+               "scale", "causal", "evidence")
 
 
 def _num_or_none(value):
@@ -333,6 +334,49 @@ def _int_or_none(value):
         return None
 
 
+def _normalize_compare(raw) -> dict:
+    """Scale anchor: one unfamiliar number against one familiar unit."""
+    data = raw if isinstance(raw, dict) else {}
+    value = _num_or_none(data.get("value"))
+    anchor = _num_or_none(data.get("anchor_value", data.get("anchorValue")))
+    if value is None or anchor is None or anchor <= 0:
+        return {}
+    return {"value": value,
+            "unit": str(data.get("unit", ""))[:16],
+            "label": str(data.get("label", ""))[:60],
+            "anchorLabel": str(data.get("anchor_label",
+                                        data.get("anchorLabel", "")))[:40],
+            "anchorValue": anchor,
+            "anchorUnit": str(data.get("anchor_unit",
+                                       data.get("anchorUnit", "")))[:16]}
+
+
+def _normalize_causal(raw) -> dict:
+    """Mechanism chain A -> B -> C with 2-6 short steps."""
+    data = raw if isinstance(raw, dict) else {}
+    steps = [str(s).strip()[:60] for s in (data.get("steps") or [])
+             if str(s).strip()][:6]
+    if len(steps) < 2:
+        return {}
+    return {"headline": str(data.get("headline", ""))[:80], "steps": steps}
+
+
+def _normalize_evidence(raw) -> dict:
+    """Named-source frame with an honest confidence tag."""
+    data = raw if isinstance(raw, dict) else {}
+    source = str(data.get("source", "")).strip()[:90]
+    if not source:
+        return {}
+    conf = str(data.get("confidence", "")).strip()
+    if conf not in ("पुष्टि", "अनुमान", "विवादित"):
+        conf = ""
+    return {"kicker": str(data.get("kicker", ""))[:24],
+            "headline": str(data.get("headline", ""))[:80],
+            "source": source,
+            "date": str(data.get("date", ""))[:24],
+            "confidence": conf}
+
+
 def _normalize_retention_plan(raw, n_scenes: int) -> dict:
     """Bound the machine-readable story contract (see retention_lint.py)."""
     data = raw if isinstance(raw, dict) else {}
@@ -372,6 +416,16 @@ def _normalize(script: dict, min_scenes: int) -> dict:
         s.setdefault("kinetic_text", "")
         s["stat"] = _normalize_stat(s.get("stat"))
         s["glass"] = _normalize_glass(s.get("glass"))
+        s["compare"] = _normalize_compare(s.get("compare"))
+        s["causal"] = _normalize_causal(s.get("causal"))
+        s["evidence"] = _normalize_evidence(s.get("evidence"))
+        # a mode whose payload failed validation degrades to plain footage
+        if s["visual_mode"] == "scale" and not s["compare"]:
+            s["visual_mode"] = "broll"
+        if s["visual_mode"] == "causal" and not s["causal"]:
+            s["visual_mode"] = "broll"
+        if s["visual_mode"] == "evidence" and not s["evidence"]:
+            s["visual_mode"] = "broll"
         s.setdefault("card", {})
         s.setdefault("map", {})
         s["milestone"] = _normalize_milestone(s.get("milestone"))
@@ -463,6 +517,7 @@ DRAFT:
         # a stat/glass/map scene into an empty overlay.
         for before, after in zip(script["scenes"], revised["scenes"]):
             for field in ("stat", "card", "glass", "map", "milestone",
+                          "compare", "causal", "evidence",
                           "must_show", "visual_role", "narrative_role"):
                 after[field] = before.get(field, after.get(field, {}))
             if not str(after.get("question_out", "")).strip():
@@ -668,7 +723,8 @@ def _retention_pass(script: dict, cfg: dict, api_key: str, topic: str) -> dict:
             # keep visual payloads unless the repair legitimately changed them
             # (engine_flat repairs MUST rewrite milestones, so no blanket copy)
             for before, after in zip(script["scenes"], fixed["scenes"]):
-                for field in ("stat", "card", "glass", "map"):
+                for field in ("stat", "card", "glass", "map",
+                              "compare", "causal", "evidence"):
                     if not after.get(field) and before.get(field):
                         after[field] = before[field]
             for field in ("premise", "changing_variable", "hero_prompt",
@@ -740,7 +796,7 @@ Write a scene-segmented script and return ONLY valid JSON with this exact shape:
       "n": 1,
       "title": "3-6 word scene title",
       "narration": "60-150 words of spoken narration",
-      "visual_mode": "broll | ai_image | kinetic | stat | card | map | glass",
+      "visual_mode": "broll | ai_image | kinetic | stat | card | map | glass | scale | causal | evidence",
       "visual_role": "experience | explanation | measurement",
       "narrative_role": "hook | question | context | discovery | explanation | comparison | reversal | evidence | escalation | partial_answer | mini_reveal | main_reveal | implication | conclusion | next_curiosity",
       "reward": {{"type": "fact | comparison | visual_reveal | partial_answer | contradiction | consequence | scale | evidence", "strength": 0.7}},
@@ -754,7 +810,10 @@ Write a scene-segmented script and return ONLY valid JSON with this exact shape:
       "stat": {{"value": 0, "suffix": "", "label": "", "max": null, "baseline": null, "bars": [{{"label": "short label", "value": 0}}]}},
       "card": {{"kicker": "short category", "headline": "5-10 word headline", "body": "one concise explanatory sentence"}},
       "glass": {{"kicker": "short category", "headline": "main Hindi line", "body": "one short support line", "value": null, "suffix": "", "label": "", "delta": null, "delta_direction": "up | down | flat", "location": "", "coordinates": "", "chapter": ""}},
-      "map": {{"lat": 0.0, "lon": 0.0, "label": ""}}
+      "map": {{"lat": 0.0, "lon": 0.0, "label": ""}},
+      "compare": {{"value": 0, "unit": "मीटर", "label": "what the number is (Hindi)", "anchor_label": "बुर्ज ख़लीफ़ा", "anchor_value": 828, "anchor_unit": "मीटर"}},
+      "causal": {{"headline": "optional short Hindi headline", "steps": ["3-6 SHORT Hindi steps, each <= 6 words, cause -> effect order"]}},
+      "evidence": {{"kicker": "स्रोत", "headline": "short Hindi claim being proven", "source": "the REAL named source (mission/agency/journal + name)", "date": "year or date", "confidence": "पुष्टि | अनुमान | विवादित"}}
     }}
   ]
 }}
@@ -790,6 +849,23 @@ Visual mode rules (variety is the goal — videos must not feel stock-only):
   Use value/suffix/label for a metric, location/coordinates for a place,
   chapter/headline for an act break, or headline/body for a fact. Reserve the
   biggest reveal for delivery="reveal"; the renderer selects the matching layout.
+- 0-1 scenes are "scale": when ONE big number begs a physical comparison the
+  viewer can feel. Fill compare: the number (value+unit) and ONE familiar
+  Indian anchor (anchor_label + anchor_value in the same unit — बुर्ज ख़लीफ़ा
+  828 मीटर, कुतुब मीनार 73 मीटर, एक रेल डिब्बा 25 मीटर, हिमालय 8,849 मीटर).
+  The narration must SAY the value. Use on a "comparison" narrative_role scene.
+- 0-1 scenes are "causal": when the mechanism is a chain (A causes B causes C),
+  show it as a stepwise diagram instead of generic footage. causal.steps =
+  3-6 SHORT Hindi steps in strict cause->effect order. Pair with
+  narrative_role "explanation" — this replaces the weakest broll explanation.
+- 0-1 scenes are "evidence": on the video's strongest PROOF beat. Name the
+  REAL source (mission, agency, journal, scientist + year) in evidence.source
+  and tag confidence HONESTLY: "पुष्टि" only for well-established findings,
+  "अनुमान" for estimates/models, "विवादित" for contested claims. The frame
+  brackets real footage — search_terms must request authentic/archival
+  material (NASA, expedition, observatory), NEVER generated art. Pair with
+  narrative_role "evidence". An honest "अनुमान" tag builds more trust than a
+  fake certainty.
 - Every scene still needs search_terms as fallback. Concrete visual nouns only,
   and every term must belong to the topic's own visual world — never
   metaphorical/studio/commercial imagery (no drinks, food, offices, product
@@ -919,6 +995,7 @@ DRAFT:
                     expanded = _normalize(_parse_json(_llm(exp, cfg, api_key)), 4)
                     for before, after in zip(script["scenes"], expanded["scenes"]):
                         for field in ("stat", "card", "glass", "map", "milestone",
+                                      "compare", "causal", "evidence",
                                       "narrative_role"):
                             after[field] = before.get(field, {})
                     for field in ("premise", "changing_variable", "hero_prompt",

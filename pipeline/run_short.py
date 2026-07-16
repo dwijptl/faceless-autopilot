@@ -30,7 +30,8 @@ import script_gen                   # noqa: E402
 import sfx as sfx_mod               # noqa: E402
 import tts as tts_mod               # noqa: E402
 import vision_qc                    # noqa: E402
-from run import _impact_start       # noqa: E402  (word-synced overlay timing)
+import visual_beats as visual_beats_mod  # noqa: E402
+from run import _impact_start, _visual_beat_manifest  # noqa: E402
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REMOTION_DIR = os.path.join(REPO_ROOT, "remotion")
@@ -62,6 +63,19 @@ def short_cfg(cfg: dict) -> dict:
         "max_shot_seconds": s.get("max_shot_seconds", 3.5),
         "outro_seconds": 0,
     })
+    # semantic visual beats for shorts: imagery changes with the spoken idea
+    # (not just a 2.4s rotation timer). Beat count derives from channel.wpm,
+    # so pin it to the REAL short pace; ceilings match the portrait shot cap.
+    sv = s.get("visual_beats", {}) if isinstance(s.get("visual_beats"), dict) else {}
+    c["channel"]["wpm"] = int(s.get("wpm", 100))
+    c["longform_quality"] = {"visual_beats": {
+        "enabled": bool(sv.get("enabled", True)),
+        "hook_max_seconds": float(sv.get("hook_max_seconds", 1.6)),
+        "max_seconds": float(sv.get("max_seconds",
+                                    s.get("max_shot_seconds", 2.4))),
+        "min_per_scene": int(sv.get("min_per_scene", 1)),
+        "max_per_scene": int(sv.get("max_per_scene", 6)),
+    }}
     c["captions"]["max_chars"] = s.get("captions_max_chars", 14)
     c["music"]["volume"] = s.get("music_volume", 0.18)
     c["tts"]["speed"] = s.get("tts_speed", 1.0)
@@ -132,9 +146,13 @@ def main() -> None:
         REPO_ROOT, int(cfg.get("short", {}).get("wpm", 100)), kind="short")
     if measured_wpm:
         cfg.setdefault("short", {})["wpm"] = measured_wpm
+        cfg["channel"]["wpm"] = measured_wpm  # beat counts track real pace
         print(f"[calib] short word budget uses measured pace: "
               f"{measured_wpm} wpm")
     script = script_gen.generate_short_script(cfg, topic, gemini_key, learnings)
+    # sentence-level visual beats — one free Gemini pass binds each spoken
+    # idea to a concrete visual (same system as long-form, portrait ceilings)
+    script = script_gen._plan_visual_beats(script, cfg, gemini_key)
     fact_report = factcheck.check_script(script, cfg, gemini_key)
     with open(os.path.join(outdir, "script.json"), "w", encoding="utf-8") as f:
         json.dump(script, f, indent=2, ensure_ascii=False)
@@ -180,6 +198,10 @@ def main() -> None:
                       if aligned_scenes == len(scenes) else
                       (f"mixed ({aligned_scenes}/{len(scenes)} scenes aligned)"
                        if aligned_scenes else "estimated (heuristic)"))
+
+    # map each visual beat onto the measured narration timeline
+    for sc in scenes:
+        visual_beats_mod.time_scene(sc)
 
     # 2b) map scenes (portrait) — fail -> b-roll
     if cfg.get("maps", {}).get("enabled", True):
@@ -297,6 +319,7 @@ def main() -> None:
                 "path": os.path.basename(a["path"]), "kind": a["kind"],
                 "duration": round(a["duration"], 2) if a.get("duration") else None,
             } for a in sc["assets"]],
+            "visualBeats": _visual_beat_manifest(sc),
         } for sc in scenes],
     }}
     manifest_path = os.path.join(workdir, "props.json")

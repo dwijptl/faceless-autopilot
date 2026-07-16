@@ -254,6 +254,7 @@ def lint(script: dict, cfg: dict) -> dict:
     for i, s in enumerate(scenes):
         narration = str(s.get("narration", ""))
         for label, value in (("stat", (s.get("stat") or {}).get("value")),
+                             ("compare", (s.get("compare") or {}).get("value")),
                              ("milestone", (s.get("milestone") or {}).get("value"))):
             variants = _num_variants(value)
             if not variants or float(value) == 0:
