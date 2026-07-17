@@ -60,7 +60,11 @@ def _anthropic(prompt: str, cfg: dict, api_key: str) -> str:
     for model in models:
         body = {
             "model": model,
-            "max_tokens": 8000,
+            # the retention-engine schema (retention_plan + per-scene roles/
+            # rewards/payloads) in Devanagari runs ~20-30k chars; 8000 tokens
+            # truncated mid-JSON and every parse failed. Sonnet supports far
+            # larger outputs — give the full script generous headroom.
+            "max_tokens": 32000,
             "temperature": min(float(cfg["llm"].get("temperature", 0.9)), 1.0),
             "system": ("You are a JSON API. Respond with ONLY the requested "
                        "JSON object — no preamble, no markdown fences, no "
