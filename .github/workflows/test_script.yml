@@ -1,0 +1,44 @@
+name: Test Script
+
+# Script-only test bench (~2-4 minutes, a few rupees of LLM, ZERO media
+# spend). Runs the full writing pipeline — topic, Claude/Gemini script,
+# critique, retention audit, visual beats, fact-check — prints the script
+# into the log and uploads it as the "script-test" artifact. Does NOT
+# consume the topic: the real scheduled run can still use it.
+
+on:
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: "Optional: force a specific topic (leave empty for auto)"
+        required: false
+        default: ""
+
+jobs:
+  test-script:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Minimal dependencies
+        run: pip install requests pyyaml
+
+      - name: Write script (no TTS, no assets, no render)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          FORCED_TOPIC: ${{ github.event.inputs.topic }}
+        run: python pipeline/test_script.py
+
+      - name: Upload script artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: script-test
+          path: out/script_test/
