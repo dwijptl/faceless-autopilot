@@ -93,7 +93,10 @@ llm:
                            # secret exists (crisper writing, ~₹4/script),
                            # otherwise Gemini free tier. Claude failures
                            # auto-fall back to Gemini.
-  anthropic_model: "claude-sonnet-5"   # if a name 404s, the pipeline asks the
+  anthropic_model: "claude-sonnet-4-6" # newest sonnet this key actually
+                                       # serves (claude-sonnet-5 404s on the
+                                       # generate endpoint — Test Script #2).
+                                       # If a name 404s, the pipeline asks the
                                        # API what models YOUR key has and
                                        # self-heals to the newest sonnet/haiku
   anthropic_fallback_models: ["claude-sonnet-4-5", "claude-haiku-4-5-20251001"]
