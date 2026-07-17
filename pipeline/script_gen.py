@@ -1026,11 +1026,53 @@ DRAFT:
                 except Exception as exc:
                     print(f"[script] expansion skipped ({exc})")
                     break
+            # overshoot is a miss too: a 6-minute promise delivered as 8
+            # minutes dilutes pacing and trips the runtime gate at render.
+            # Trim verbose scenes BEFORE TTS (free), mirroring the expansion.
+            for _pass in range(2):
+                wc = _word_count(script)
+                if wc <= int(words * 1.10):
+                    break
+                print(f"[script] overshoot ({wc}/{words} words) — "
+                      f"trim pass {_pass + 1}")
+                trim = f"""The draft below runs {wc} spoken words but must stay
+under {int(words * 1.08)} words (target {words}). TRIM the most verbose
+scenes: cut adjectives, repeated ideas and any sentence that adds no new
+information — NEVER cut milestone values, reveals, numbers that graphics
+display, or the promise-ladder structure. Keep the same JSON schema, scene
+count, visual modes and every non-narration field unchanged.
+{_lang_rules(cfg)}
+Return ONLY the full revised JSON.
+
+DRAFT:
+{json.dumps(script, ensure_ascii=False)}"""
+                try:
+                    trimmed = _normalize(_parse_json(_llm(trim, cfg, api_key)), 4)
+                    for before, after in zip(script["scenes"], trimmed["scenes"]):
+                        for field in ("stat", "card", "glass", "map", "milestone",
+                                      "compare", "causal", "evidence",
+                                      "narrative_role"):
+                            after[field] = before.get(field, {})
+                    for field in ("premise", "changing_variable", "hero_prompt",
+                                  "forbidden_visuals", "title_options",
+                                  "thumb_options", "thumb_headline",
+                                  "thumb_question", "next_tease_topic",
+                                  "retention_plan"):
+                        if not trimmed.get(field):
+                            trimmed[field] = script.get(field)
+                    trimmed["topic"] = topic
+                    if _word_count(trimmed) < wc:
+                        script = trimmed
+                        print(f"[script] trimmed to {_word_count(script)} words")
+                except Exception as exc:
+                    print(f"[script] trim skipped ({exc})")
+                    break
             wc = _word_count(script)
             script["word_budget"] = {
                 "target": words, "min": int(words * 0.92),
                 "max": int(words * 1.08), "actual": wc,
-                "wpm_used": wpm, "ok": wc >= int(words * 0.88),
+                "wpm_used": wpm,
+                "ok": int(words * 0.88) <= wc <= int(words * 1.15),
             }
             if not script["word_budget"]["ok"]:
                 print(f"[script] WORD BUDGET MISS: {wc}/{words} — the release "
