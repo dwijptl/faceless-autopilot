@@ -23,6 +23,7 @@ ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 
 
 _anthropic_available: list | None = None
+ANTHROPIC_MODEL_USED = ""
 
 
 def _anthropic_discover(headers: dict) -> list[str]:
@@ -81,6 +82,8 @@ def _anthropic(prompt: str, cfg: dict, api_key: str) -> str:
                     time.sleep(wait)
                     continue
                 r.raise_for_status()
+                global ANTHROPIC_MODEL_USED
+                ANTHROPIC_MODEL_USED = model
                 return r.json()["content"][0]["text"]
             except requests.RequestException as e:
                 last_err = str(e)
@@ -88,16 +91,23 @@ def _anthropic(prompt: str, cfg: dict, api_key: str) -> str:
     raise RuntimeError(f"Anthropic call failed on all models: {last_err}")
 
 
+PROVIDER_USED = ""  # which provider wrote the last CREATIVE call (see _llm)
+
+
 def _llm(prompt: str, cfg: dict, gemini_key: str) -> str:
     """Route to Claude when a key exists (better scripts), else Gemini.
     Any Claude failure silently falls back to Gemini — runs never block."""
+    global PROVIDER_USED
     ak = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     provider = str(cfg["llm"].get("provider", "auto")).lower()
     if ak and provider in ("auto", "anthropic"):
         try:
-            return _anthropic(prompt, cfg, ak)
+            out = _anthropic(prompt, cfg, ak)
+            PROVIDER_USED = f"anthropic:{ANTHROPIC_MODEL_USED or '?'}"
+            return out
         except Exception as e:
             print(f"[script] anthropic failed ({e}) -> gemini fallback")
+    PROVIDER_USED = f"gemini:{cfg['llm'].get('model', '?')}"
     return _gemini(prompt, cfg, gemini_key)
 
 
