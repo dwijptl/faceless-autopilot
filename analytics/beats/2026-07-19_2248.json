@@ -1,0 +1,249 @@
+{
+  "stamp": "2026-07-19_2248",
+  "title": "ब्लैक होल मरने के बाद वापस आता है — उल्टा | White Hole Theory",
+  "style": "documentary",
+  "retention_plan": {
+    "core_question": "ब्लैक होल जो कुछ भी निगल लेता है — क्या वो सब कभी वापस आ सकता है?",
+    "viewer_assumption": "दर्शक मानते हैं कि ब्लैक होल में जो चला जाता है वो हमेशा के लिए खत्म हो जाता है",
+    "first_reversal": "ब्लैक होल हमेशा के लिए नहीं रहता — वो धीरे-धीरे मरता है, और मरने में उसे ब्रह्मांड की उम्र से भी ज़्यादा वक़्त लगता है",
+    "main_reveal": "Carlo Rovelli और Hal Haggard की hypothesis के अनुसार — मरने के बाद ब्लैक होल quantum bounce से पलट जाता है और एक White Hole बन जाता है, जो वो सब कुछ बाहर उगल देता है जो कभी अंदर गया था — समय उल्टा चलत",
+    "main_reveal_scene": 7,
+    "open_loops": [
+      {
+        "question": "अगर ब्लैक होल मर सकता है — तो वो सब कहाँ जाता है जो उसने निगला था?",
+        "opens_scene": 2,
+        "partial_scene": 4,
+        "closes_scene": 7
+      },
+      {
+        "question": "Quantum bounce होता क्या है — और क्या यह सच में हो सकता है?",
+        "opens_scene": 5,
+        "partial_scene": 6,
+        "closes_scene": 8
+      }
+    ]
+  },
+  "beats": [
+    {
+      "n": 1,
+      "title": "तारे का आखिरी लम्हा",
+      "start": 0.0,
+      "end": 27.65,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "hook",
+      "rewardType": "visual_reveal",
+      "rewardStrength": 0.82,
+      "questionOut": "ब्लैक होल जो निगल लेता है — क्या वो हमेशा के लिए गायब हो जाता है?",
+      "delivery": "hook",
+      "assets": [
+        "video:ai",
+        "image:ai",
+        "image:ai",
+        "video:stock",
+        "image:ai",
+        "video:stock",
+        "video:stock",
+        "image:stock",
+        "image:ai",
+        "video:stock",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 2,
+      "title": "ब्लैक होल कितना टिकता है",
+      "start": 27.25,
+      "end": 60.11,
+      "visualMode": "stat",
+      "visualRole": "measurement",
+      "narrativeRole": "context",
+      "rewardType": "scale",
+      "rewardStrength": 0.8,
+      "questionOut": "इतने लंबे वक़्त बाद जब ब्लैक होल आखिरकार मरता है — तो उसके अंदर का सब कुछ कहाँ जाता है?",
+      "delivery": "calm",
+      "assets": [
+        "video:stock",
+        "image:ai",
+        "video:stock",
+        "video:stock",
+        "image:stock",
+        "image:ai",
+        "video:stock",
+        "video:stock",
+        "video:stock"
+      ]
+    },
+    {
+      "n": 3,
+      "title": "निगला हुआ कहाँ जाता है",
+      "start": 59.71,
+      "end": 94.18,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "question",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.78,
+      "questionOut": "वो दो लोग कौन थे — और उन्होंने क्या कहा जो पहले किसी ने नहीं सोचा था?",
+      "delivery": "calm",
+      "assets": [
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock"
+      ]
+    },
+    {
+      "n": 4,
+      "title": "Rovelli और Haggard की खोज",
+      "start": 93.78,
+      "end": 132.85,
+      "visualMode": "evidence",
+      "visualRole": "explanation",
+      "narrativeRole": "evidence",
+      "rewardType": "evidence",
+      "rewardStrength": 0.8,
+      "questionOut": "Quantum bounce आखिर होता क्या है — और वो ब्लैक होल को कैसे पलट देता है?",
+      "delivery": "calm",
+      "assets": [
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock"
+      ]
+    },
+    {
+      "n": 5,
+      "title": "Quantum Bounce — वापसी की शक्ति",
+      "start": 132.45,
+      "end": 159.65,
+      "visualMode": "causal",
+      "visualRole": "explanation",
+      "narrativeRole": "explanation",
+      "rewardType": "awe",
+      "rewardStrength": 0.82,
+      "questionOut": "उलटी दिशा में जाने का मतलब क्या है — बाहर से ब्लैक होल का क्या होता है?",
+      "delivery": "calm",
+      "assets": [
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock"
+      ]
+    },
+    {
+      "n": 6,
+      "title": "समय उल्टा चलता है",
+      "start": 159.25,
+      "end": 199.57,
+      "visualMode": "kinetic",
+      "visualRole": "explanation",
+      "narrativeRole": "reversal",
+      "rewardType": "disbelief",
+      "rewardStrength": 0.85,
+      "questionOut": "तो जब यह पलटाव होता है — White Hole आखिर दिखता कैसा है?",
+      "delivery": "calm",
+      "assets": [
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock"
+      ]
+    },
+    {
+      "n": 7,
+      "title": "White Hole — उल्टा जन्म",
+      "start": 199.17,
+      "end": 241.7,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "main_reveal",
+      "rewardType": "visual_reveal",
+      "rewardStrength": 0.95,
+      "questionOut": "अगर यह सच है — तो इसका ब्रह्मांड के लिए क्या मतलब है?",
+      "delivery": "reveal",
+      "assets": [
+        "video:ai",
+        "image:ai",
+        "image:ai",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock"
+      ]
+    },
+    {
+      "n": 8,
+      "title": "ब्रह्मांड में कुछ खोता नहीं",
+      "start": 241.3,
+      "end": 277.3,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "implication",
+      "rewardType": "consequence",
+      "rewardStrength": 0.9,
+      "questionOut": "",
+      "delivery": "calm",
+      "assets": [
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock"
+      ]
+    },
+    {
+      "n": 9,
+      "title": "अगला रहस्य — न्यूट्रॉन स्टार",
+      "start": 276.9,
+      "end": 300.32,
+      "visualMode": "kinetic",
+      "visualRole": "experience",
+      "narrativeRole": "next_curiosity",
+      "rewardType": "scale",
+      "rewardStrength": 0.78,
+      "questionOut": "",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "video:stock"
+      ]
+    }
+  ]
+}
