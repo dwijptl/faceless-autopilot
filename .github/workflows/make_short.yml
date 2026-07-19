@@ -2,10 +2,13 @@ name: Make Short
 
 on:
   schedule:
-    # Tue / Wed / Fri / Sat at 05:00 UTC (= 10:30 AM IST) — shorts fill the
-    # gap days between Mon/Thu long-form videos. Publish in the evening:
-    # Shorts scroll in India peaks 7-10 PM IST.
-    - cron: "0 5 * * 2,3,5,6"
+    # Mon/Tue/Thu/Fri/Sat at 23:00 UTC (= 7 PM Kitchener) — each short is
+    # ready the EVENING BEFORE its publish day (Tue/Wed/Fri/Sat/Sun: 5/week).
+    # Review at night, then SCHEDULE in YouTube Studio (Kitchener time):
+    #   Tue+Wed 8:00-9:00 AM  -> 5:30-6:30 PM IST
+    #   Fri     6:30-7:30 AM  -> 4:00-5:00 PM IST
+    #   Sat+Sun 1:30 AM       -> 11:00 AM IST (schedule it before bed)
+    - cron: "0 23 * * 1,2,4,5,6"
   workflow_dispatch:
     inputs:
       topic:
