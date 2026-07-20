@@ -101,6 +101,26 @@ def thumbnail_remotion(manifest_path: str, workdir: str, thumb_path: str) -> Non
     subprocess.run(cmd, cwd=REMOTION_DIR, check=True, timeout=1200)
 
 
+INDIA_DESC_HEADER = ("\U0001F1EE\U0001F1F3 \u0939\u093f\u0902\u0926\u0940 \u092e\u0947\u0902 space \u0914\u0930 science \u0915\u0940 \u0916\u094b\u091c \u2014 TERRA INCOGNITA\n\n")
+BASE_HINDI_TAGS = ["\u0939\u093f\u0902\u0926\u0940", "\u0939\u093f\u0902\u0926\u0940 \u0935\u093f\u091c\u094d\u091e\u093e\u0928",
+                   "\u092d\u093e\u0930\u0924", "\u0935\u093f\u091c\u094d\u091e\u093e\u0928 \u0939\u093f\u0902\u0926\u0940 \u092e\u0947\u0902",
+                   "hindi science", "space hindi"]
+
+
+def _india_tags(tags: list) -> list:
+    """Base Hindi/India tags first (audience-cluster signal), then the
+    script's own tags, deduplicated, capped at 500 chars total (YT limit)."""
+    seen, out = set(), []
+    for t in BASE_HINDI_TAGS + list(tags or []):
+        k = t.strip()
+        if k and k.lower() not in seen:
+            seen.add(k.lower())
+            out.append(k)
+    while sum(len(t) + 2 for t in out) > 480 and len(out) > len(BASE_HINDI_TAGS):
+        out.pop()
+    return out
+
+
 def _asset_manifest(asset: dict) -> dict:
     return {
         "path": os.path.basename(asset["path"]),
@@ -788,7 +808,7 @@ def main() -> None:
 
 ### Description (paste into YouTube)
 
-{script['description']}
+{INDIA_DESC_HEADER}{script['description']}
 
 ### Chapters (paste at the END of the description — enables YouTube chapters)
 
@@ -796,7 +816,7 @@ def main() -> None:
 
 ### Tags
 
-{', '.join(script.get('tags', []))}
+{', '.join(_india_tags(script.get('tags', [])))}
 
 ### Title & thumbnail alternates (pick your favourite before uploading)
 
