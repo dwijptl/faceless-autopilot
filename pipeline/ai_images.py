@@ -137,11 +137,13 @@ def _gemini_image(prompt: str, out_path: str, api_key: str, cfg: dict,
 
 # ── public API (signature unchanged — assets.py keeps working) ──────────
 def generate(prompt: str, out_path: str, api_key: str, cfg: dict,
-             aspect: str = "16:9 wide") -> bool:
+             aspect: str = "16:9 wide", provider: str = "auto") -> bool:
+    """provider: "auto" (FLUX then Gemini), "gemini" (free tier only — used
+    for thumbnails so paid FLUX credits stay reserved for in-video shots)."""
     aicfg = cfg.get("ai_images", {})
     if not aicfg.get("enabled", True):
         return False
-    if _flux(prompt, out_path, cfg, aspect):
+    if provider != "gemini" and _flux(prompt, out_path, cfg, aspect):
         return True
     if _gemini_image(prompt, out_path, api_key, cfg, aspect):
         return True

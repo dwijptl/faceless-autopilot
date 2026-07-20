@@ -549,7 +549,9 @@ def main() -> None:
     tp = (script.get("thumb_prompt") or "").strip()
     if tp:
         p = os.path.join(workdir, "thumb_ai.png")
-        if ai_images.generate(tp, p, gemini_key, cfg, aspect="16:9 wide"):
+        if ai_images.generate(tp, p, gemini_key, cfg, aspect="16:9 wide",
+                              provider=str(cfg.get("thumbnail", {})
+                                           .get("ai_provider", "gemini"))):
             if _thumb_mean_luma(p) < 42:  # murky — one brighter retry
                 print("[thumb] too dark for feed size — regenerating brighter")
                 bright_tp = (tp + " The subject is LARGE in frame with bright "
@@ -557,6 +559,8 @@ def main() -> None:
                              "light — clearly readable as a tiny thumbnail, "
                              "not a dark murky image.")
                 ai_images.generate(bright_tp, p, gemini_key, cfg,
+                                   provider=str(cfg.get("thumbnail", {})
+                                                .get("ai_provider", "gemini")),
                                    aspect="16:9 wide")
             _lift_thumb(p)
             thumb_ai = "thumb_ai.png"

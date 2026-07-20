@@ -202,9 +202,21 @@ LANGUAGE — this channel speaks HINDI:
 - EXCEPTION — thumb_text: bold ENGLISH/Hinglish keywords in Latin script
   ("DEADLY PLANET", "MYSTERY SOLVED", "AAKHIR KYUN?") — English thumbnail
   keywords outperform Devanagari in the Hindi market.
-- Register: the Hindi of a good documentary narrator — clear, warm,
-  conversational. Common loanwords are fine in Devanagari (डॉक्यूमेंट्री,
-  किलोमीटर), but never write full English sentences.
+- Register: CASUAL spoken Hindi (Hindustani) — the Hindi a 22-year-old in
+  Delhi uses with a friend, NOT शुद्ध/साहित्यिक/textbook Hindi. The viewer
+  should never hit a word they'd have to look up.
+- USE English loanwords in Devanagari wherever urban speakers naturally do:
+  स्पेस, ग्रैविटी, यूनिवर्स, गैलेक्सी, एनर्जी, प्रेशर, टेम्परेचर, स्पीड,
+  ऑर्बिट, एस्ट्रोनॉट, साइंटिस्ट, ब्लैक होल, लाइट, सिग्नल, मशीन.
+- BANNED textbook words → use the everyday word instead:
+  गुरुत्वाकर्षण→ग्रैविटी · आकाशगंगा→गैलेक्सी · परिक्रमा→ऑर्बिट/चक्कर ·
+  खगोलशास्त्री→साइंटिस्ट · अंतरिक्ष यात्री→एस्ट्रोनॉट · ऊष्मा→गर्मी ·
+  दाब→प्रेशर · प्रकाश वर्ष→लाइट ईयर · उत्सर्जित→बाहर फेंकता है ·
+  संकुचित→सिकुड़ता है · अभिकल्पना→आइडिया · अनुनाद→रेज़ोनेंस.
+  (ब्रह्मांड and वैज्ञानिक are fine — common speech.)
+- SELF-TEST for every line: would it sound natural in a WhatsApp voice note
+  to a friend? If any word feels like a school textbook, replace it. Never
+  write full English sentences — mix at the word level only.
 - NUMBERS in narration: Arabic numerals; anything longer than 4 digits gets
   commas (10,000 not 10000) so the voice reads it as one number.
 - HARD RULE: search_terms and ai_prompt stay in ENGLISH — stock libraries
