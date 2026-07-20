@@ -147,3 +147,48 @@ def test_lint_never_mutates_script():
     before = copy.deepcopy(script)
     retention_lint.lint(script, CFG)
     assert script == before
+
+
+# ---- deterministic C9 reconcile (script_gen._reconcile_display_numbers) ----
+
+def _c9_script():
+    return {"scenes": [
+        {"n": 1, "narration": "सूरज से बड़ा तारा गिरता है।",
+         "visual_mode": "broll",
+         "milestone": {"value": 1000000000.0, "label": "YEARS", "unit": "yr"}},
+        {"n": 2, "narration": "ब्लैक होल 9,200 मीटर तक फैलता है।",
+         "visual_mode": "stat",
+         "stat": {"value": 9200, "suffix": "m", "label": "size"}},
+    ]}
+
+
+def test_reconcile_drops_unspoken_milestone_keeps_spoken_stat():
+    import script_gen
+    cfg = {}
+    script = _c9_script()
+    report = {"violations": [{"code": "claim_display_mismatch"}]}
+    script_gen._reconcile_display_numbers(script, report, cfg)
+    assert script["scenes"][0]["milestone"] == {}          # unspoken -> hidden
+    assert script["scenes"][1]["stat"]["value"] == 9200    # spoken -> kept
+    assert script["scenes"][1]["visual_mode"] == "stat"
+
+
+def test_reconcile_stat_without_spoken_number_falls_back_to_broll():
+    import script_gen
+    script = {"scenes": [
+        {"n": 1, "narration": "दबाव हर सांस को कुचल देता है।",
+         "visual_mode": "stat",
+         "stat": {"value": 1100, "suffix": "atm", "label": "pressure"}}]}
+    report = {"violations": [{"code": "claim_display_mismatch"}]}
+    script_gen._reconcile_display_numbers(script, report, {})
+    assert script["scenes"][0]["stat"] == {}
+    assert script["scenes"][0]["visual_mode"] == "broll"
+
+
+def test_reconcile_noop_without_c9_violation():
+    import script_gen
+    script = _c9_script()
+    report = {"violations": [{"code": "engine_flat"}]}
+    out = script_gen._reconcile_display_numbers(script, report, {})
+    assert script["scenes"][0]["milestone"]["value"] == 1000000000.0
+    assert out is report
