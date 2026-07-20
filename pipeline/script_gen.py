@@ -714,6 +714,42 @@ SCENES:
         return visual_beats_mod.normalize_plan(script, None, cfg)
 
 
+def _reconcile_display_numbers(script: dict, report: dict, cfg: dict) -> dict:
+    """Deterministic last resort for claim_display_mismatch (C9), applied
+    AFTER the LLM repair loop and BEFORE TTS: a displayed number the
+    narration never speaks is removed from the screen. Screen and voice must
+    agree — when the repair could not make the voice say the number, the
+    screen stops showing it. Milestones simply hide for that scene; a
+    stat/compare scene whose narration has no number falls back to broll
+    (this runs pre-assets, so the fallback renders normally). Fail-open."""
+    codes = {v.get("code") for v in report.get("violations", [])}
+    if "claim_display_mismatch" not in codes:
+        return report
+    fixed = []
+    for i, s in enumerate(script.get("scenes", [])):
+        narration = str(s.get("narration", ""))
+        for field in ("stat", "compare", "milestone"):
+            payload = s.get(field) or {}
+            value = payload.get("value")
+            variants = retention_lint._num_variants(value)
+            try:
+                if not variants or float(value) == 0:
+                    continue
+            except (TypeError, ValueError):
+                continue
+            if any(v in narration for v in variants):
+                continue
+            s[field] = {}
+            if field in ("stat", "compare") and s.get("visual_mode") == field:
+                s["visual_mode"] = "broll"
+            fixed.append(f"scene {i + 1} {field}={value:g}")
+    if fixed:
+        print("[retention] reconciled unspoken display numbers (screen now "
+              "agrees with voice): " + "; ".join(fixed))
+        report = retention_lint.lint(script, cfg)
+    return report
+
+
 def _retention_pass(script: dict, cfg: dict, api_key: str, topic: str) -> dict:
     """Deterministic story audit + bounded repair loop (pre-TTS, so repairs
     are free). Fail-open: the final report travels on the script and run.py
@@ -753,6 +789,7 @@ def _retention_pass(script: dict, cfg: dict, api_key: str, topic: str) -> dict:
             print(f"[retention] repair pass failed ({exc}) — keeping draft")
             break
         report = retention_lint.lint(script, cfg)
+    report = _reconcile_display_numbers(script, report, cfg)
     status = "PASSED" if report["passed"] else "FAILED"
     print(f"[retention] story audit {status} — "
           f"reveal at {report['metrics'].get('reveal_fraction')}, "

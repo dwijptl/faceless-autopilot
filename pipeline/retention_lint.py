@@ -45,8 +45,8 @@ def _num_variants(value) -> list:
     if v == int(v):
         i = int(v)
         out.append(str(i))
-        if abs(i) >= 10000:
-            out.append(f"{i:,}")
+        if abs(i) >= 1000:
+            out.append(f"{i:,}")  # "9,200" is spoken text too
     else:
         out.append(f"{v:g}")
         out.append(str(int(v)))
