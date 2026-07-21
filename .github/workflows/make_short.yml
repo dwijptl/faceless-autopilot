@@ -1,11 +1,17 @@
 name: Make Short
 
 on:
-  # Scheduled shorts are PAUSED (creator decision 2026-07-20: manual only
-  # while the channel's India/Hindi audience targeting beds in).
-  # To resume the nightly cadence, restore under `on:`:
-  #   schedule:
-  #     - cron: "0 23 * * 1,2,4,5,6"   # Mon/Tue/Thu/Fri/Sat 7 PM Kitchener
+  schedule:
+    # DAILY at 23:00 UTC (= 7 PM Kitchener EDT / 6 PM EST) — each short is
+    # generated the EVENING BEFORE its publish day, so the nightly ritual is:
+    # review the release -> schedule the YouTube publish -> sleep.
+    # Volume is the discovery mechanism on a young channel: the Shorts feed
+    # is the only surface currently distributing this channel to strangers
+    # (53% of Shorts views), so cadence went 5/week -> 7/week on 2026-07-20.
+    # Publish times (Kitchener) -> lands in the Indian evening peak:
+    #   weekdays 8:00-9:00 AM  -> 5:30-6:30 PM IST
+    #   Sat/Sun  1:30 AM       -> 11:00 AM IST (schedule before bed)
+    - cron: "0 23 * * *"
   workflow_dispatch:
     inputs:
       topic:

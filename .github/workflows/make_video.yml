@@ -2,12 +2,14 @@ name: Make Video
 
 on:
   schedule:
-    # Sun + Wed at 23:00 UTC (= 7 PM Kitchener EDT / 6 PM EST) — the video
-    # for Monday/Thursday is ready the EVENING BEFORE, creator local time.
-    # Nightly ritual: review the release, then SCHEDULE the YouTube publish
-    # for ~6:30 AM Kitchener = ~4:00-4:30 PM IST (Hindi long-form viewing
-    # peaks 6-9 PM IST). You never wake up early; QC review stays.
-    - cron: "0 23 * * 0,3"
+    # Wednesday at 23:00 UTC (= 7 PM Kitchener EDT / 6 PM EST) — Thursday's
+    # video is ready the EVENING BEFORE, creator local time. Review the
+    # release, then SCHEDULE the YouTube publish for ~6:30 AM Kitchener
+    # = ~4:00-4:30 PM IST (Hindi long-form viewing peaks 6-9 PM IST).
+    # 1/week (was Sun+Wed): long-form is the watch-time and monetization
+    # base, but at this channel size discovery comes from Shorts, so the
+    # weekly slot keeps the back-catalogue growing without starving cadence.
+    - cron: "0 23 * * 3"
   workflow_dispatch:
     inputs:
       topic:
