@@ -101,24 +101,92 @@ def thumbnail_remotion(manifest_path: str, workdir: str, thumb_path: str) -> Non
     subprocess.run(cmd, cwd=REMOTION_DIR, check=True, timeout=1200)
 
 
+# ── India/Hindi audience targeting for YouTube metadata ─────────────────
+# YouTube classifies a channel's audience from the LANGUAGE and SEMANTICS of
+# its metadata. Devanagari in the first two lines of the description is the
+# strongest text signal we control; the tag mix decides which Hindi cluster
+# we land in. (Per-video "Video language: Hindi" in Studio still matters most.)
+
 INDIA_DESC_HEADER = ("\U0001F1EE\U0001F1F3 \u0939\u093f\u0902\u0926\u0940 \u092e\u0947\u0902 space \u0914\u0930 science \u0915\u0940 \u0916\u094b\u091c \u2014 TERRA INCOGNITA\n\n")
-BASE_HINDI_TAGS = ["\u0939\u093f\u0902\u0926\u0940", "\u0939\u093f\u0902\u0926\u0940 \u0935\u093f\u091c\u094d\u091e\u093e\u0928",
-                   "\u092d\u093e\u0930\u0924", "\u0935\u093f\u091c\u094d\u091e\u093e\u0928 \u0939\u093f\u0902\u0926\u0940 \u092e\u0947\u0902",
-                   "hindi science", "space hindi"]
+
+# Evergreen Hindi discovery tags — what an Indian viewer actually types.
+BASE_HINDI_TAGS = ["\u0939\u093f\u0902\u0926\u0940 \u092e\u0947\u0902 \u0935\u093f\u091c\u094d\u091e\u093e\u0928",       # हिंदी में विज्ञान
+                   "\u0935\u093f\u091c\u094d\u091e\u093e\u0928 \u0915\u0947 \u0930\u0939\u0938\u094d\u092f",              # विज्ञान के रहस्य
+                   "\u092c\u094d\u0930\u0939\u094d\u092e\u093e\u0902\u0921 \u0915\u0947 \u0930\u0939\u0938\u094d\u092f",  # ब्रह्मांड के रहस्य
+                   "\u0905\u0902\u0924\u0930\u093f\u0915\u094d\u0937 \u0939\u093f\u0902\u0926\u0940",                        # अंतरिक्ष हिंदी
+                   "\u0939\u093f\u0902\u0926\u0940",                                                                                  # हिंदी
+                   "\u092d\u093e\u0930\u0924",                                                                                        # भारत
+                   "hindi science", "space hindi", "science in hindi",
+                   "hindi documentary"]
+
+# Hinglish search terms — how young Indian viewers actually type on mobile.
+HINGLISH_TAGS = ["vigyan hindi", "brahmand rahasya", "antariksh hindi"]
+
+SUBSCRIBE_CTA = ("\U0001F514 \u0910\u0938\u0940 \u0939\u0940 \u0916\u094b\u091c\u094b\u0902 \u0915\u0947 \u0932\u093f\u090f "
+                 "\u0938\u092c\u094d\u0938\u0915\u094d\u0930\u093e\u0907\u092c \u0915\u0930\u0947\u0902 \u2014 "
+                 "TERRA INCOGNITA")   # 🔔 ऐसी ही खोजों के लिए सब्सक्राइब करें
+BASE_HASHTAGS = ["#\u0939\u093f\u0902\u0926\u0940", "#\u0935\u093f\u091c\u094d\u091e\u093e\u0928",
+                 "#\u092d\u093e\u0930\u0924"]   # #हिंदी #विज्ञान #भारत
 
 
-def _india_tags(tags: list) -> list:
-    """Base Hindi/India tags first (audience-cluster signal), then the
-    script's own tags, deduplicated, capped at 500 chars total (YT limit)."""
+def _india_tags(tags: list, is_short: bool = False) -> list:
+    """Hindi-first tag list: evergreen Hindi discovery tags, then Hinglish,
+    then the script's own topic tags, deduped and capped to YouTube's 500
+    chars. Topic tags are never dropped before the evergreen ones because the
+    evergreen block is what routes the video into the Hindi/India cluster."""
+    base = list(BASE_HINDI_TAGS) + list(HINGLISH_TAGS)
+    if is_short:
+        base = base + ["shorts", "hindi shorts",
+                       "\u0935\u093f\u091c\u094d\u091e\u093e\u0928 \u0936\u0949\u0930\u094d\u091f\u094d\u0938"]  # विज्ञान शॉर्ट्स
     seen, out = set(), []
-    for t in BASE_HINDI_TAGS + list(tags or []):
-        k = t.strip()
+    for t in base + list(tags or []):
+        k = " ".join(str(t).split())[:30].strip()
         if k and k.lower() not in seen:
             seen.add(k.lower())
             out.append(k)
-    while sum(len(t) + 2 for t in out) > 480 and len(out) > len(BASE_HINDI_TAGS):
+    while sum(len(t) + 2 for t in out) > 480 and len(out) > len(base):
+        out.pop()
+    while sum(len(t) + 2 for t in out) > 480:
         out.pop()
     return out
+
+
+def get_short_tags(tags: list) -> list:
+    """Public wrapper used by run_short.py."""
+    return _india_tags(tags, is_short=True)
+
+
+def _hashtags(tags: list, is_short: bool = False) -> str:
+    """3-5 hashtags, Hindi first — these render above the title on YouTube."""
+    out = list(BASE_HASHTAGS)
+    for t in tags or []:
+        k = "".join(str(t).split())
+        if k and not k.isascii() and f"#{k}" not in out and len(out) < 5:
+            out.append(f"#{k}")
+    if is_short and "#shorts" not in out:
+        out.append("#shorts")
+    return " ".join(out)
+
+
+def build_description(script: dict, is_short: bool = False,
+                      chapters: str = "") -> str:
+    """Assemble the copy-paste YouTube description, India-targeted.
+
+    Order is deliberate — YouTube weighs the first ~150 chars most, and that
+    is also all a viewer sees before "...more":
+      1. Devanagari channel line (language signal + brand)
+      2. the script's own Hindi hook/summary
+      3. chapters (long-form only — drives session time)
+      4. Hindi subscribe CTA
+      5. Hindi-first hashtags
+    """
+    body = " ".join(str(script.get("description", "")).split())
+    parts = [INDIA_DESC_HEADER.rstrip("\n"), body]
+    if chapters and not is_short:
+        parts.append(chapters)
+    parts.append(SUBSCRIBE_CTA)
+    parts.append(_hashtags(script.get("tags", []), is_short))
+    return "\n\n".join(p for p in parts if p)
 
 
 def _asset_manifest(asset: dict) -> dict:
@@ -806,17 +874,13 @@ def main() -> None:
 **AI visuals:** {n_ai} · **Run:** {stamp} · **Renderer:** {used_engine} ·
 **Voice:** {voice_line}
 
-### Description (paste into YouTube)
+### Description (paste into YouTube — chapters + CTA + hashtags included)
 
-{INDIA_DESC_HEADER}{script['description']}
-
-### Chapters (paste at the END of the description — enables YouTube chapters)
-
-{_chapters_block(scenes) or "_not enough scenes for chapters_"}
+{build_description(script, is_short=False, chapters=_chapters_block(scenes))}
 
 ### Tags
 
-{', '.join(_india_tags(script.get('tags', [])))}
+{', '.join(_india_tags(script.get('tags', []), is_short=False))}
 
 ### Title & thumbnail alternates (pick your favourite before uploading)
 

@@ -50,22 +50,7 @@ def probe_duration(path: str) -> float:
         return 4.0
 
 
-INDIA_DESC_HEADER = ("\U0001F1EE\U0001F1F3 \u0939\u093f\u0902\u0926\u0940 \u092e\u0947\u0902 space \u0914\u0930 science \u0915\u0940 \u0916\u094b\u091c \u2014 TERRA INCOGNITA\n\n")
-BASE_HINDI_TAGS = ["\u0939\u093f\u0902\u0926\u0940", "\u0939\u093f\u0902\u0926\u0940 \u0935\u093f\u091c\u094d\u091e\u093e\u0928",
-                   "\u092d\u093e\u0930\u0924", "\u0935\u093f\u091c\u094d\u091e\u093e\u0928 \u0939\u093f\u0902\u0926\u0940 \u092e\u0947\u0902",
-                   "hindi science", "space hindi"]
-
-
-def _india_tags(tags: list) -> list:
-    seen, out = set(), []
-    for t in BASE_HINDI_TAGS + list(tags or []):
-        k = t.strip()
-        if k and k.lower() not in seen:
-            seen.add(k.lower())
-            out.append(k)
-    while sum(len(t) + 2 for t in out) > 480 and len(out) > len(BASE_HINDI_TAGS):
-        out.pop()
-    return out
+import run as run_mod  # noqa: E402  (shared India-targeting helpers)
 
 
 def short_cfg(cfg: dict) -> dict:
@@ -393,11 +378,11 @@ voice: {voice_line} · run {stamp}
 
 ### Description (paste into YouTube/Instagram)
 
-{INDIA_DESC_HEADER}{script['description']}
+{run_mod.build_description(script, is_short=True)}
 
 ### Tags
 
-{', '.join(_india_tags(script.get('tags', [])))}
+{', '.join(run_mod.get_short_tags(script.get('tags', [])))}
 
 ### Reliability report
 
