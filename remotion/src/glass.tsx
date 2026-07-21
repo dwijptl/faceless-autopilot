@@ -8,7 +8,7 @@ import {
 } from 'remotion';
 import {bodyFamily} from './elements';
 import {StylePack} from './styles';
-import {GLASS, GLOW, RADIUS, SPRING, panel, text, useEnter, useScale} from './motion-tokens';
+import {GLASS, GLOW, RADIUS, SPRING, anchorLayout, panel, springPresetFor, text, useEnter, useScale} from './motion-tokens';
 
 export type GlassVariant = 'fact' | 'metric' | 'location' | 'chapter' | 'reveal';
 
@@ -118,7 +118,7 @@ export const GlassCard: React.FC<{
   const {fps, width, height} = useVideoConfig();
   const s = useScale();
   const compact = width < height;
-  const enter = useEnter(3, variant === 'reveal' ? 'snap' : 'settle');
+  const enter = useEnter(3, variant === 'reveal' ? 'snap' : springPresetFor(style));
   const count = spring({frame: frame - 7, fps, config: SPRING.drift});
   const hasValue = data.value != null && Number.isFinite(Number(data.value));
   const value = Number(data.value ?? 0);
@@ -189,7 +189,7 @@ export const GlassCard: React.FC<{
     </div>;
   }
 
-  return <AbsoluteFill style={{justifyContent:'center',alignItems:'center',padding:(compact?70:90)*s,
+  return <AbsoluteFill style={{...anchorLayout(style, s, compact ? 70 : 90),
     fontFamily:bodyFamily(style),pointerEvents:'none'}}>
     <div style={{opacity:enter.opacity,transform:enter.transform,maxWidth,
       filter:`drop-shadow(0 ${18*s}px ${38*s}px rgba(0,0,0,.45))`}}>

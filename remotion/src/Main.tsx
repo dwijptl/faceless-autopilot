@@ -330,10 +330,13 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
       ) : null}
       <CtaLayer event={m.cta} style={style} fps={fps} />
       {m.watermarkPath ? (
-        <Watermark src={m.watermarkPath} opacity={m.watermarkOpacity ?? 0.08} />
+        <Watermark src={m.watermarkPath} opacity={m.watermarkOpacity ?? 0.08}
+          corner={style.layout?.watermark} />
       ) : null}
-      {m.progressBar ? (
-        <ProgressBar accent={style.accent} marks={chapterMarks} />
+      {m.progressBar && style.layout?.progress !== 'none' ? (
+        <ProgressBar accent={style.accent} marks={chapterMarks}
+          position={style.layout?.progress?.startsWith('bottom') ? 'bottom' : 'top'}
+          thickness={style.layout?.progress === 'bottom-thick' ? 14 : 8} />
       ) : null}
       <SfxLayer events={m.sfx ?? []} fps={fps} />
       <MusicTrack m={m} />

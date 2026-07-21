@@ -200,10 +200,15 @@ export const ShortMain: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
       <TextureOverlay style={style} opacityMul={vr.texOpacity} />
       <CtaLayer event={m.cta} style={style} fps={fps} />
       {m.watermarkPath ? (
-        <Watermark src={m.watermarkPath} corner="tl"
+        <Watermark src={m.watermarkPath}
+          corner={style.layout?.watermark ?? 'tl'}
           opacity={Math.max(m.watermarkOpacity ?? 0.08, 0.1)} />
       ) : null}
-      {m.progressBar ? <ProgressBar accent={style.accent} /> : null}
+      {m.progressBar && style.layout?.progress !== 'none' ? (
+        <ProgressBar accent={style.accent}
+          position={style.layout?.progress?.startsWith('bottom') ? 'bottom' : 'top'}
+          thickness={style.layout?.progress === 'bottom-thick' ? 12 : 8} />
+      ) : null}
       <SfxLayer events={m.sfx ?? []} fps={fps} />
       <MusicTrack m={m} />
     </AbsoluteFill>

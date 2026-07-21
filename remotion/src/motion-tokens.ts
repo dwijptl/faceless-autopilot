@@ -5,6 +5,7 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from 'remotion';
+import type {StylePack} from './styles';
 
 /** Shared motion and surface vocabulary for every new library component. */
 export const SPRING = {
@@ -13,6 +14,43 @@ export const SPRING = {
   drift: {damping: 24, stiffness: 75, mass: 1.05},
   wobble: {damping: 10, stiffness: 165, mass: 0.72},
 } as const;
+
+// ── Pack motion/layout DNA consumers ───────────────────────────────────
+const SPRING_BY_PACK = {
+  calm: 'drift', settle: 'settle', snappy: 'snap',
+} as const;
+
+/** Spring preset NAME for a pack (for useEnter). */
+export const springPresetFor = (style?: StylePack): keyof typeof SPRING =>
+  SPRING_BY_PACK[style?.motion?.spring ?? 'settle'];
+
+/** Spring CONFIG for a pack (for direct spring() calls). */
+export const springFor = (style?: StylePack) =>
+  SPRING[springPresetFor(style)];
+
+/** Where a pack anchors its overlay graphics (stat/card/glass/kinetic).
+ * Replaces the hardcoded centered layout — noir leans its cards left,
+ * terracotta right, some packs push them high. Returns the root
+ * AbsoluteFill's justify/align/padding. */
+export const anchorLayout = (
+  style: StylePack, s: number, basePad = 70
+): CSSProperties => {
+  const pad = basePad * s;
+  const a = style.layout?.overlayAnchor ?? 'center';
+  if (a === 'left') {
+    return {padding: pad, paddingLeft: pad + 60 * s,
+      justifyContent: 'center', alignItems: 'flex-start'};
+  }
+  if (a === 'right') {
+    return {padding: pad, paddingRight: pad + 60 * s,
+      justifyContent: 'center', alignItems: 'flex-end'};
+  }
+  if (a === 'high') {
+    return {padding: pad, paddingTop: pad + 50 * s,
+      justifyContent: 'flex-start', alignItems: 'center'};
+  }
+  return {padding: pad, justifyContent: 'center', alignItems: 'center'};
+};
 
 export const TIMING = {
   enter: 10,

@@ -35,15 +35,19 @@ export const KenBurnsImage: React.FC<{
   src: string;
   durationInFrames: number;
   seed: string;
-}> = ({src, durationInFrames, seed}) => {
+  energy?: number; // pack motion DNA: 0.6 calm drift – 1.5 punchy push
+}> = ({src, durationInFrames, seed, energy = 1}) => {
   const frame = useCurrentFrame();
+  const e = Math.min(Math.max(energy, 0.4), 1.6);
   const zoomIn = random(`kb-${seed}`) < 0.5;
-  const driftX = (random(`dx-${seed}`) - 0.5) * 60;
-  const driftY = (random(`dy-${seed}`) - 0.5) * 40;
+  const driftX = (random(`dx-${seed}`) - 0.5) * 60 * e;
+  const driftY = (random(`dy-${seed}`) - 0.5) * 40 * e;
   const t = frame / Math.max(durationInFrames, 1);
+  const lo = 1.04 + 0.02 * e;
+  const hi = lo + 0.12 * e;
   const scale = zoomIn
-    ? interpolate(t, [0, 1], [1.06, 1.18])
-    : interpolate(t, [0, 1], [1.18, 1.06]);
+    ? interpolate(t, [0, 1], [lo, hi])
+    : interpolate(t, [0, 1], [hi, lo]);
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <Img
@@ -67,21 +71,25 @@ export const ParallaxKenBurns: React.FC<{
   src: string;
   durationInFrames: number;
   seed: string;
-}> = ({src, durationInFrames, seed}) => {
+  energy?: number; // pack motion DNA
+}> = ({src, durationInFrames, seed, energy = 1}) => {
   const frame = useCurrentFrame();
+  const e = Math.min(Math.max(energy, 0.4), 1.6);
   const t = frame / Math.max(durationInFrames, 1);
   const dirX = random(`px-${seed}`) < 0.5 ? 1 : -1;
   const dirY = random(`py-${seed}`) < 0.5 ? 1 : -1;
   const zoomIn = random(`pz-${seed}`) < 0.6;
+  const fgLo = 1.06 + 0.04 * e;
+  const fgHi = fgLo + 0.14 * e;
   const fgScale = zoomIn
-    ? interpolate(t, [0, 1], [1.1, 1.24])
-    : interpolate(t, [0, 1], [1.24, 1.1]);
+    ? interpolate(t, [0, 1], [fgLo, fgHi])
+    : interpolate(t, [0, 1], [fgHi, fgLo]);
   const bgScale = zoomIn
-    ? interpolate(t, [0, 1], [1.3, 1.36])
-    : interpolate(t, [0, 1], [1.36, 1.3]);
-  const fgX = dirX * interpolate(t, [0, 1], [0, 42]);
-  const fgY = dirY * interpolate(t, [0, 1], [0, 26]);
-  const rot = dirX * interpolate(t, [0, 1], [0, 0.5]);
+    ? interpolate(t, [0, 1], [1.3, 1.3 + 0.06 * e])
+    : interpolate(t, [0, 1], [1.3 + 0.06 * e, 1.3]);
+  const fgX = dirX * interpolate(t, [0, 1], [0, 42 * e]);
+  const fgY = dirY * interpolate(t, [0, 1], [0, 26 * e]);
+  const rot = dirX * interpolate(t, [0, 1], [0, 0.5 * e]);
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <Img
@@ -188,10 +196,12 @@ export const SceneVisual: React.FC<{
                 seed={`${sceneN}-${s.idx}`} />
             ) : s.asset.ai ? (
               <ParallaxKenBurns src={staticFile(s.asset.path)}
-                durationInFrames={s.frames} seed={`${sceneN}-${s.idx}`} />
+                durationInFrames={s.frames} seed={`${sceneN}-${s.idx}`}
+                energy={style.motion?.kenBurns} />
             ) : (
               <KenBurnsImage src={staticFile(s.asset.path)}
-                durationInFrames={s.frames} seed={`${sceneN}-${s.idx}`} />
+                durationInFrames={s.frames} seed={`${sceneN}-${s.idx}`}
+                energy={style.motion?.kenBurns} />
             )}
           </Sequence>
         ))}
@@ -273,8 +283,7 @@ export const CaptionsLayer: React.FC<{
   const {fps, height, width} = useVideoConfig();
   const s = Math.max(width, height) / 1920;
   const vr = variation ?? DEFAULT_VARIATION;
-  const yBias = (style.captionYBias ?? 0) + vr.captionYOff;
-  const clampY = (f: number) => Math.min(Math.max(f + yBias, 0.5), 0.9);
+  const clampY = (f: number) => Math.min(Math.max(f + vr.captionYOff, 0.5), 0.9);
   return (
     <AbsoluteFill>
       {captions.map((c, i) => {
@@ -285,7 +294,8 @@ export const CaptionsLayer: React.FC<{
         return (
           <Sequence key={i} from={from} durationInFrames={dur}>
             <CaptionChunk text={c.text} style={style}
-              y={height * clampY(compact ? (compactYFrac ?? 0.84) : (yFrac ?? 0.78))}
+              y={height * clampY(compact ? (compactYFrac ?? 0.84)
+                : (yFrac ?? style.layout?.captionY ?? 0.78))}
               s={s} durFrames={dur} compact={compact}
               sizeBoost={(sizeBoost ?? 1) * vr.captionScale}
               maxW={vr.captionMaxW} tiltSeed={vr.tiltSeed} chunkIndex={i} />
@@ -314,6 +324,9 @@ const CaptionChunk: React.FC<{
   const pop = spring({frame, fps, config: {damping: 14, stiffness: 240, mass: 0.6}});
   const scale = interpolate(pop, [0, 1], [0.84, 1]);
   const captionScale = (compact ? 0.72 : 1) * sizeBoost;
+  const align = style.layout?.captionAlign ?? 'center';
+  const alignJustify = align === 'left' ? 'flex-start'
+    : align === 'right' ? 'flex-end' : 'center';
   const font = bodyFamily(style);
   const serifFont = headingFamily(style);
   const v = style.captionVariant;
@@ -340,8 +353,8 @@ const CaptionChunk: React.FC<{
     fontSize: number, doneColor: string, shadow?: string,
     opts?: {tilt?: boolean; altColor?: string; weight?: number}
   ) => (
-    <div style={{display: 'flex', flexWrap: 'wrap', justifyContent: 'center',
-      columnGap: 13 * s, rowGap: 4 * s, lineHeight: 1.35, textAlign: 'center'}}>
+    <div style={{display: 'flex', flexWrap: 'wrap', justifyContent: alignJustify,
+      columnGap: 13 * s, rowGap: 4 * s, lineHeight: 1.35, textAlign: align}}>
       {words.map((w, i) => {
         const wpop = spring({frame: frame - starts[i], fps,
           config: {damping: 15, stiffness: 260, mass: 0.5}});
@@ -374,7 +387,7 @@ const CaptionChunk: React.FC<{
     ) : v === 'minimal' ? (
       <div style={{
         color: BRAND.text, fontSize: 50 * captionScale * s, fontWeight: 600, letterSpacing: 0.4,
-        textAlign: 'center', lineHeight: 1.4, textShadow: '0 3px 18px rgba(0,0,0,0.9)',
+        textAlign: align, lineHeight: 1.4, textShadow: '0 3px 18px rgba(0,0,0,0.9)',
         borderBottom: `${3 * s}px solid ${style.accent}`, paddingBottom: 8 * s,
       }}>{text}</div>
     ) : v === 'chip' ? (
@@ -398,7 +411,7 @@ const CaptionChunk: React.FC<{
       <div style={{
         fontFamily: serifFont, color: BRAND.text,
         fontSize: 48 * captionScale * s, fontWeight: 600,
-        textAlign: 'center', lineHeight: 1.45,
+        textAlign: align, lineHeight: 1.45,
         textShadow: '0 3px 20px rgba(0,0,0,0.92)',
         borderTop: `${1.5 * s}px solid ${hexA(style.accent, 0.55)}`,
         borderBottom: `${1.5 * s}px solid ${hexA(style.accent, 0.55)}`,
@@ -476,11 +489,26 @@ const CaptionChunk: React.FC<{
       </div>
     );
 
+  // pack motion DNA: how the caption ENTERS
+  const entry = style.motion?.entry ?? 'pop';
+  const riseSpring = spring({frame, fps,
+    config: {damping: 19, stiffness: 130, mass: 0.8}});
+  const fadeIn = interpolate(frame, [0, 9], [0, 1],
+    {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  const slideFrom = align === 'right' ? 70 : -70;
+  const enterStyle: React.CSSProperties =
+    entry === 'fade' ? {opacity: fadeIn}
+    : entry === 'rise' ? {opacity: riseSpring,
+        transform: `translateY(${interpolate(riseSpring, [0, 1], [26, 0])}px)`}
+    : entry === 'slide' ? {opacity: riseSpring,
+        transform: `translateX(${interpolate(riseSpring, [0, 1], [slideFrom, 0])}px)`}
+    : {opacity: pop, transform: `scale(${scale})`};
   return (
     <div style={{position: 'absolute', top: y, width: '100%', display: 'flex',
-      justifyContent: 'center', fontFamily: font}}>
-      <div style={{transform: `scale(${scale})`, opacity: pop,
-        maxWidth: `${Math.round(maxW * 100)}%`}}>
+      justifyContent: alignJustify,
+      padding: align === 'center' ? 0 : `0 ${Math.round(width * 0.045)}px`,
+      fontFamily: font}}>
+      <div style={{...enterStyle, maxWidth: `${Math.round(maxW * 100)}%`}}>
         {body}
       </div>
     </div>
@@ -570,14 +598,15 @@ export const StatCard: React.FC<{
 export const Watermark: React.FC<{
   src: string;
   opacity: number;
-  corner?: 'br' | 'tl';
+  corner?: 'br' | 'bl' | 'tl' | 'tr';
 }> = ({src, opacity, corner}) => {
   const {width, height} = useVideoConfig();
   const s = Math.max(width, height) / 1920;
   const place =
-    corner === 'tl'
-      ? {left: 36 * s, top: 36 * s}
-      : {right: 40 * s, bottom: 36 * s};
+    corner === 'tl' ? {left: 36 * s, top: 36 * s}
+    : corner === 'tr' ? {right: 40 * s, top: 36 * s}
+    : corner === 'bl' ? {left: 36 * s, bottom: 36 * s}
+    : {right: 40 * s, bottom: 36 * s};
   return (
     <Img src={staticFile(src)} style={{
       position: 'absolute', ...place,
@@ -722,20 +751,23 @@ export const SfxLayer: React.FC<{
 export const ProgressBar: React.FC<{
   accent: string;
   marks?: number[]; // chapter positions as 0-1 fractions
-}> = ({accent, marks}) => {
+  position?: 'top' | 'bottom';
+  thickness?: number;
+}> = ({accent, marks, position = 'top', thickness = 8}) => {
   const frame = useCurrentFrame();
   const {durationInFrames} = useVideoConfig();
+  const edge = position === 'bottom' ? {bottom: 0} : {top: 0};
   return (
     <>
       <div style={{
-        position: 'absolute', top: 0, left: 0, height: 8,
+        position: 'absolute', ...edge, left: 0, height: thickness,
         width: `${(frame / Math.max(durationInFrames - 1, 1)) * 100}%`,
         background: accent, opacity: 0.9,
       }} />
       {(marks ?? []).map((f, i) => (
         <div key={i} style={{
-          position: 'absolute', top: 0, left: `${Math.min(Math.max(f, 0), 1) * 100}%`,
-          width: 2, height: 8, background: 'rgba(244,247,251,0.4)',
+          position: 'absolute', ...edge, left: `${Math.min(Math.max(f, 0), 1) * 100}%`,
+          width: 2, height: thickness, background: 'rgba(244,247,251,0.4)',
         }} />
       ))}
     </>

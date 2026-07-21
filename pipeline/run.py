@@ -459,6 +459,7 @@ def main() -> None:
     cfg.setdefault("render", {})["style_pack"] = style  # steers AI-image look
     print(f"[style] topic-driven pack: {style} "
           f"(recent: {style_packs.recent_styles(style_packs.history_path(REPO_ROOT))})")
+    style_packs.apply_pacing(cfg, style, is_short=False)
 
     # shipped topics drive title-form / skeleton / topic-family rotation
     done_titles = script_gen._done_titles(done_file)

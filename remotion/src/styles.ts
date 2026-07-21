@@ -46,6 +46,32 @@ export type TextureKind =
 export type TransitionBias =
   | 'mixed' | 'slides' | 'fades' | 'wipes' | 'whips' | 'punches';
 
+// ── Layout DNA: where things LIVE on screen, per pack ──────────────────
+export type CaptionAlign = 'center' | 'left' | 'right';
+export type LowerThirdPos = 'tl' | 'tr' | 'bl';
+export type OverlayAnchor = 'center' | 'left' | 'right' | 'high';
+export type WatermarkCorner = 'br' | 'bl' | 'tl' | 'tr';
+export type ProgressStyle = 'top' | 'bottom' | 'bottom-thick' | 'none';
+
+export type PackLayout = {
+  captionAlign: CaptionAlign;
+  captionY: number;        // long-form caption anchor (fraction of height)
+  lowerThird: LowerThirdPos;
+  overlayAnchor: OverlayAnchor; // where stat/card/glass/kinetic graphics sit
+  watermark: WatermarkCorner;
+  progress: ProgressStyle;
+};
+
+// ── Motion DNA: how things MOVE, per pack ──────────────────────────────
+export type CaptionEntry = 'pop' | 'fade' | 'rise' | 'slide';
+export type Springiness = 'calm' | 'settle' | 'snappy';
+
+export type PackMotion = {
+  entry: CaptionEntry;   // caption entrance animation
+  spring: Springiness;   // card/lower-third spring character
+  kenBurns: number;      // still-photo movement energy (0.6 calm – 1.5 punchy)
+};
+
 export type StylePack = {
   name: string;
   accent: string;
@@ -60,7 +86,8 @@ export type StylePack = {
   visualFilter: string; // CSS filter applied to footage
   transitionBias: TransitionBias;
   texture: TextureKind;
-  captionYBias?: number; // fraction offset added to the caption anchor
+  layout: PackLayout;
+  motion: PackMotion;
   hud?: boolean; // persistent sci-doc HUD overlay
 };
 
@@ -88,6 +115,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'linear-gradient(180deg, rgba(255,176,32,0.05) 0%, rgba(10,20,40,0.14) 100%)',
     visualFilter: 'saturate(1.06) contrast(1.04)',
     transitionBias: 'mixed', texture: 'grain',
+    layout: {captionAlign: 'center', captionY: 0.78, lowerThird: 'tl',
+      overlayAnchor: 'center', watermark: 'br', progress: 'top'},
+    motion: {entry: 'pop', spring: 'settle', kenBurns: 1.0},
   },
   kinetic: {
     name: 'kinetic',
@@ -98,6 +128,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(4,8,16,0.42) 100%)',
     visualFilter: 'saturate(1.16) contrast(1.12)',
     transitionBias: 'whips', texture: 'none',
+    layout: {captionAlign: 'center', captionY: 0.74, lowerThird: 'tl',
+      overlayAnchor: 'center', watermark: 'tl', progress: 'top'},
+    motion: {entry: 'pop', spring: 'snappy', kenBurns: 1.35},
   },
   editorial: {
     name: 'editorial',
@@ -108,6 +141,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'linear-gradient(180deg, rgba(77,163,255,0.05) 0%, rgba(16,23,32,0.12) 100%)',
     visualFilter: 'saturate(0.92) contrast(1.02)',
     transitionBias: 'fades', texture: 'paper',
+    layout: {captionAlign: 'center', captionY: 0.8, lowerThird: 'tr',
+      overlayAnchor: 'center', watermark: 'br', progress: 'none'},
+    motion: {entry: 'fade', spring: 'calm', kenBurns: 0.7},
   },
   noir: {
     name: 'noir',
@@ -118,6 +154,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'linear-gradient(180deg, rgba(10,20,40,0.22) 0%, rgba(6,9,15,0.38) 100%)',
     visualFilter: 'grayscale(0.85) contrast(1.18) brightness(0.96)',
     transitionBias: 'wipes', texture: 'vignette',
+    layout: {captionAlign: 'left', captionY: 0.76, lowerThird: 'bl',
+      overlayAnchor: 'left', watermark: 'bl', progress: 'bottom'},
+    motion: {entry: 'fade', spring: 'calm', kenBurns: 0.8},
   },
   telemetry: {
     name: 'telemetry',
@@ -128,6 +167,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'linear-gradient(180deg, rgba(111,227,212,0.04) 0%, rgba(6,11,20,0.30) 100%)',
     visualFilter: 'saturate(0.88) contrast(1.10) brightness(0.97)',
     transitionBias: 'fades', texture: 'scanlines', hud: true,
+    layout: {captionAlign: 'left', captionY: 0.74, lowerThird: 'tr',
+      overlayAnchor: 'left', watermark: 'tr', progress: 'top'},
+    motion: {entry: 'rise', spring: 'settle', kenBurns: 0.75},
   },
 
   // ── History / culture ────────────────────────────────────────────────
@@ -140,6 +182,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'linear-gradient(180deg, rgba(216,162,74,0.08) 0%, rgba(20,16,10,0.34) 100%)',
     visualFilter: 'sepia(0.34) saturate(0.86) contrast(1.06)',
     transitionBias: 'fades', texture: 'paper',
+    layout: {captionAlign: 'left', captionY: 0.78, lowerThird: 'bl',
+      overlayAnchor: 'left', watermark: 'br', progress: 'bottom'},
+    motion: {entry: 'fade', spring: 'calm', kenBurns: 0.75},
   },
   manuscript: {
     name: 'manuscript', // mythology, ancient texts, sacred geometry
@@ -150,6 +195,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'radial-gradient(ellipse at 50% 20%, rgba(201,168,106,0.07) 0%, rgba(16,12,20,0.36) 100%)',
     visualFilter: 'sepia(0.18) saturate(0.9) contrast(1.05) brightness(0.97)',
     transitionBias: 'fades', texture: 'paper',
+    layout: {captionAlign: 'center', captionY: 0.8, lowerThird: 'tr',
+      overlayAnchor: 'center', watermark: 'br', progress: 'none'},
+    motion: {entry: 'fade', spring: 'calm', kenBurns: 0.65},
   },
   relic: {
     name: 'relic', // archaeology, ruins, museums
@@ -160,6 +208,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'linear-gradient(180deg, rgba(176,141,87,0.06) 0%, rgba(14,13,11,0.40) 100%)',
     visualFilter: 'saturate(0.8) contrast(1.12) brightness(0.95)',
     transitionBias: 'wipes', texture: 'vignette',
+    layout: {captionAlign: 'center', captionY: 0.78, lowerThird: 'bl',
+      overlayAnchor: 'center', watermark: 'bl', progress: 'bottom'},
+    motion: {entry: 'fade', spring: 'calm', kenBurns: 0.7},
   },
   bazaar: {
     name: 'bazaar', // Indian festivals, food, street culture
@@ -170,6 +221,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'linear-gradient(160deg, rgba(255,159,28,0.08) 0%, rgba(231,29,115,0.06) 55%, rgba(23,10,18,0.30) 100%)',
     visualFilter: 'saturate(1.28) contrast(1.06)',
     transitionBias: 'slides', texture: 'grain',
+    layout: {captionAlign: 'center', captionY: 0.76, lowerThird: 'tl',
+      overlayAnchor: 'center', watermark: 'tr', progress: 'top'},
+    motion: {entry: 'slide', spring: 'snappy', kenBurns: 1.2},
   },
   terracotta: {
     name: 'terracotta', // crafts, villages, human stories, warm earth
@@ -180,6 +234,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'linear-gradient(180deg, rgba(226,114,91,0.08) 0%, rgba(26,15,10,0.26) 100%)',
     visualFilter: 'saturate(1.12) contrast(1.02) sepia(0.08)',
     transitionBias: 'slides', texture: 'grain',
+    layout: {captionAlign: 'right', captionY: 0.78, lowerThird: 'tl',
+      overlayAnchor: 'right', watermark: 'br', progress: 'top'},
+    motion: {entry: 'rise', spring: 'settle', kenBurns: 0.95},
   },
   folklore: {
     name: 'folklore', // legends, village mysteries, night stories
@@ -190,6 +247,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'radial-gradient(ellipse at 50% 80%, rgba(201,180,88,0.07) 0%, rgba(11,7,20,0.42) 100%)',
     visualFilter: 'saturate(0.94) contrast(1.08) brightness(0.94)',
     transitionBias: 'fades', texture: 'vignette',
+    layout: {captionAlign: 'center', captionY: 0.8, lowerThird: 'bl',
+      overlayAnchor: 'center', watermark: 'bl', progress: 'none'},
+    motion: {entry: 'fade', spring: 'calm', kenBurns: 0.7},
   },
 
   // ── Space / physics ──────────────────────────────────────────────────
@@ -202,6 +262,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'radial-gradient(ellipse at 50% 10%, rgba(142,124,255,0.07) 0%, rgba(5,6,15,0.38) 100%)',
     visualFilter: 'saturate(1.08) contrast(1.10) brightness(0.96)',
     transitionBias: 'punches', texture: 'halation',
+    layout: {captionAlign: 'center', captionY: 0.74, lowerThird: 'tr',
+      overlayAnchor: 'center', watermark: 'tr', progress: 'none'},
+    motion: {entry: 'rise', spring: 'settle', kenBurns: 0.9},
   },
   quantum: {
     name: 'quantum', // physics, particles, the very small
@@ -212,6 +275,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'radial-gradient(ellipse at 30% 30%, rgba(178,107,255,0.06) 0%, rgba(6,3,16,0.36) 100%)',
     visualFilter: 'saturate(1.05) contrast(1.12) hue-rotate(-6deg)',
     transitionBias: 'punches', texture: 'halation',
+    layout: {captionAlign: 'left', captionY: 0.72, lowerThird: 'tr',
+      overlayAnchor: 'left', watermark: 'tl', progress: 'top'},
+    motion: {entry: 'fade', spring: 'calm', kenBurns: 0.8},
   },
   horizon: {
     name: 'horizon', // exploration, records, human achievement
@@ -222,6 +288,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'linear-gradient(200deg, rgba(255,142,90,0.09) 0%, rgba(18,13,20,0.30) 100%)',
     visualFilter: 'saturate(1.14) contrast(1.05)',
     transitionBias: 'mixed', texture: 'halation',
+    layout: {captionAlign: 'center', captionY: 0.78, lowerThird: 'tl',
+      overlayAnchor: 'center', watermark: 'br', progress: 'top'},
+    motion: {entry: 'pop', spring: 'settle', kenBurns: 1.1},
   },
 
   // ── Ocean / water / weather ──────────────────────────────────────────
@@ -234,6 +303,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'linear-gradient(180deg, rgba(46,119,184,0.10) 0%, rgba(2,7,12,0.46) 100%)',
     visualFilter: 'saturate(0.92) contrast(1.14) brightness(0.92) hue-rotate(8deg)',
     transitionBias: 'fades', texture: 'vignette',
+    layout: {captionAlign: 'left', captionY: 0.76, lowerThird: 'bl',
+      overlayAnchor: 'left', watermark: 'bl', progress: 'bottom'},
+    motion: {entry: 'fade', spring: 'calm', kenBurns: 0.7},
   },
   monsoon: {
     name: 'monsoon', // rain, rivers, climate, forests in weather
@@ -244,6 +316,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'linear-gradient(180deg, rgba(157,184,204,0.07) 0%, rgba(10,20,16,0.32) 100%)',
     visualFilter: 'saturate(1.02) contrast(1.05) brightness(0.96)',
     transitionBias: 'fades', texture: 'grain',
+    layout: {captionAlign: 'center', captionY: 0.8, lowerThird: 'tl',
+      overlayAnchor: 'center', watermark: 'br', progress: 'top'},
+    motion: {entry: 'rise', spring: 'settle', kenBurns: 0.85},
   },
   storm: {
     name: 'storm', // cyclones, lightning, extreme weather
@@ -254,6 +329,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'linear-gradient(180deg, rgba(143,168,200,0.09) 0%, rgba(10,14,20,0.40) 100%)',
     visualFilter: 'saturate(0.88) contrast(1.18) brightness(0.93)',
     transitionBias: 'punches', texture: 'grain',
+    layout: {captionAlign: 'center', captionY: 0.72, lowerThird: 'tl',
+      overlayAnchor: 'center', watermark: 'tl', progress: 'top'},
+    motion: {entry: 'pop', spring: 'snappy', kenBurns: 1.4},
   },
   glacier: {
     name: 'glacier', // ice, poles, high mountains, cold
@@ -264,6 +342,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'linear-gradient(180deg, rgba(159,216,240,0.08) 0%, rgba(10,18,24,0.26) 100%)',
     visualFilter: 'saturate(0.82) contrast(1.08) brightness(1.02)',
     transitionBias: 'fades', texture: 'none',
+    layout: {captionAlign: 'center', captionY: 0.8, lowerThird: 'tr',
+      overlayAnchor: 'center', watermark: 'tr', progress: 'none'},
+    motion: {entry: 'fade', spring: 'calm', kenBurns: 0.6},
   },
 
   // ── Earth / nature / wildlife ────────────────────────────────────────
@@ -276,6 +357,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'linear-gradient(180deg, rgba(200,162,74,0.07) 0%, rgba(18,16,10,0.30) 100%)',
     visualFilter: 'saturate(1.12) contrast(1.08) sepia(0.06)',
     transitionBias: 'mixed', texture: 'grain',
+    layout: {captionAlign: 'left', captionY: 0.78, lowerThird: 'tl',
+      overlayAnchor: 'left', watermark: 'br', progress: 'top'},
+    motion: {entry: 'pop', spring: 'settle', kenBurns: 1.05},
   },
   verdant: {
     name: 'verdant', // plants, fungi, micro-ecosystems
@@ -286,6 +370,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'radial-gradient(ellipse at 50% 90%, rgba(88,196,82,0.07) 0%, rgba(8,18,8,0.34) 100%)',
     visualFilter: 'saturate(1.16) contrast(1.03) brightness(0.98)',
     transitionBias: 'fades', texture: 'halation',
+    layout: {captionAlign: 'center', captionY: 0.8, lowerThird: 'tr',
+      overlayAnchor: 'center', watermark: 'br', progress: 'none'},
+    motion: {entry: 'rise', spring: 'calm', kenBurns: 0.75},
   },
   dune: {
     name: 'dune', // deserts, heat, extreme geography
@@ -296,6 +383,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'linear-gradient(180deg, rgba(232,163,76,0.10) 0%, rgba(23,15,7,0.32) 100%)',
     visualFilter: 'saturate(1.10) contrast(1.09) sepia(0.12)',
     transitionBias: 'slides', texture: 'grain',
+    layout: {captionAlign: 'right', captionY: 0.76, lowerThird: 'bl',
+      overlayAnchor: 'right', watermark: 'bl', progress: 'top'},
+    motion: {entry: 'rise', spring: 'settle', kenBurns: 0.9},
   },
   ember: {
     name: 'ember', // volcanoes, fire, disasters
@@ -306,6 +396,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'radial-gradient(ellipse at 50% 100%, rgba(255,90,45,0.12) 0%, rgba(18,7,5,0.40) 100%)',
     visualFilter: 'saturate(1.22) contrast(1.14) brightness(0.94)',
     transitionBias: 'punches', texture: 'grain',
+    layout: {captionAlign: 'center', captionY: 0.72, lowerThird: 'tl',
+      overlayAnchor: 'center', watermark: 'tl', progress: 'bottom-thick'},
+    motion: {entry: 'pop', spring: 'snappy', kenBurns: 1.45},
   },
 
   // ── Science / body / how-things-work ─────────────────────────────────
@@ -318,6 +411,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'linear-gradient(180deg, rgba(53,196,200,0.06) 0%, rgba(7,16,22,0.30) 100%)',
     visualFilter: 'saturate(0.96) contrast(1.08) brightness(0.99)',
     transitionBias: 'fades', texture: 'none',
+    layout: {captionAlign: 'left', captionY: 0.74, lowerThird: 'tr',
+      overlayAnchor: 'left', watermark: 'tr', progress: 'top'},
+    motion: {entry: 'rise', spring: 'settle', kenBurns: 0.8},
   },
   laboratory: {
     name: 'laboratory', // experiments, scientific method, discoveries
@@ -328,6 +424,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'linear-gradient(180deg, rgba(77,163,255,0.05) 0%, rgba(13,18,24,0.24) 100%)',
     visualFilter: 'saturate(0.94) contrast(1.06)',
     transitionBias: 'fades', texture: 'none',
+    layout: {captionAlign: 'left', captionY: 0.76, lowerThird: 'tr',
+      overlayAnchor: 'left', watermark: 'br', progress: 'none'},
+    motion: {entry: 'fade', spring: 'calm', kenBurns: 0.7},
   },
   blueprint: {
     name: 'blueprint', // engineering, how machines/structures work
@@ -338,6 +437,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'linear-gradient(180deg, rgba(111,183,255,0.07) 0%, rgba(7,18,36,0.34) 100%)',
     visualFilter: 'saturate(0.90) contrast(1.10) hue-rotate(4deg)',
     transitionBias: 'wipes', texture: 'scanlines',
+    layout: {captionAlign: 'left', captionY: 0.74, lowerThird: 'tl',
+      overlayAnchor: 'left', watermark: 'tl', progress: 'top'},
+    motion: {entry: 'rise', spring: 'settle', kenBurns: 0.8},
   },
   circuit: {
     name: 'circuit', // AI, computers, technology
@@ -348,6 +450,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'linear-gradient(180deg, rgba(61,255,140,0.05) 0%, rgba(4,10,6,0.40) 100%)',
     visualFilter: 'saturate(0.96) contrast(1.14) brightness(0.95)',
     transitionBias: 'wipes', texture: 'scanlines', hud: true,
+    layout: {captionAlign: 'left', captionY: 0.72, lowerThird: 'tr',
+      overlayAnchor: 'left', watermark: 'tr', progress: 'top'},
+    motion: {entry: 'slide', spring: 'snappy', kenBurns: 1.1},
   },
 
   // ── City / modern / dark ─────────────────────────────────────────────
@@ -360,6 +465,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'linear-gradient(160deg, rgba(255,61,129,0.09) 0%, rgba(33,212,253,0.06) 60%, rgba(11,6,20,0.36) 100%)',
     visualFilter: 'saturate(1.30) contrast(1.12) brightness(0.95)',
     transitionBias: 'whips', texture: 'halation',
+    layout: {captionAlign: 'center', captionY: 0.74, lowerThird: 'tl',
+      overlayAnchor: 'center', watermark: 'bl', progress: 'bottom-thick'},
+    motion: {entry: 'slide', spring: 'snappy', kenBurns: 1.3},
   },
   metro: {
     name: 'metro', // cities, infrastructure, megaprojects
@@ -370,6 +478,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'linear-gradient(180deg, rgba(200,205,212,0.05) 0%, rgba(13,15,18,0.34) 100%)',
     visualFilter: 'saturate(0.98) contrast(1.10)',
     transitionBias: 'slides', texture: 'none',
+    layout: {captionAlign: 'right', captionY: 0.74, lowerThird: 'tl',
+      overlayAnchor: 'right', watermark: 'tl', progress: 'bottom'},
+    motion: {entry: 'slide', spring: 'snappy', kenBurns: 1.15},
   },
   rustbelt: {
     name: 'rustbelt', // industry, machines, abandoned places
@@ -380,6 +491,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'linear-gradient(180deg, rgba(217,108,44,0.06) 0%, rgba(16,12,10,0.38) 100%)',
     visualFilter: 'saturate(0.88) contrast(1.14) sepia(0.10)',
     transitionBias: 'wipes', texture: 'grain',
+    layout: {captionAlign: 'left', captionY: 0.78, lowerThird: 'bl',
+      overlayAnchor: 'left', watermark: 'br', progress: 'bottom'},
+    motion: {entry: 'fade', spring: 'settle', kenBurns: 0.9},
   },
   signal: {
     name: 'signal', // alerts, ongoing events, investigation urgency
@@ -390,6 +504,9 @@ export const STYLE_PACKS: Record<string, StylePack> = {
       'linear-gradient(180deg, rgba(255,46,77,0.06) 0%, rgba(14,5,8,0.38) 100%)',
     visualFilter: 'saturate(1.10) contrast(1.16) brightness(0.94)',
     transitionBias: 'whips', texture: 'scanlines',
+    layout: {captionAlign: 'left', captionY: 0.7, lowerThird: 'tl',
+      overlayAnchor: 'left', watermark: 'tl', progress: 'bottom-thick'},
+    motion: {entry: 'slide', spring: 'snappy', kenBurns: 1.35},
   },
 };
 

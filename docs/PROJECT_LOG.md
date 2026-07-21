@@ -51,7 +51,13 @@ seeded jitter: python (`render_jitter` — xfade/shot/overlay/captionY/
 watermark) + renderer (`variation.ts` — caption pos/size, grade/texture
 intensity, lower-third delay, word tilt) so same-pack videos never render
 identically. `REMOTION_DISABLE_REMOTE_FONTS=1` renders offline on system
-fonts. 112 tests green.
+fonts. Same day, layout+motion+pacing DNA: every pack also owns its
+LAYOUT (caption align left/center/right + height, lower-third corner
+tl/tr/bl, overlay-card anchor left/center/right/high, watermark corner,
+progress bar top/bottom/thick/none) and MOTION (caption entry
+pop/fade/rise/slide, card spring calm/settle/snappy, Ken Burns energy
+0.6-1.45) and PACING (style_packs.PACING: shot length, crossfade weight,
+caption chunk size bent per pack via apply_pacing). 116 tests green.
 
 **Jul 9 — Foundation (Claude).** Repo created via browser; base pipeline
 (Gemini script, Kokoro TTS, Pexels, MoviePy→Remotion, Releases delivery);

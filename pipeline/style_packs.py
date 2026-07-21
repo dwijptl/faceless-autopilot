@@ -373,6 +373,72 @@ PACKS: dict[str, dict] = {
 
 _LEGACY_BASES = ("documentary", "kinetic", "editorial", "noir")
 
+# ── Pacing DNA: how each pack CUTS ───────────────────────────────────────
+# pace  -> multiplier on max shot length AND crossfade weight: snappy packs
+#          (<1) cut faster with shorter dissolves, contemplative packs (>1)
+#          hold shots longer and dissolve slower.
+# chunk -> multiplier on caption max_chars: punchy packs flash short word
+#          groups, editorial packs breathe with fuller thought groups.
+PACING: dict[str, dict] = {
+    "documentary": {"pace": 1.00, "chunk": 1.00},
+    "kinetic":     {"pace": 0.75, "chunk": 0.80},
+    "editorial":   {"pace": 1.25, "chunk": 1.15},
+    "noir":        {"pace": 1.15, "chunk": 1.15},
+    "telemetry":   {"pace": 1.10, "chunk": 1.00},
+    "archive":     {"pace": 1.20, "chunk": 1.15},
+    "manuscript":  {"pace": 1.30, "chunk": 1.15},
+    "relic":       {"pace": 1.20, "chunk": 1.15},
+    "bazaar":      {"pace": 0.85, "chunk": 0.80},
+    "terracotta":  {"pace": 1.00, "chunk": 1.00},
+    "folklore":    {"pace": 1.20, "chunk": 1.15},
+    "cosmos":      {"pace": 1.10, "chunk": 1.00},
+    "quantum":     {"pace": 1.05, "chunk": 1.15},
+    "horizon":     {"pace": 0.95, "chunk": 1.00},
+    "abyss":       {"pace": 1.15, "chunk": 1.15},
+    "monsoon":     {"pace": 1.10, "chunk": 1.00},
+    "storm":       {"pace": 0.75, "chunk": 0.80},
+    "glacier":     {"pace": 1.30, "chunk": 1.15},
+    "safari":      {"pace": 0.95, "chunk": 1.00},
+    "verdant":     {"pace": 1.20, "chunk": 1.15},
+    "dune":        {"pace": 1.10, "chunk": 1.00},
+    "ember":       {"pace": 0.70, "chunk": 0.80},
+    "medical":     {"pace": 1.05, "chunk": 1.00},
+    "laboratory":  {"pace": 1.20, "chunk": 1.15},
+    "blueprint":   {"pace": 1.10, "chunk": 1.00},
+    "circuit":     {"pace": 0.90, "chunk": 0.90},
+    "neon-vice":   {"pace": 0.80, "chunk": 0.80},
+    "metro":       {"pace": 0.90, "chunk": 0.90},
+    "rustbelt":    {"pace": 1.10, "chunk": 1.00},
+    "signal":      {"pace": 0.75, "chunk": 0.80},
+}
+
+
+def pace_for(name: str) -> float:
+    return float(PACING.get(str(name), {}).get("pace", 1.0))
+
+
+def chunk_scale_for(name: str) -> float:
+    return float(PACING.get(str(name), {}).get("chunk", 1.0))
+
+
+def apply_pacing(cfg: dict, name: str, is_short: bool = False) -> None:
+    """Bend the render config to the pack's cutting rhythm (bounded)."""
+    pace = pace_for(name)
+    video = cfg.setdefault("video", {})
+    base_shot = float(video.get("max_shot_seconds", 2.4 if is_short else 5))
+    lo, hi = (1.4, 3.6) if is_short else (3.0, 8.0)
+    video["max_shot_seconds"] = round(min(max(base_shot * pace, lo), hi), 2)
+    base_xfade = float(video.get("crossfade", 0.4))
+    video["crossfade"] = round(
+        min(max(base_xfade * min(max(pace, 0.8), 1.25), 0.2), 0.7), 3)
+    caps = cfg.setdefault("captions", {})
+    base_chars = int(caps.get("max_chars", 24 if is_short else 30))
+    c_lo, c_hi = (12, 30) if is_short else (18, 40)
+    caps["max_chars"] = int(min(max(round(base_chars * chunk_scale_for(name)),
+                                    c_lo), c_hi))
+    print(f"[style] pacing '{name}': shot<={video['max_shot_seconds']}s, "
+          f"xfade={video['crossfade']}s, captions<={caps['max_chars']}ch")
+
 
 # ── registry lookups (fail-open to sane defaults) ───────────────────────
 def base_for(name: str) -> str:

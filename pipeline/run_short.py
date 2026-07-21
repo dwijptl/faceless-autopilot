@@ -143,6 +143,7 @@ def main() -> None:
     style = style_packs.select_and_log(topic, "", REPO_ROOT, is_short=True)
     cfg.setdefault("render", {})["style_pack"] = style  # steers AI-image look
     print(f"[style] topic-driven pack: {style}")
+    style_packs.apply_pacing(cfg, style, is_short=True)
     measured_wpm = calibration.measured_wpm(
         REPO_ROOT, int(cfg.get("short", {}).get("wpm", 100)), kind="short")
     if measured_wpm:

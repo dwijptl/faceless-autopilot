@@ -148,3 +148,85 @@ def test_legacy_base_helpers_fail_open():
     assert style_packs.camera_for("no-such-pack")
     assert style_packs.frames_for("cosmos") == ("focus", "aperture")
     assert style_packs.lower_thirds_for("bazaar") == ("pill", "rail")
+
+
+# ── Layout + motion DNA (structural variety, not just palettes) ─────────
+
+def _pack_float(field: str) -> dict[str, float]:
+    result = {}
+    blocks = re.split(r"\n\s+name: '([\w-]+)',", STYLES_TS)
+    for i in range(1, len(blocks) - 1, 2):
+        m = re.search(rf"{field}: ([0-9.]+)", blocks[i + 1])
+        if m:
+            result[blocks[i]] = float(m.group(1))
+    return result
+
+
+def test_every_pack_has_layout_and_motion_dna():
+    for field, union_name in (("captionAlign", "CaptionAlign"),
+                              ("lowerThird", "LowerThirdPos"),
+                              ("overlayAnchor", "OverlayAnchor"),
+                              ("watermark", "WatermarkCorner"),
+                              ("progress", "ProgressStyle"),
+                              ("entry", "CaptionEntry"),
+                              ("spring", "Springiness")):
+        values = _pack_field(field)
+        assert set(values) == TS_PACK_NAMES, field
+        assert set(values.values()) <= _ts_union(union_name), field
+    cap_y = _pack_float("captionY")
+    kb = _pack_float("kenBurns")
+    assert set(cap_y) == TS_PACK_NAMES and set(kb) == TS_PACK_NAMES
+    assert all(0.65 <= v <= 0.85 for v in cap_y.values())
+    assert all(0.5 <= v <= 1.6 for v in kb.values())
+
+
+def test_layouts_are_structurally_varied():
+    aligns = _pack_field("captionAlign")
+    lts = _pack_field("lowerThird")
+    anchors = _pack_field("overlayAnchor")
+    wms = _pack_field("watermark")
+    progress = _pack_field("progress")
+    entries = _pack_field("entry")
+    springs = _pack_field("spring")
+    assert len(set(aligns.values())) >= 3
+    assert len(set(lts.values())) >= 3
+    assert len(set(anchors.values())) >= 3
+    assert len(set(wms.values())) >= 4
+    assert len(set(progress.values())) >= 4
+    assert len(set(entries.values())) >= 4
+    assert len(set(springs.values())) >= 3
+    # the full layout signature rarely repeats across the catalog
+    combos = {(aligns[n], lts[n], anchors[n], wms[n], progress[n],
+               entries[n], springs[n]) for n in TS_PACK_NAMES}
+    assert len(combos) >= 20
+
+
+def test_pacing_dna_bounds_and_coverage():
+    assert set(style_packs.PACING) == set(style_packs.PACKS)
+    for name, p in style_packs.PACING.items():
+        assert 0.6 <= p["pace"] <= 1.4, name
+        assert 0.7 <= p["chunk"] <= 1.3, name
+    paces = {p["pace"] for p in style_packs.PACING.values()}
+    assert len(paces) >= 6  # real rhythm spread, not one tempo
+
+
+def test_apply_pacing_bends_config_within_bounds():
+    cfg = {"video": {"max_shot_seconds": 5, "crossfade": 0.4},
+           "captions": {"max_chars": 30}}
+    style_packs.apply_pacing(cfg, "ember")           # fastest pack
+    assert cfg["video"]["max_shot_seconds"] == 3.5   # 5 * 0.7
+    assert cfg["video"]["crossfade"] == 0.32         # 0.4 * 0.8 floor
+    assert cfg["captions"]["max_chars"] == 24        # 30 * 0.8
+
+    cfg = {"video": {"max_shot_seconds": 5, "crossfade": 0.4},
+           "captions": {"max_chars": 30}}
+    style_packs.apply_pacing(cfg, "manuscript")      # slowest pack
+    assert cfg["video"]["max_shot_seconds"] == 6.5   # 5 * 1.3
+    assert cfg["video"]["crossfade"] == 0.5          # 0.4 * 1.25 cap
+    assert cfg["captions"]["max_chars"] == 34        # 30 * 1.15, half-even
+
+    cfg = {"video": {"max_shot_seconds": 2.4, "crossfade": 0.25},
+           "captions": {"max_chars": 24}}
+    style_packs.apply_pacing(cfg, "glacier", is_short=True)
+    assert 1.4 <= cfg["video"]["max_shot_seconds"] <= 3.6
+    assert 12 <= cfg["captions"]["max_chars"] <= 30

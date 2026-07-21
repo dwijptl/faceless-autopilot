@@ -8,6 +8,7 @@ import {
   useVideoConfig,
 } from 'remotion';
 import {BRAND, StylePack, hexA, panelBg} from './styles';
+import {anchorLayout, springFor} from './motion-tokens';
 import {bodyFamily, fontFamily, headingFamily} from './elements';
 import {GlassCard, GlassData} from './glass';
 
@@ -74,8 +75,7 @@ export const AnimatedStatCard: React.FC<{
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
   });
   const display = formatStat(value, shown);
-  const enter = spring({frame: frame - 3, fps,
-    config: {damping: 16, stiffness: 135, mass: 0.75}});
+  const enter = spring({frame: frame - 3, fps, config: springFor(style)});
   const line = interpolate(frame, [8, 8 + fps], [0, 1], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
   });
@@ -235,8 +235,8 @@ export const AnimatedStatCard: React.FC<{
     </div>;
   }
 
-  return <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center',
-    fontFamily: bodyFamily(style), padding: 70 * s}}>
+  return <AbsoluteFill style={{...anchorLayout(style, s, 70),
+    fontFamily: bodyFamily(style)}}>
     <div style={{opacity: enter, transform: `translateY(${interpolate(enter,[0,1],[70,0])}px) scale(${interpolate(enter,[0,1],[.90,1])})`}}>
       {body}
     </div>
@@ -252,8 +252,7 @@ export const KineticTitle: React.FC<{
   const {fps} = useVideoConfig();
   const s = useScale();
   const words = text.split(/\s+/).filter(Boolean).slice(0, 9);
-  const base = spring({frame: frame - 3, fps,
-    config: {damping: 15, stiffness: 150, mass: .75}});
+  const base = spring({frame: frame - 3, fps, config: springFor(style)});
 
   if (variant === 'wipe') {
     return <AbsoluteFill style={{justifyContent: 'center', padding: 120 * s,
@@ -266,7 +265,7 @@ export const KineticTitle: React.FC<{
     </AbsoluteFill>;
   }
   if (variant === 'stack') {
-    return <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center',
+    return <AbsoluteFill style={{...anchorLayout(style, s, 60),
       fontFamily: headingFamily(style)}}>
       <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
         {words.map((word, i) => {
@@ -298,7 +297,7 @@ export const KineticTitle: React.FC<{
     </AbsoluteFill>;
   }
   if (variant === 'orbit') {
-    return <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center',
+    return <AbsoluteFill style={{...anchorLayout(style, s, 60),
       fontFamily: headingFamily(style)}}>
       <div style={{position: 'absolute', width: 720 * s, height: 720 * s,
         border: `${3 * s}px solid ${style.accent}55`, borderRadius: '50%',
@@ -311,7 +310,7 @@ export const KineticTitle: React.FC<{
     </AbsoluteFill>;
   }
   if (variant === 'split') {
-    return <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center',
+    return <AbsoluteFill style={{...anchorLayout(style, s, 60),
       fontFamily: headingFamily(style)}}>
       <div style={{display: 'flex', flexWrap: 'wrap', justifyContent: 'center',
         maxWidth: 1200 * s, gap: 22 * s}}>
@@ -326,7 +325,7 @@ export const KineticTitle: React.FC<{
     </AbsoluteFill>;
   }
   if (variant === 'marker') {
-    return <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center',
+    return <AbsoluteFill style={{...anchorLayout(style, s, 60),
       fontFamily: headingFamily(style)}}>
       <div style={{position: 'relative', maxWidth: 1100 * s, padding: `${20 * s}px ${42 * s}px`}}>
         <div style={{position: 'absolute', left: 0, bottom: 18 * s,
@@ -337,8 +336,8 @@ export const KineticTitle: React.FC<{
       </div>
     </AbsoluteFill>;
   }
-  return <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center',
-    padding: 100 * s, fontFamily: headingFamily(style)}}>
+  return <AbsoluteFill style={{...anchorLayout(style, s, 100),
+    fontFamily: headingFamily(style)}}>
     <div style={{display: 'flex', flexWrap: 'wrap', gap: 22 * s, justifyContent: 'center'}}>
       {words.map((word, i) => {
         const p = spring({frame: frame - 5 - i * 4, fps,
@@ -360,8 +359,7 @@ export const EditorialCard: React.FC<{
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
   const s = useScale();
-  const enter = spring({frame: frame - 4, fps,
-    config: {damping: 17, stiffness: 145, mass: .8}});
+  const enter = spring({frame: frame - 4, fps, config: springFor(style)});
   const kicker = card.kicker ?? 'TERRA NOTE';
   const headline = card.headline ?? '';
   const body = card.body ?? '';
@@ -415,7 +413,7 @@ export const EditorialCard: React.FC<{
     <div style={{fontSize:35*s,color:'rgba(255,255,255,.76)',lineHeight:1.48,marginTop:22*s}}>{body}</div>
   </div>;
 
-  return <AbsoluteFill style={{justifyContent:'center',alignItems:'center',padding:80*s,
+  return <AbsoluteFill style={{...anchorLayout(style, s, 80),
     fontFamily: bodyFamily(style)}}>
     <div style={{opacity:enter,transform:`translateY(${interpolate(enter,[0,1],[60,0])}px) scale(${interpolate(enter,[0,1],[.94,1])})`}}>{content}</div>
   </AbsoluteFill>;
@@ -495,10 +493,16 @@ export const AnimatedLowerThird: React.FC<{
   const frame = useCurrentFrame();
   const {fps, height} = useVideoConfig();
   const s = useScale();
-  const enter = spring({frame: frame - delay, fps, config: {damping: 18, stiffness: 150}});
-  const common: React.CSSProperties = {position: 'absolute', left: 54 * s,
-    top: height * .085, fontFamily: bodyFamily(style), opacity: enter,
-    transform: `translateX(${interpolate(enter,[0,1],[-320,0])}px)`};
+  const enter = spring({frame: frame - delay, fps, config: springFor(style)});
+  const pos = style.layout?.lowerThird ?? 'tl';
+  const place: React.CSSProperties =
+    pos === 'tr' ? {right: 54 * s, top: height * .085}
+    : pos === 'bl' ? {left: 54 * s, top: height * .60}
+    : {left: 54 * s, top: height * .085};
+  const fromX = pos === 'tr' ? 320 : -320;
+  const common: React.CSSProperties = {position: 'absolute', ...place,
+    fontFamily: bodyFamily(style), opacity: enter,
+    transform: `translateX(${interpolate(enter,[0,1],[fromX,0])}px)`};
   if (variant === 'pill') return <div style={{...common, borderRadius: 999,
     background: style.accent, color: BRAND.navy, fontSize: 31 * s,
     fontWeight: 850, padding: `${10*s}px ${26*s}px`}}>{title}</div>;
