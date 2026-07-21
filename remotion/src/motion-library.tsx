@@ -7,8 +7,8 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from 'remotion';
-import {BRAND, StylePack} from './styles';
-import {fontFamily} from './elements';
+import {BRAND, StylePack, hexA, panelBg} from './styles';
+import {bodyFamily, fontFamily, headingFamily} from './elements';
 import {GlassCard, GlassData} from './glass';
 
 export const MOTION_CATALOG = {
@@ -92,7 +92,7 @@ export const AnimatedStatCard: React.FC<{
   if (bars.length >= 2) {
     const barMax = Math.max(...bars.map((item) => Math.abs(Number(item.value))), 1);
     body = <div style={{width: 1050 * s, minHeight: 430 * s,
-      background: 'rgba(7,14,28,.90)', borderRadius: 24 * s,
+      background: panelBg(style, .90), borderRadius: 24 * s,
       border: `${2 * s}px solid ${style.accent}55`, padding: `${42 * s}px ${58 * s}px`,
       boxShadow: '0 28px 90px rgba(0,0,0,.58)'}}>
       <div style={{fontSize: 28 * s, color: 'rgba(255,255,255,.70)',
@@ -120,7 +120,7 @@ export const AnimatedStatCard: React.FC<{
     const compareMax = Math.max(Math.abs(baseline), Math.abs(value), 1);
     const valueW = Math.abs(shown) / compareMax * 100;
     const baseW = Math.abs(baseline) / compareMax * 100;
-    body = <div style={{width: 1050 * s, background: 'rgba(7,14,28,.91)',
+    body = <div style={{width: 1050 * s, background: panelBg(style, .91),
       borderRadius: 24 * s, padding: `${48 * s}px ${62 * s}px`,
       border: `${2 * s}px solid ${style.accent}55`, boxShadow: '0 28px 90px rgba(0,0,0,.58)'}}>
       <div style={{fontSize: 34 * s, color: 'rgba(255,255,255,.76)',
@@ -161,7 +161,7 @@ export const AnimatedStatCard: React.FC<{
   } else if (variant === 'split') {
     body = <div style={{display: 'grid', gridTemplateColumns: '1.15fr 1fr',
       alignItems: 'stretch', width: 1080 * s, minHeight: 310 * s,
-      background: 'rgba(7,14,28,0.90)', borderRadius: 18 * s,
+      background: panelBg(style, .90), borderRadius: 18 * s,
       overflow: 'hidden', boxShadow: '0 28px 90px rgba(0,0,0,.58)'}}>
       <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center',
         color: style.accent, fontSize: 152 * s, fontWeight: 950,
@@ -176,7 +176,7 @@ export const AnimatedStatCard: React.FC<{
     body = <div style={{position: 'relative', width: 430 * s, height: 430 * s,
       display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
       <svg width={430 * s} height={430 * s} style={{position: 'absolute', transform: 'rotate(-90deg)'}}>
-        <circle cx={215 * s} cy={215 * s} r={radius} fill="rgba(10,20,40,.70)"
+        <circle cx={215 * s} cy={215 * s} r={radius} fill={panelBg(style, .70)}
           stroke="rgba(255,255,255,.13)" strokeWidth={20 * s}/>
         <circle cx={215 * s} cy={215 * s} r={radius} fill="none"
           stroke={style.accent} strokeWidth={20 * s} strokeLinecap="round"
@@ -193,7 +193,7 @@ export const AnimatedStatCard: React.FC<{
   } else if (variant === 'ticker') {
     body = <div style={{width: 1120 * s, borderTop: `${5 * s}px solid ${style.accent}`,
       borderBottom: `${5 * s}px solid ${style.accent}`, padding: `${38 * s}px 0`,
-      background: 'rgba(4,9,18,.78)', overflow: 'hidden'}}>
+      background: panelBg(style, .78), overflow: 'hidden'}}>
       <div style={{transform: `translateX(${interpolate(enter, [0,1], [-420,0])}px)`,
         display: 'flex', alignItems: 'baseline', gap: 48 * s, whiteSpace: 'nowrap'}}>
         <div style={{fontSize: 174 * s, color: style.accent, fontWeight: 950,
@@ -205,7 +205,7 @@ export const AnimatedStatCard: React.FC<{
   } else if (variant === 'stamp') {
     body = <div style={{transform: `rotate(${interpolate(enter,[0,1],[-7,-2])}deg)`,
       border: `${8 * s}px double ${style.accent}`, padding: `${55 * s}px ${80 * s}px`,
-      background: 'rgba(10,20,40,.84)', boxShadow: `14px 14px 0 ${style.accent}24`,
+      background: panelBg(style, .84), boxShadow: `14px 14px 0 ${style.accent}24`,
       textAlign: 'center', maxWidth: 950 * s}}>
       <div style={{fontSize: 166 * s, color: style.accent, fontWeight: 950,
         lineHeight: 1}}>{number}</div>
@@ -222,7 +222,7 @@ export const AnimatedStatCard: React.FC<{
         lineHeight: 1.4, maxWidth: 1040 * s, margin: '0 auto'}}>{label}</div>
     </div>;
   } else {
-    body = <div style={{background: 'linear-gradient(145deg, rgba(19,36,65,.90), rgba(8,15,30,.76))',
+    body = <div style={{background: `linear-gradient(145deg, ${panelBg(style, .90)}, ${hexA(style.bg, .76)})`,
       backdropFilter: 'blur(16px)', border: `${2 * s}px solid ${style.accent}55`,
       borderRadius: 28 * s, padding: `${48 * s}px ${88 * s}px`, textAlign: 'center',
       boxShadow: '0 32px 90px rgba(0,0,0,.58)', minWidth: 720 * s}}>
@@ -236,7 +236,7 @@ export const AnimatedStatCard: React.FC<{
   }
 
   return <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center',
-    fontFamily, padding: 70 * s}}>
+    fontFamily: bodyFamily(style), padding: 70 * s}}>
     <div style={{opacity: enter, transform: `translateY(${interpolate(enter,[0,1],[70,0])}px) scale(${interpolate(enter,[0,1],[.90,1])})`}}>
       {body}
     </div>
@@ -256,7 +256,8 @@ export const KineticTitle: React.FC<{
     config: {damping: 15, stiffness: 150, mass: .75}});
 
   if (variant === 'wipe') {
-    return <AbsoluteFill style={{justifyContent: 'center', padding: 120 * s, fontFamily}}>
+    return <AbsoluteFill style={{justifyContent: 'center', padding: 120 * s,
+      fontFamily: headingFamily(style)}}>
       <div style={{overflow: 'hidden', borderLeft: `${12 * s}px solid ${style.accent}`,
         paddingLeft: 42 * s}}>
         <div style={{transform: `translateX(${interpolate(base,[0,1],[-105,0])}%)`,
@@ -265,7 +266,8 @@ export const KineticTitle: React.FC<{
     </AbsoluteFill>;
   }
   if (variant === 'stack') {
-    return <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center', fontFamily}}>
+    return <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center',
+      fontFamily: headingFamily(style)}}>
       <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
         {words.map((word, i) => {
           const p = spring({frame: frame - 4 - i * 4, fps,
@@ -282,8 +284,8 @@ export const KineticTitle: React.FC<{
     const before = words.slice(0, focusIndex).join(' ');
     const focus = words[focusIndex] ?? '';
     const after = words.slice(focusIndex + 1).join(' ');
-    return <AbsoluteFill style={{justifyContent:'center', alignItems:'center', fontFamily,
-      padding:100*s, textAlign:'center'}}>
+    return <AbsoluteFill style={{justifyContent:'center', alignItems:'center',
+      fontFamily: headingFamily(style), padding:100*s, textAlign:'center'}}>
       <div style={{opacity:base, maxWidth:1100*s}}>
         {before ? <div style={{fontSize:56*s, color:'white', fontWeight:760,
           lineHeight:1.4}}>{before}</div> : null}
@@ -296,7 +298,8 @@ export const KineticTitle: React.FC<{
     </AbsoluteFill>;
   }
   if (variant === 'orbit') {
-    return <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center', fontFamily}}>
+    return <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center',
+      fontFamily: headingFamily(style)}}>
       <div style={{position: 'absolute', width: 720 * s, height: 720 * s,
         border: `${3 * s}px solid ${style.accent}55`, borderRadius: '50%',
         transform: `scale(${interpolate(base,[0,1],[.55,1])}) rotate(${frame * .22}deg)`}}>
@@ -308,7 +311,8 @@ export const KineticTitle: React.FC<{
     </AbsoluteFill>;
   }
   if (variant === 'split') {
-    return <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center', fontFamily}}>
+    return <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center',
+      fontFamily: headingFamily(style)}}>
       <div style={{display: 'flex', flexWrap: 'wrap', justifyContent: 'center',
         maxWidth: 1200 * s, gap: 22 * s}}>
         {words.map((word, i) => {
@@ -322,7 +326,8 @@ export const KineticTitle: React.FC<{
     </AbsoluteFill>;
   }
   if (variant === 'marker') {
-    return <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center', fontFamily}}>
+    return <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center',
+      fontFamily: headingFamily(style)}}>
       <div style={{position: 'relative', maxWidth: 1100 * s, padding: `${20 * s}px ${42 * s}px`}}>
         <div style={{position: 'absolute', left: 0, bottom: 18 * s,
           height: 36 * s, width: `${base * 100}%`, background: style.accent,
@@ -333,7 +338,7 @@ export const KineticTitle: React.FC<{
     </AbsoluteFill>;
   }
   return <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center',
-    padding: 100 * s, fontFamily}}>
+    padding: 100 * s, fontFamily: headingFamily(style)}}>
     <div style={{display: 'flex', flexWrap: 'wrap', gap: 22 * s, justifyContent: 'center'}}>
       {words.map((word, i) => {
         const p = spring({frame: frame - 5 - i * 4, fps,
@@ -363,14 +368,14 @@ export const EditorialCard: React.FC<{
   let content: React.ReactNode;
 
   if (variant === 'quote') content = <div style={{maxWidth: 1050*s,
-    padding:`${50*s}px ${80*s}px`,background:'rgba(8,15,30,.84)',
+    padding:`${50*s}px ${80*s}px`,background:panelBg(style, .84),
     borderRadius:24*s,borderLeft:`10px solid ${style.accent}`}}>
     <div style={{fontSize:150*s,color:style.accent,lineHeight:.55,fontFamily:'serif'}}>“</div>
     <div style={{fontSize:62*s,color:'white',fontWeight:760,lineHeight:1.35}}>{headline}</div>
     <div style={{fontSize:31*s,color:'rgba(255,255,255,.72)',marginTop:22*s,lineHeight:1.45}}>{body}</div>
   </div>;
   else if (variant === 'split') content = <div style={{display:'grid',gridTemplateColumns:'1fr 1.25fr',
-    width:1120*s,minHeight:350*s,background:'rgba(7,14,28,.88)',borderRadius:22*s,overflow:'hidden'}}>
+    width:1120*s,minHeight:350*s,background:panelBg(style, .88),borderRadius:22*s,overflow:'hidden'}}>
     <div style={{background:style.accent,color:BRAND.navy,padding:48*s,
       display:'flex',flexDirection:'column',justifyContent:'space-between'}}>
       <div style={{fontSize:22*s,fontWeight:900,letterSpacing:4}}>{kicker}</div>
@@ -384,14 +389,14 @@ export const EditorialCard: React.FC<{
     <div style={{width:6*s,background:`linear-gradient(${style.accent},${style.accent}22)`,
       position:'relative'}}><div style={{position:'absolute',left:-12*s,top:34*s,width:30*s,height:30*s,
       borderRadius:'50%',background:style.accent,boxShadow:`0 0 ${28*s}px ${style.accent}`}}/></div>
-    <div style={{background:'rgba(8,16,32,.84)',padding:`${38*s}px ${52*s}px`,
+    <div style={{background:panelBg(style, .84),padding:`${38*s}px ${52*s}px`,
       borderRadius:18*s,flex:1}}><div style={{fontSize:22*s,fontWeight:900,letterSpacing:4,
       color:style.accent}}>{kicker}</div><div style={{fontSize:63*s,fontWeight:920,color:'white',
       lineHeight:1.25,marginTop:15*s}}>{headline}</div><div style={{fontSize:34*s,color:'rgba(255,255,255,.75)',
       lineHeight:1.45,marginTop:18*s}}>{body}</div></div>
   </div>;
   else if (variant === 'warning') content = <div style={{maxWidth:1050*s,padding:`${44*s}px ${58*s}px`,
-    background:'rgba(16,11,8,.88)',border:`3px solid ${style.accent}`,borderRadius:18*s,
+    background:panelBg(style, .88),border:`3px solid ${style.accent}`,borderRadius:18*s,
     boxShadow:`inset 0 0 ${60*s}px ${style.accent}18`}}>
     <div style={{display:'flex',alignItems:'center',gap:28*s}}><div style={{width:0,height:0,
       borderLeft:`${32*s}px solid transparent`,borderRight:`${32*s}px solid transparent`,
@@ -402,7 +407,7 @@ export const EditorialCard: React.FC<{
     <div style={{fontSize:34*s,color:'rgba(255,255,255,.76)',lineHeight:1.45,marginTop:27*s}}>{body}</div>
   </div>;
   else content = <div style={{maxWidth:1050*s,padding:`${48*s}px ${64*s}px`,
-    background:'linear-gradient(145deg,rgba(19,36,65,.92),rgba(7,14,28,.82))',
+    background:`linear-gradient(145deg,${panelBg(style, .92)},${hexA(style.bg, .82)})`,
     borderRadius:26*s,border:`2px solid ${style.accent}55`,boxShadow:'0 30px 90px rgba(0,0,0,.55)'}}>
     <div style={{fontSize:22*s,fontWeight:900,letterSpacing:5,color:style.accent}}>{kicker}</div>
     <div style={{height:4*s,width:120*s,background:style.accent,margin:`${18*s}px 0`}}/>
@@ -410,7 +415,8 @@ export const EditorialCard: React.FC<{
     <div style={{fontSize:35*s,color:'rgba(255,255,255,.76)',lineHeight:1.48,marginTop:22*s}}>{body}</div>
   </div>;
 
-  return <AbsoluteFill style={{justifyContent:'center',alignItems:'center',padding:80*s,fontFamily}}>
+  return <AbsoluteFill style={{justifyContent:'center',alignItems:'center',padding:80*s,
+    fontFamily: bodyFamily(style)}}>
     <div style={{opacity:enter,transform:`translateY(${interpolate(enter,[0,1],[60,0])}px) scale(${interpolate(enter,[0,1],[.94,1])})`}}>{content}</div>
   </AbsoluteFill>;
 };
@@ -432,7 +438,8 @@ export const SceneFrame: React.FC<{
       <div style={{position: 'absolute', bottom: 0, height: 42 * s, width: '100%',
         background: 'rgba(0,0,0,.82)'}}/>
       <div style={{position: 'absolute', right: 36 * s, bottom: 55 * s,
-        fontFamily, fontSize: 18 * s, letterSpacing: 5, color: 'rgba(255,255,255,.55)'}}>
+        fontFamily: bodyFamily(style), fontSize: 18 * s, letterSpacing: 5,
+        color: 'rgba(255,255,255,.55)'}}>
         TI · {String(sceneN).padStart(2, '0')}
       </div>
     </AbsoluteFill>;
@@ -483,13 +490,14 @@ export const AnimatedLowerThird: React.FC<{
   style: StylePack;
   variant?: string;
   index?: number;
-}> = ({title, style, variant = 'rail', index = 1}) => {
+  delay?: number; // per-video jitter (variation.ts)
+}> = ({title, style, variant = 'rail', index = 1, delay = 7}) => {
   const frame = useCurrentFrame();
   const {fps, height} = useVideoConfig();
   const s = useScale();
-  const enter = spring({frame: frame - 7, fps, config: {damping: 18, stiffness: 150}});
+  const enter = spring({frame: frame - delay, fps, config: {damping: 18, stiffness: 150}});
   const common: React.CSSProperties = {position: 'absolute', left: 54 * s,
-    top: height * .085, fontFamily, opacity: enter,
+    top: height * .085, fontFamily: bodyFamily(style), opacity: enter,
     transform: `translateX(${interpolate(enter,[0,1],[-320,0])}px)`};
   if (variant === 'pill') return <div style={{...common, borderRadius: 999,
     background: style.accent, color: BRAND.navy, fontSize: 31 * s,
@@ -507,7 +515,7 @@ export const AnimatedLowerThird: React.FC<{
       <div style={{fontSize:34*s,fontWeight:720,color:'white'}}>{title}</div></div>;
   return <div style={{...common, display:'flex',alignItems:'center',gap:16*s}}>
     <div style={{width:9*s,height:58*s,background:style.accent,borderRadius:4*s}}/>
-    <div style={{fontSize:35*s,fontWeight:760,color:'white',background:'rgba(6,12,24,.68)',
+    <div style={{fontSize:35*s,fontWeight:760,color:'white',background:panelBg(style, .68),
       padding:`9px ${18*s}px`,borderRadius:8*s}}>{title}</div></div>;
 };
 
@@ -549,23 +557,23 @@ export const SubscribeBell: React.FC<{event: CtaEvent; style: StylePack}> = ({ev
 
   let body: React.ReactNode;
   if (event.variant === 'stamp') body = <div style={{display:'flex',alignItems:'center',gap:18*s,
-    border:`4px double ${style.accent}`,background:'rgba(7,13,25,.88)',
+    border:`4px double ${style.accent}`,background:panelBg(style, .88),
     padding:`${14*s}px ${22*s}px`,transform:'rotate(-2deg)'}}>{icon}{text}{bell}</div>;
   else if (event.variant === 'minimal') body = <div style={{display:'flex',alignItems:'center',
-    gap:15*s,background:'rgba(6,12,24,.65)',borderBottom:`3px solid ${style.accent}`,
+    gap:15*s,background:panelBg(style, .65),borderBottom:`3px solid ${style.accent}`,
     padding:`${10*s}px ${18*s}px`}}>{icon}{text}{bell}</div>;
   else if (event.variant === 'orbit') body = <div style={{display:'flex',alignItems:'center',gap:20*s,
-    background:'rgba(7,14,29,.88)',padding:`${13*s}px ${24*s}px`,borderRadius:18*s,
+    background:panelBg(style, .88),padding:`${13*s}px ${24*s}px`,borderRadius:18*s,
     boxShadow:`0 0 0 ${3*s}px ${style.accent}33, 0 20px 60px rgba(0,0,0,.45)`}}>
     <div style={{position:'relative'}}>{icon}<div style={{position:'absolute',inset:-9*s,
       border:`2px dashed ${style.accent}`,borderRadius:'50%',transform:`rotate(${frame*3}deg)`}}/></div>{text}{bell}</div>;
   else body = <div style={{display:'flex',alignItems:'center',gap:18*s,
-    background:'rgba(8,16,32,.90)',border:`2px solid ${style.accent}66`,
+    background:panelBg(style, .90),border:`2px solid ${style.accent}66`,
     borderRadius:999,padding:`${11*s}px ${20*s}px ${11*s}px ${12*s}px`,
     boxShadow:'0 20px 60px rgba(0,0,0,.48)'}}>{icon}{text}{bell}</div>;
 
   return <div style={{position:'absolute',right:compact?26*s:48*s,
-    top:compact?height*.16:height*.13,fontFamily,
+    top:compact?height*.16:height*.13,fontFamily:bodyFamily(style),
     opacity:enter,transform:`translateX(${interpolate(enter,[0,1],[220,0])}px) scale(${interpolate(enter,[0,1],[.88,1])})`,
     maxWidth:width*.72}}>{body}</div>;
 };

@@ -12,6 +12,8 @@ import os
 import numpy as np
 import soundfile as sf
 
+import style_packs
+
 SR = 44100
 SOUND_CATALOG = (
     "whoosh_soft", "whoosh_fast", "whoosh_reverse", "riser", "hit",
@@ -269,6 +271,8 @@ def build_ambient_bed(workdir: str, seed: str, style: str = "documentary",
     """
     duration = 12.0 if is_short else 24.0
     n = int(duration * SR)
+    # full pack name seeds the rng (per-pack phase variety); the harmonic
+    # profile branches on the pack's legacy base family
     digest = hashlib.sha256(f"{seed}:{style}:{is_short}".encode()).digest()
     rng = np.random.default_rng(int.from_bytes(digest[:8], "big"))
     t = np.arange(n, dtype=np.float32) / SR
@@ -278,7 +282,8 @@ def build_ambient_bed(workdir: str, seed: str, style: str = "documentary",
         "editorial": (55.0, 73.0, 110.0, 165.0),
         "documentary": (46.0, 61.0, 92.0, 138.0),
     }
-    targets = profiles.get(style, profiles["documentary"])
+    base = style_packs.base_for(style) if style not in profiles else style
+    targets = profiles.get(base, profiles["documentary"])
 
     left = np.zeros(n, dtype=np.float32)
     right = np.zeros(n, dtype=np.float32)
@@ -293,7 +298,7 @@ def build_ambient_bed(workdir: str, seed: str, style: str = "documentary",
     # Periodic filtered texture adds air without sounding like a plain chord.
     bins = np.fft.rfftfreq(n, 1 / SR)
     spectrum = np.zeros(len(bins), dtype=np.complex64)
-    mask = (bins >= 120) & (bins <= (1100 if style != "noir" else 650))
+    mask = (bins >= 120) & (bins <= (1100 if base != "noir" else 650))
     phases = rng.uniform(0, 2 * np.pi, int(mask.sum()))
     shaped = 1.0 / np.maximum(bins[mask], 1.0) ** 0.72
     spectrum[mask] = shaped * np.exp(1j * phases)
@@ -351,7 +356,9 @@ def plan_events(scenes: list[dict], cfg: dict, workdir: str,
         return []
     base = float(scfg.get("volume", 0.5))
     events: list[dict] = []
-    style_pack = str(cfg.get("render", {}).get("style_pack", "documentary"))
+    # new packs map onto the four legacy sound families via their base
+    style_pack = style_packs.base_for(
+        str(cfg.get("render", {}).get("style_pack", "documentary")))
     transitions = (("page_turn", "whoosh_soft", "page_turn")
                    if style_pack == "editorial" else
                    (("air", "whoosh_reverse", "whoosh_soft")

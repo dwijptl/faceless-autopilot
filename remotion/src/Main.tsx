@@ -18,14 +18,15 @@ import {MapZoom} from './Map';
 import {getStyle, StylePack} from './styles';
 import {
   CaptionsLayer,
-  CinematicOverlay,
   LightLeak,
   Outro,
   ProgressBar,
   SceneVisual,
   SfxLayer,
+  TextureOverlay,
   Watermark,
 } from './elements';
+import {variationFor} from './variation';
 import {
   AnimatedLowerThird,
   AnimatedStatCard,
@@ -62,6 +63,16 @@ const pickTransition = (i: number, style: StylePack): any => {
       if (r < 0.6) return wipe({direction: 'from-top-left'});
       if (r < 0.8) return zoomPunch();
       return fade();
+    case 'whips':
+      if (r < 0.35) return blurWhip('from-right');
+      if (r < 0.6) return blurWhip('from-left');
+      if (r < 0.8) return zoomPunch();
+      return slide({direction: 'from-right'});
+    case 'punches':
+      if (r < 0.45) return zoomPunch();
+      if (r < 0.7) return fade();
+      if (r < 0.88) return blurWhip('from-right');
+      return wipe({direction: 'from-left'});
     default:
       if (r < 0.35) return fade();
       if (r < 0.5) return zoomPunch();
@@ -173,6 +184,7 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
   const fps = m.fps;
   const {durationInFrames} = useVideoConfig();
   const style = getStyle(m.style);
+  const vr = variationFor(m.motionSeed || m.title || 'main');
   const chapterMarks = m.scenes.slice(1).map(
     (sc) => ((sc.start ?? 0) * fps) / Math.max(durationInFrames, 1));
   const metricLabel = String((m as any).variableLabel ?? '');
@@ -226,6 +238,7 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
               maxShotSeconds={maxShotSeconds}
               sceneN={scene.n}
               style={style}
+              gradeOpacity={vr.gradeOpacity}
             />
           )}
         </CameraRig>
@@ -272,7 +285,8 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
         ) : null}
         {!overlayScene && !isMap && mode !== 'evidence' && scene.title ? (
           <AnimatedLowerThird title={scene.title} style={style}
-            variant={motion.lowerThirdVariant} index={scene.n} />
+            variant={motion.lowerThirdVariant} index={scene.n}
+            delay={vr.ltDelay} />
         ) : null}
         <SceneFrame variant={motion.frameVariant} style={style} sceneN={scene.n} />
         {i > 0 ? <LightLeak seed={`scene-${scene.n}`} /> : null}
@@ -302,8 +316,9 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
     <AbsoluteFill style={{backgroundColor: style.bg}}>
       <TransitionSeries>{items}</TransitionSeries>
       <CaptionsLayer captions={m.captions} style={style}
-        compactRanges={overlayRanges} compactYFrac={0.84} sizeBoost={1.15} />
-      <CinematicOverlay />
+        compactRanges={overlayRanges} compactYFrac={0.84} sizeBoost={1.15}
+        variation={vr} />
+      <TextureOverlay style={style} opacityMul={vr.texOpacity} />
       {style.hud ? (
         <TelemetryHUD starts={m.scenes.map((sc) => sc.start ?? 0)}
           accent={style.accent} accent2={style.accent2}

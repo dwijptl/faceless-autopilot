@@ -28,13 +28,10 @@ SKIP_RE = re.compile(
     r"face|चेहरा|hand|हाथ|text|लिख|अक्षर|diagram|आरेख|chart|चार्ट|graph",
     re.IGNORECASE)
 
-# Per-style-pack camera grammar (matches ai_images.STYLE_WRAPPERS packs).
-CAMERA = {
-    "documentary": "slow push-in, drifting atmospheric haze",
-    "kinetic": "dynamic parallax slide, hard light shifting",
-    "editorial": "measured lateral dolly, soft light",
-    "noir": "creeping zoom, fog rolling through frame",
-}
+# Per-style-pack camera grammar lives in style_packs.PACKS (one camera
+# move per pack — matches ai_images wrappers).
+import style_packs
+
 NEGATIVE = ("text, watermark, morphing, warping, extra limbs, "
             "distorted faces, objects appearing from nowhere, flickering")
 
@@ -56,7 +53,7 @@ def should_skip(cue: str) -> bool:
 
 def motion_prompt(cue: str, cfg: dict) -> str:
     pack = str(cfg.get("render", {}).get("style_pack", "documentary"))
-    camera = CAMERA.get(pack, CAMERA["documentary"])
+    camera = style_packs.camera_for(pack)
     return (f"{(cue or '').strip()}. {camera}, slow cinematic movement, "
             "consistent lighting, no new objects entering frame")
 

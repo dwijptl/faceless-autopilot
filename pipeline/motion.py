@@ -40,8 +40,19 @@ def _pick_glass(scene: dict, seed: str, index: int) -> str:
     return _pick_cycle(("fact", "chapter"), seed, "glass", index)
 
 
-def decorate_scenes(scenes: list[dict], seed: str) -> None:
-    """Attach a complete variant set to every scene, mutating scenes in place."""
+def decorate_scenes(scenes: list[dict], seed: str,
+                    frame_pool: tuple[str, ...] | None = None,
+                    lower_third_pool: tuple[str, ...] | None = None) -> None:
+    """Attach a complete variant set to every scene, mutating scenes in place.
+
+    frame_pool / lower_third_pool restrict the rotation to the style pack's
+    aesthetic subset (style_packs.frames_for / lower_thirds_for) — a noir
+    video cycles film/focus frames, a blueprint video grid/scanner —
+    instead of every pack wearing all six frames identically."""
+    frames = tuple(v for v in (frame_pool or FRAME_VARIANTS)
+                   if v in FRAME_VARIANTS) or FRAME_VARIANTS
+    lower_thirds = tuple(v for v in (lower_third_pool or LOWER_THIRD_VARIANTS)
+                         if v in LOWER_THIRD_VARIANTS) or LOWER_THIRD_VARIANTS
     use_index = {"stat": 0, "kinetic": 0, "card": 0, "glass": 0,
                  "lower-third": 0}
     for index, scene in enumerate(scenes):
@@ -53,9 +64,9 @@ def decorate_scenes(scenes: list[dict], seed: str) -> None:
                 KINETIC_VARIANTS, seed, "kinetic", use_index["kinetic"]),
             "cardVariant": _pick_cycle(
                 CARD_VARIANTS, seed, "card", use_index["card"]),
-            "frameVariant": _pick_cycle(FRAME_VARIANTS, seed, "frame", index),
+            "frameVariant": _pick_cycle(frames, seed, "frame", index),
             "lowerThirdVariant": _pick_cycle(
-                LOWER_THIRD_VARIANTS, seed, "lower-third", use_index["lower-third"]),
+                lower_thirds, seed, "lower-third", use_index["lower-third"]),
             "glassVariant": _pick_glass(scene, seed, use_index["glass"]),
         }
         if mode in ("stat", "kinetic", "card", "glass"):

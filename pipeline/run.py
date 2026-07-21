@@ -35,6 +35,7 @@ import motion as motion_mod         # noqa: E402
 import postprocess                  # noqa: E402
 import quality_report as quality_mod  # noqa: E402
 import script_gen                   # noqa: E402
+import style_packs                  # noqa: E402
 import sfx as sfx_mod               # noqa: E402
 import tts as tts_mod               # noqa: E402
 import visual_beats as visual_beats_mod  # noqa: E402
@@ -42,7 +43,6 @@ import vision_qc                    # noqa: E402
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REMOTION_DIR = os.path.join(REPO_ROOT, "remotion")
-STYLES = ["documentary", "kinetic", "editorial", "noir", "telemetry"]
 
 
 def probe_duration(path: str) -> float:
@@ -437,21 +437,7 @@ def main() -> None:
     workdir = os.path.join(outdir, "work")
     os.makedirs(workdir, exist_ok=True)
 
-    # style rotation: deterministic, based on how many videos exist ---------
-    done_count = 0
-    try:
-        with open(os.path.join(REPO_ROOT, "topics_done.txt"), encoding="utf-8") as f:
-            done_count = sum(1 for ln in f
-                             if ln.strip() and not ln.startswith("#")
-                             and not ln.startswith("NEXT:"))
-    except Exception:
-        pass
-    style = STYLES[done_count % len(STYLES)]
-    # telemetry shares editorial's photographic grammar + ambient palette for
-    # the python-side helpers that don't know the new pack
-    base_style = "editorial" if style == "telemetry" else style
-    cfg.setdefault("render", {})["style_pack"] = base_style  # steers AI-image look
-    print(f"=== Faceless Autopilot run {stamp} · style: {style} ===")
+    print(f"=== Faceless Autopilot run {stamp} ===")
 
     # narration-pace calibration: word budgets use the MEASURED wpm of past
     # runs (calibration.json) instead of the static channel.wpm guess
@@ -465,6 +451,15 @@ def main() -> None:
     # 1) topic + script ------------------------------------------------------
     done_file = os.path.join(REPO_ROOT, "topics_done.txt")
     topic = script_gen.pick_topic(cfg, gemini_key, done_file, learnings)
+
+    # topic-driven style: the LOOK follows the SUBJECT (mystery -> noir
+    # family, space -> cosmos, body -> medical...), no-repeat window over
+    # the last runs. Replaces the old done_count % N rotation.
+    style = style_packs.select_and_log(topic, "", REPO_ROOT, is_short=False)
+    cfg.setdefault("render", {})["style_pack"] = style  # steers AI-image look
+    print(f"[style] topic-driven pack: {style} "
+          f"(recent: {style_packs.recent_styles(style_packs.history_path(REPO_ROOT))})")
+
     # shipped topics drive title-form / skeleton / topic-family rotation
     done_titles = script_gen._done_titles(done_file)
     script = script_gen.generate_script(cfg, topic, gemini_key, learnings,
@@ -525,7 +520,8 @@ def main() -> None:
 
     # 2) voiceover -----------------------------------------------------------
     fps = int(cfg["video"]["fps"])
-    xfade = float(cfg["video"].get("crossfade", 0.4))
+    jit = style_packs.render_jitter(script["title"])
+    xfade = float(cfg["video"].get("crossfade", 0.4)) * jit["xfade_mul"]
     scenes, offset = [], 0.0
     for sc in script["scenes"]:
         wav = os.path.join(workdir, f"vo_s{sc['n']:02d}.wav")
@@ -630,11 +626,14 @@ def main() -> None:
 
     # 4b) deterministic motion library + sound design + dedicated thumbnail ----
     motion_seed = f"{script['title']}:{style}"
-    motion_mod.decorate_scenes(scenes, motion_seed)
+    motion_mod.decorate_scenes(
+        scenes, motion_seed,
+        frame_pool=style_packs.frames_for(style),
+        lower_third_pool=style_packs.lower_thirds_for(style))
     cta_event = motion_mod.plan_cta(scenes, cfg, motion_seed, is_short=False)
     sfx_events = sfx_mod.plan_events(scenes, cfg, workdir, cta_event)
     music_automation = sfx_mod.plan_music_automation(scenes, cfg)
-    music_path = pick_music(workdir, cfg, motion_seed, base_style)
+    music_path = pick_music(workdir, cfg, motion_seed, style)
     thumb_ai = None
     tp = (script.get("thumb_prompt") or "").strip()
     if tp:
@@ -659,8 +658,9 @@ def main() -> None:
     # 5) manifest ------------------------------------------------------------
     rcfg = cfg.get("render", {})
     brand_cfg = cfg.get("brand", {})
-    overlay_seconds = float(cfg.get("longform_quality", {})
-                            .get("overlay_seconds", 5.0))
+    overlay_seconds = (float(cfg.get("longform_quality", {})
+                             .get("overlay_seconds", 5.0))
+                       * jit["overlay_mul"])
     for sc in scenes:
         sc["impact_start"] = _impact_start(sc, overlay_seconds)
         if sc["impact_start"] > 0:
@@ -671,7 +671,8 @@ def main() -> None:
         "width": int(cfg["video"]["width"]),
         "height": int(cfg["video"]["height"]),
         "xfadeFrames": max(int(round(xfade * fps)), 1),
-        "maxShotSeconds": float(cfg["video"].get("max_shot_seconds", 5)),
+        "maxShotSeconds": float(cfg["video"].get("max_shot_seconds", 5))
+        * jit["max_shot_mul"],
         "overlaySeconds": overlay_seconds,
         "style": style,
         "variableLabel": str((script.get("changing_variable") or {})
@@ -683,7 +684,9 @@ def main() -> None:
         "brandName": brand_cfg.get("name", ""),
         "brandTagline": brand_cfg.get("tagline", ""),
         "watermarkPath": stage_brand(workdir),
-        "watermarkOpacity": float(brand_cfg.get("watermark_opacity", 0.08)),
+        "watermarkOpacity": min(max(
+            float(brand_cfg.get("watermark_opacity", 0.08))
+            + jit["watermark_off"], 0.05), 0.14),
         "outroSeconds": float(cfg["video"].get("outro_seconds", 4)),
         "title": script["title"],
         "thumbText": script.get("thumb_text", script["title"][:24]),
@@ -971,6 +974,7 @@ Remotion. Brand: Terra Incognita.*
         print(f"[beats] analytics copy skipped ({exc})")
 
     script_gen.log_topic_done(topic, os.path.join(REPO_ROOT, "topics_done.txt"))
+    style_packs.record_use(style, REPO_ROOT, is_short=False)
     tease = str(script.get("next_tease_topic", "")).strip()
     if tease:
         # the on-screen tease is a promise — lock it as the next episode

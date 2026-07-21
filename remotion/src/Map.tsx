@@ -8,7 +8,7 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from 'remotion';
-import {fontFamily} from './elements';
+import {bodyFamily} from './elements';
 import {StylePack} from './styles';
 
 export type MapRender = {
@@ -97,7 +97,7 @@ export const MapZoom: React.FC<{
             position: 'absolute',
             left: `${Math.min(rx * 100 + 3, 72)}%`,
             top: `${Math.max(ry * 100 - 8, 6)}%`,
-            fontFamily, fontSize: 40 * s, fontWeight: 800,
+            fontFamily: bodyFamily(style), fontSize: 40 * s, fontWeight: 800,
             color: '#F4F7FB', background: 'rgba(10,20,40,0.85)',
             border: `${2 * s}px solid ${style.accent}`,
             padding: `${8 * s}px ${20 * s}px`, borderRadius: 10 * s,

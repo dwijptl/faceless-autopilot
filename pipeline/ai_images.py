@@ -6,9 +6,10 @@ Priority:
 Any failure returns False and the caller falls back to stock — the pipeline
 never blocks on this module.
 
-Every prompt gets a STYLE WRAPPER matched to the video's rotating style pack
-(documentary / kinetic / editorial / noir) so AI shots feel like one
-photographer shot the whole video instead of random AI output.
+Every prompt gets a STYLE WRAPPER matched to the video's topic-driven style
+pack (30 packs in style_packs.PACKS — cosmos, abyss, archive, ...) so AI
+shots feel like one photographer shot the whole video instead of random AI
+output.
 """
 import base64
 import json
@@ -20,26 +21,16 @@ import requests
 API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 FAL_RUN = "https://fal.run/{model}"
 
-# Per-style-pack photographic grammar (matches remotion/src/styles.ts packs)
-STYLE_WRAPPERS = {
-    "documentary": ("cinematic documentary photography, dramatic natural "
-                    "light, atmospheric haze, shot on 35mm film, subtle film "
-                    "grain, muted earth tones"),
-    "kinetic": ("high-contrast editorial photography, deep shadows, one "
-                "strong directional light, bold graphic composition, dark "
-                "background, saturated accent colors"),
-    "editorial": ("muted editorial palette, soft diffused overcast light, "
-                  "minimalist composition with negative space, premium "
-                  "printed-magazine look"),
-    "noir": ("black and white fine-art photography, hard chiaroscuro "
-             "lighting, fog, deep blacks, visible grain, brooding mood"),
-}
+# Per-style-pack photographic grammar lives in style_packs.PACKS (30 packs,
+# one wrapper each — matches remotion/src/styles.ts).
+import style_packs
+
 COMMON_SUFFIX = ", photorealistic, high detail, no text, no watermark, no borders"
 
 
 def _style_wrapper(cfg: dict) -> str:
     pack = str(cfg.get("render", {}).get("style_pack", "documentary"))
-    return STYLE_WRAPPERS.get(pack, STYLE_WRAPPERS["documentary"])
+    return style_packs.wrapper_for(pack)
 
 
 def _download(url: str, out_path: str) -> bool:

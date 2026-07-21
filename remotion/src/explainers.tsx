@@ -17,7 +17,7 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from 'remotion';
-import {fontFamily} from './elements';
+import {bodyFamily} from './elements';
 import {GLASS, GLOW, RADIUS, SHADOW, SPRING, text, useScale} from './motion-tokens';
 import type {StylePack} from './styles';
 
@@ -70,7 +70,8 @@ export const ScaleComparator: React.FC<{
   const unitW = Math.min(64 * s, (980 * s) / shown - 6 * s);
 
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', fontFamily}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center',
+      fontFamily: bodyFamily(style)}}>
       <div
         style={{
           ...glassPanel(s),
@@ -145,7 +146,8 @@ export const CausalDiagram: React.FC<{
   const vertical = steps.length > 3;
 
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', fontFamily}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center',
+      fontFamily: bodyFamily(style)}}>
       <div
         style={{
           ...glassPanel(s),
@@ -235,7 +237,7 @@ export const EvidenceFrame: React.FC<{
   );
 
   return (
-    <AbsoluteFill style={{fontFamily}}>
+    <AbsoluteFill style={{fontFamily: bodyFamily(style)}}>
       {corner({top: inset, left: inset},
         {borderTop: `${stroke}px solid ${style.accent}`,
          borderLeft: `${stroke}px solid ${style.accent}`})}

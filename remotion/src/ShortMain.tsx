@@ -19,21 +19,39 @@ import {MapZoom} from './Map';
 import {getStyle, StylePack} from './styles';
 import {
   CaptionsLayer,
-  CinematicOverlay,
   ProgressBar,
   SceneVisual,
   SfxLayer,
+  TextureOverlay,
   Watermark,
 } from './elements';
+import {variationFor} from './variation';
 import {AnimatedStatCard, CtaLayer, EditorialCard, KineticTitle, SceneFrame} from './motion-library';
 import type {MotionSpec} from './motion-library';
 import {GlassCard} from './glass';
 import {OverlayWindow, TimedDim} from './Main';
 import {blurWhip, zoomPunch} from './transitions';
 
-// Shorts: fast vertical whips, slides and punches.
+// Shorts: fast vertical whips, slides and punches — but calm packs
+// (fades bias) breathe more, aggressive packs (whips/punches) hit harder.
 const pickTransition = (i: number, style: StylePack): any => {
   const r = random(`str-${style.name}-${i}`);
+  if (style.transitionBias === 'fades') {
+    if (r < 0.5) return fade();
+    if (r < 0.75) return zoomPunch();
+    return slide({direction: 'from-bottom'});
+  }
+  if (style.transitionBias === 'whips') {
+    if (r < 0.4) return blurWhip('from-bottom');
+    if (r < 0.65) return blurWhip('from-right');
+    if (r < 0.85) return zoomPunch();
+    return slide({direction: 'from-bottom'});
+  }
+  if (style.transitionBias === 'punches') {
+    if (r < 0.45) return zoomPunch();
+    if (r < 0.7) return blurWhip('from-bottom');
+    return fade();
+  }
   if (r < 0.28) return blurWhip('from-bottom');
   if (r < 0.45) return slide({direction: 'from-bottom'});
   if (r < 0.6) return blurWhip('from-right');
@@ -81,6 +99,7 @@ export const ShortMain: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
   const fps = m.fps;
   const {durationInFrames} = useVideoConfig();
   const style = getStyle(m.style);
+  const vr = variationFor(m.motionSeed || m.title || 'short');
   const maxShotSeconds = m.maxShotSeconds ?? 2.4;
   const overlaySeconds = Math.min(
     Math.max(Number((m as any).overlaySeconds ?? 3.5), 1.5), 8);
@@ -120,6 +139,7 @@ export const ShortMain: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
             maxShotSeconds={maxShotSeconds}
             sceneN={scene.n}
             style={style}
+            gradeOpacity={vr.gradeOpacity}
           />
         )}
         {overlayScene ? (
@@ -175,8 +195,9 @@ export const ShortMain: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
         yFrac={(m as {captionY?: number}).captionY ?? 0.62}
         compactYFrac={0.75}
         compactRanges={overlayRanges}
+        variation={vr}
       />
-      <CinematicOverlay />
+      <TextureOverlay style={style} opacityMul={vr.texOpacity} />
       <CtaLayer event={m.cta} style={style} fps={fps} />
       {m.watermarkPath ? (
         <Watermark src={m.watermarkPath} corner="tl"

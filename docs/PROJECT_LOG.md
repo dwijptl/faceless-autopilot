@@ -37,6 +37,22 @@ kinetic, editorial, noir, telemetry) rotating per video.
 
 ## Changelog
 
+**Jul 21 — Visual identity v2: 30 topic-driven style packs (Claude).**
+`styles.ts` + new `pipeline/style_packs.py` (mirrored registries, synced by
+`tests/test_style_packs.py`): 30 distinct looks (cosmos/abyss/archive/
+neon-vice/medical/bazaar/...), each owning palette, Devanagari-safe font
+pairing (new `fonts.ts`, ~28 Google families, lazy-loaded), one of 12
+caption treatments, texture (grain/paper/halation/scanlines/vignette),
+transition grammar, panel tint, per-pack AI-image wrapper + hero-shot
+camera + SceneFrame/lower-third pools. Pack selection is now TOPIC-driven
+(keyword affinity + last-8 no-repeat window in `styles_used*.txt`,
+deterministic title-hash tie-break) replacing `done_count % N`. Per-video
+seeded jitter: python (`render_jitter` — xfade/shot/overlay/captionY/
+watermark) + renderer (`variation.ts` — caption pos/size, grade/texture
+intensity, lower-third delay, word tilt) so same-pack videos never render
+identically. `REMOTION_DISABLE_REMOTE_FONTS=1` renders offline on system
+fonts. 112 tests green.
+
 **Jul 9 — Foundation (Claude).** Repo created via browser; base pipeline
 (Gemini script, Kokoro TTS, Pexels, MoviePy→Remotion, Releases delivery);
 first video same day. Remotion motion-design layer; visual originality

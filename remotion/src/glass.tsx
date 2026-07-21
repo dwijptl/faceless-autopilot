@@ -6,7 +6,7 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from 'remotion';
-import {fontFamily} from './elements';
+import {bodyFamily} from './elements';
 import {StylePack} from './styles';
 import {GLASS, GLOW, RADIUS, SPRING, panel, text, useEnter, useScale} from './motion-tokens';
 
@@ -190,7 +190,7 @@ export const GlassCard: React.FC<{
   }
 
   return <AbsoluteFill style={{justifyContent:'center',alignItems:'center',padding:(compact?70:90)*s,
-    fontFamily,pointerEvents:'none'}}>
+    fontFamily:bodyFamily(style),pointerEvents:'none'}}>
     <div style={{opacity:enter.opacity,transform:enter.transform,maxWidth,
       filter:`drop-shadow(0 ${18*s}px ${38*s}px rgba(0,0,0,.45))`}}>
       <GlassSurface accent={style.accent} strong={variant==='reveal'}

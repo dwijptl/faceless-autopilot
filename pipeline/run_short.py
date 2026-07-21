@@ -32,10 +32,10 @@ import tts as tts_mod               # noqa: E402
 import vision_qc                    # noqa: E402
 import visual_beats as visual_beats_mod  # noqa: E402
 from run import _impact_start, _visual_beat_manifest  # noqa: E402
+import style_packs                  # noqa: E402
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REMOTION_DIR = os.path.join(REPO_ROOT, "remotion")
-STYLES = ["kinetic", "documentary", "noir", "editorial"]  # shorts lean punchy
 DONE_FILE = os.path.join(REPO_ROOT, "topics_done_shorts.txt")
 
 
@@ -113,15 +113,7 @@ def main() -> None:
     workdir = os.path.join(outdir, "work")
     os.makedirs(workdir, exist_ok=True)
 
-    done_count = 0
-    try:
-        with open(DONE_FILE, encoding="utf-8") as f:
-            done_count = sum(1 for ln in f if ln.strip() and not ln.startswith("#"))
-    except Exception:
-        pass
-    style = STYLES[done_count % len(STYLES)]
-    cfg.setdefault("render", {})["style_pack"] = style  # steers AI-image look
-    print(f"=== Shorts run {stamp} · style: {style} ===")
+    print(f"=== Shorts run {stamp} ===")
 
     # 1) topic + short script ------------------------------------------------
     # Shorts are trailers: bias the topic toward the latest long-form episode
@@ -145,6 +137,12 @@ def main() -> None:
         pass
     topic = script_gen.pick_topic(cfg, gemini_key, DONE_FILE,
                                   (learnings or "") + trailer_hint)
+
+    # topic-driven style pack (mystery -> noir family, space -> cosmos...),
+    # rotating away from the last few Shorts. Replaces done_count % N.
+    style = style_packs.select_and_log(topic, "", REPO_ROOT, is_short=True)
+    cfg.setdefault("render", {})["style_pack"] = style  # steers AI-image look
+    print(f"[style] topic-driven pack: {style}")
     measured_wpm = calibration.measured_wpm(
         REPO_ROOT, int(cfg.get("short", {}).get("wpm", 100)), kind="short")
     if measured_wpm:
@@ -164,7 +162,8 @@ def main() -> None:
 
     # 2) voiceover -------------------------------------------------------------
     fps = int(cfg["video"]["fps"])
-    xfade = float(cfg["video"]["crossfade"])
+    jit = style_packs.render_jitter(script["title"] + ":short")
+    xfade = float(cfg["video"]["crossfade"]) * jit["xfade_mul"]
     scenes, offset = [], 0.0
     short_settings = cfg.get("short", {})
     final_index = len(script["scenes"]) - 1
@@ -271,12 +270,16 @@ def main() -> None:
         music_rel = sfx_mod.build_ambient_bed(
             workdir, motion_seed, style, is_short=True)
 
-    motion_mod.decorate_scenes(scenes, motion_seed)
+    motion_mod.decorate_scenes(
+        scenes, motion_seed,
+        frame_pool=style_packs.frames_for(style),
+        lower_third_pool=style_packs.lower_thirds_for(style))
     cta_event = motion_mod.plan_cta(scenes, cfg, motion_seed, is_short=True)
     sfx_events = sfx_mod.plan_events(scenes, cfg, workdir, cta_event)
 
     # word-synced impact windows: the graphic enters on the spoken keyword
-    overlay_seconds = float(short_settings.get("overlay_seconds", 3.5))
+    overlay_seconds = (float(short_settings.get("overlay_seconds", 3.5))
+                       * jit["overlay_mul"])
     for sc in scenes:
         sc["impact_start"] = _impact_start(sc, overlay_seconds)
         if sc["impact_start"] > 0:
@@ -286,7 +289,8 @@ def main() -> None:
     manifest = {"manifest": {
         "fps": fps, "width": 1080, "height": 1920,
         "xfadeFrames": max(int(round(xfade * fps)), 1),
-        "maxShotSeconds": float(cfg["video"].get("max_shot_seconds", 2.4)),
+        "maxShotSeconds": float(cfg["video"].get("max_shot_seconds", 2.4))
+        * jit["max_shot_mul"],
         "overlaySeconds": overlay_seconds,
         "style": style,
         "accent": cfg["render"].get("accent", "#FFB020"),
@@ -294,9 +298,13 @@ def main() -> None:
         "brandName": brand_cfg.get("name", ""),
         "brandTagline": brand_cfg.get("tagline", ""),
         "watermarkPath": wm,
-        "watermarkOpacity": float(brand_cfg.get("watermark_opacity", 0.08)),
+        "watermarkOpacity": min(max(
+            float(brand_cfg.get("watermark_opacity", 0.08))
+            + jit["watermark_off"], 0.05), 0.14),
         "outroSeconds": 0,
-        "captionY": float(cfg.get("short", {}).get("caption_y", 0.62)),
+        "captionY": min(max(
+            float(cfg.get("short", {}).get("caption_y", 0.62))
+            + jit["caption_y_off"], 0.5), 0.72),
         "title": script["title"],
         "thumbText": script.get("thumb_text", ""),
         "motionSeed": motion_seed,
@@ -417,6 +425,7 @@ voice: {voice_line} · run {stamp}
                    }}, f, indent=2, ensure_ascii=False)
 
     script_gen.log_topic_done(topic, DONE_FILE)
+    style_packs.record_use(style, REPO_ROOT, is_short=True)
 
     gh_out = os.environ.get("GITHUB_OUTPUT")
     if gh_out:

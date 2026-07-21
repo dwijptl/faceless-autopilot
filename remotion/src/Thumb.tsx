@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Img, staticFile} from 'remotion';
 import type {Manifest} from './Root';
-import {fontFamily} from './elements';
+import {headingFamily} from './elements';
 import {BRAND, getStyle} from './styles';
 
 /** Branded 1280x720 thumbnail template — Hindi-market high-CTR layout:
@@ -50,7 +50,8 @@ export const Thumb: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
   const question = String((m as any).thumbQuestion ?? '').trim();
 
   return (
-    <AbsoluteFill style={{backgroundColor: BRAND.navy, fontFamily}}>
+    <AbsoluteFill style={{backgroundColor: BRAND.navy,
+      fontFamily: headingFamily(style)}}>
       {hero ? (
         hero.kind === 'image' ? (
           <Img src={staticFile(hero.path)}
