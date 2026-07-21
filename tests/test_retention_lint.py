@@ -192,3 +192,71 @@ def test_reconcile_noop_without_c9_violation():
     out = script_gen._reconcile_display_numbers(script, report, {})
     assert script["scenes"][0]["milestone"]["value"] == 1000000000.0
     assert out is report
+
+
+# ---- variety engine (inauthentic-content policy, bucket 1) ----------------
+
+def test_frame_signature_collapses_templated_titles():
+    import script_gen as sg
+    a = "11,034 मीटर की गहराई पर 1 घंटा: हर मिनट आपके शरीर के साथ क्या होगा?"
+    b = "मंगल ग्रह की सतह पर 1 घंटा: हर 5 मिनट आपके शरीर के साथ क्या होगा?"
+    c = "वैज्ञानिक इस जीव को बनाने से क्यों डरते हैं"
+    assert sg._frame_signature(a) == sg._frame_signature(b)   # same template
+    assert sg._frame_signature(c) != sg._frame_signature(a)   # different shape
+
+
+def test_title_form_and_skeleton_rotate():
+    import script_gen as sg, retention_lint as rl
+    forms = {sg._title_form(i)[0] for i in range(len(sg.TITLE_FORMS))}
+    assert len(forms) == len(sg.TITLE_FORMS)          # every form is reachable
+    assert sg._title_form(0) != sg._title_form(1)     # consecutive differ
+    skels = [rl.skeleton_for(i) for i in range(3)]
+    assert len(set(skels)) == 3                       # three distinct shapes
+    assert rl.skeleton_for(0) == rl.skeleton_for(3)   # deterministic cycle
+
+
+def test_enforce_title_variety_swaps_templated_title():
+    import script_gen as sg
+    done = ["शुक्र ग्रह पर 1 घंटा: हर 5 मिनट आपके शरीर के साथ क्या होगा?"]
+    script = {"title": "मंगल पर 1 घंटा: हर 5 मिनट आपके शरीर के साथ क्या होगा?",
+              "title_options": ["वैज्ञानिक मंगल की मिट्टी से डरते हैं"]}
+    sg._enforce_title_variety(script, done)
+    assert script["title"] == "वैज्ञानिक मंगल की मिट्टी से डरते हैं"
+
+
+def test_enforce_title_variety_leaves_distinct_title_alone():
+    import script_gen as sg
+    done = ["शुक्र ग्रह पर 1 घंटा: हर 5 मिनट आपके शरीर के साथ क्या होगा?"]
+    script = {"title": "ब्लैक होल मरने के बाद उल्टा लौटता है",
+              "title_options": ["कुछ और"]}
+    sg._enforce_title_variety(script, done)
+    assert script["title"] == "ब्लैक होल मरने के बाद उल्टा लौटता है"
+
+
+def test_overused_family_is_detected():
+    import script_gen as sg
+    done = ["शरीर के साथ क्या होगा 1", "शरीर के साथ क्या होगा 2",
+            "शरीर के साथ क्या होगा 3", "समुद्र का रहस्य"]
+    assert "survival_timeline" in sg._overused_families(done)
+    varied = ["समुद्र का रहस्य", "ब्रह्मांड की तुलना",
+              "वैज्ञानिक बहस", "शरीर के साथ क्या होगा"]
+    assert sg._overused_families(varied) == []
+
+
+def test_skeleton_changes_the_reveal_window():
+    import retention_lint as rl
+    scenes = [{"narration": "w " * 12, "narrative_role": "hook"},
+              {"narration": "w " * 12, "narrative_role": "main_reveal"},
+              {"narration": "w " * 12, "narrative_role": "implication"},
+              {"narration": "w " * 12, "narrative_role": "escalation"}]
+    cfg = {}
+    early = rl.lint({"skeleton": "reveal_first", "scenes": scenes,
+                     "retention_plan": {"core_question": "q"}}, cfg)
+    late = rl.lint({"skeleton": "journey", "scenes": scenes,
+                    "retention_plan": {"core_question": "q"}}, cfg)
+    codes_early = {v["code"] for v in early["violations"]}
+    codes_late = {v["code"] for v in late["violations"]}
+    # a reveal at 25% is valid for reveal_first, misplaced for journey
+    assert "reveal_placement" not in codes_early
+    assert "reveal_placement" in codes_late
+    assert early["skeleton"] == "reveal_first"
