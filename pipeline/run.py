@@ -463,10 +463,12 @@ def main() -> None:
               f"(configured: {cfg['channel'].get('wpm', 130)})")
 
     # 1) topic + script ------------------------------------------------------
-    topic = script_gen.pick_topic(cfg, gemini_key,
-                                  os.path.join(REPO_ROOT, "topics_done.txt"),
-                                  learnings)
-    script = script_gen.generate_script(cfg, topic, gemini_key, learnings)
+    done_file = os.path.join(REPO_ROOT, "topics_done.txt")
+    topic = script_gen.pick_topic(cfg, gemini_key, done_file, learnings)
+    # shipped topics drive title-form / skeleton / topic-family rotation
+    done_titles = script_gen._done_titles(done_file)
+    script = script_gen.generate_script(cfg, topic, gemini_key, learnings,
+                                        done=done_titles)
 
     # retention gate "block": stop BEFORE any voice/asset spend when the
     # story audit or word budget still fails after repairs. Default is

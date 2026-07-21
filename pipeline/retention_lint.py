@@ -82,11 +82,41 @@ def _jaccard(a, b) -> float:
     return len(sa & sb) / len(sa | sb)
 
 
+
+# ── Narrative skeletons (inauthentic-content policy, bucket 1) ───────────
+# Enforcing ONE structure on every video is itself a template. Three
+# skeletons rotate per episode: each moves the reveal to a different point
+# and asks for a different role mix, so consecutive videos do not share a
+# shape. reveal_window is (min, max) as a fraction of the script's words.
+
+SKELETONS = {
+    "journey": {          # classic: build -> reveal late
+        "reveal_window": (0.55, 0.85),
+        "must_include": ("escalation",),
+        "note": "one changing variable escalates until a late reveal",
+    },
+    "investigation": {    # question -> evidence -> reversal -> reveal mid
+        "reveal_window": (0.45, 0.75),
+        "must_include": ("evidence", "reversal"),
+        "note": "treat it as a case being solved: clue, contradiction, verdict",
+    },
+    "reveal_first": {     # answer up front, then consequences
+        "reveal_window": (0.15, 0.40),
+        "must_include": ("implication", "escalation"),
+        "note": "give the answer early, then spend the video on what it costs",
+    },
+}
+SKELETON_ORDER = ("journey", "investigation", "reveal_first")
+
+
+def skeleton_for(done_count: int) -> str:
+    """Deterministic per-episode rotation, so structure never repeats twice."""
+    return SKELETON_ORDER[int(done_count) % len(SKELETON_ORDER)]
+
+
 def lint(script: dict, cfg: dict) -> dict:
     """Return {"passed": bool, "violations": [...], "metrics": {...}}."""
     rcfg = cfg.get("retention", {}) if isinstance(cfg, dict) else {}
-    reveal_min = float(rcfg.get("reveal_min_frac", 0.55))
-    reveal_max = float(rcfg.get("reveal_max_frac", 0.85))
     max_open = int(rcfg.get("max_open_loops", 2))
     max_gap_words = int(rcfg.get("max_reward_gap_words", 60))
     max_role_run = int(rcfg.get("max_same_role_run", 2))
@@ -100,9 +130,14 @@ def lint(script: dict, cfg: dict) -> dict:
     def add(code, detail, scene=None):
         violations.append({"code": code, "scene": scene, "detail": detail})
 
+    skel_name = str(script.get("skeleton") or "journey")
+    skel = SKELETONS.get(skel_name, SKELETONS["journey"])
+    reveal_min, reveal_max = skel["reveal_window"]
+
     if n < 4:
         add("structure", f"only {n} scenes — cannot audit")
-        return {"passed": False, "violations": violations, "metrics": {}}
+        return {"skeleton": skel_name, "passed": False,
+                "violations": violations, "metrics": {}}
 
     fracs = _fractions(scenes)
     plan = script.get("retention_plan") or {}
@@ -265,6 +300,14 @@ def lint(script: dict, cfg: dict) -> dict:
                     f"narration never says it — screen and voice must agree",
                     i + 1)
 
+    # ---- C9b: this episode's skeleton must actually be used ----------------
+    roles_present = {str(s.get("narrative_role") or "") for s in scenes}
+    for need in skel["must_include"]:
+        if need not in roles_present:
+            add("skeleton_role",
+                f"skeleton '{skel_name}' requires a scene with "
+                f"narrative_role '{need}' ({skel['note']}) — none found")
+
     # ---- C10: repeated meaning ------------------------------------------------
     token_cache = [_tokens(s.get("narration", "")) for s in scenes]
     for i in range(n):
@@ -293,8 +336,8 @@ def lint(script: dict, cfg: dict) -> dict:
         "open_loops": len(valid_loops),
         "violations": len(violations),
     }
-    return {"passed": not violations, "violations": violations,
-            "metrics": metrics}
+    return {"skeleton": skel_name, "passed": not violations,
+            "violations": violations, "metrics": metrics}
 
 
 def repair_prompt(script: dict, report: dict, cfg: dict,

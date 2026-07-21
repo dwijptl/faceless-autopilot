@@ -584,6 +584,93 @@ def load_learnings(repo_root: str) -> str:
     return text.strip()
 
 
+
+# ── Variety engine (YouTube inauthentic-content policy, bucket 1) ────────
+# "Content made with a template with little to no variation across videos"
+# is ineligible for monetization. A pipeline naturally collapses into one
+# winning formula, so variety is ENFORCED here rather than hoped for:
+# the title FORM and the topic FAMILY both rotate deterministically, and a
+# deterministic check rejects a title that reuses the previous frame.
+
+TITLE_FORMS = [
+    ("question", "a direct question the viewer wants answered "
+                 "(\u0915\u094d\u092f\u093e \u0939\u094b\u0917\u093e / \u0915\u094d\u092f\u094b\u0902)"),
+    ("claim", "a flat declarative claim that sounds impossible but is true "
+              "\u2014 NO question mark anywhere in the title"),
+    ("number", "lead with one shocking number as the first characters"),
+    ("contradiction", "two facts in tension, joined by \u0932\u0947\u0915\u093f\u0928/\u092b\u093f\u0930 \u092d\u0940"),
+    ("scene", "drop the viewer into a moment, present tense, no question"),
+    ("verdict", "state the outcome up front, then who/what it happens to"),
+]
+
+# Topic families — no single family may dominate the channel.
+TOPIC_FAMILIES = {
+    "survival_timeline": ["\u0936\u0930\u0940\u0930", "\u092e\u093f\u0928\u091f", "\u0918\u0902\u091f", "\u0938\u0947\u0915\u0902\u0921",
+                          "body", "survive", "minute", "hour"],
+    "vanishing_whatif": ["\u0905\u0917\u0930", "\u0917\u093e\u092f\u092c", "what if", "vanish", "disappear"],
+    "mystery_investigation": ["\u0930\u0939\u0938\u094d\u092f", "\u0916\u094b\u091c", "mystery", "discover", "unexplained"],
+    "scale_comparison": ["\u0924\u0941\u0932\u0928", "\u0917\u0941\u0928\u093e", "\u092c\u0921\u093c\u093e", "scale", "compare", "size"],
+    "disagreement": ["\u0935\u0948\u091c\u094d\u091e\u093e\u0928\u093f\u0915", "\u092c\u0939\u0938", "disagree", "debate", "theory"],
+}
+FAMILY_CAP = 0.40   # no family may exceed this share of recent output
+
+
+def _title_form(done_count: int) -> tuple:
+    return TITLE_FORMS[done_count % len(TITLE_FORMS)]
+
+
+def _frame_signature(title: str) -> str:
+    """Structural fingerprint of a title: the trailing phrase with all digits
+    and Latin words stripped. Two titles that differ only in their nouns and
+    numbers collapse to the same signature."""
+    t = re.sub(r"[0-9\u0966-\u096F,.\u2212\-\u00b0%]+", "", str(title))
+    t = re.sub(r"[A-Za-z]+", "", t)
+    words = [w for w in t.replace("?", " ").replace(":", " ").split() if w]
+    return " ".join(words[-4:]).strip()
+
+
+def _family_of(topic: str) -> str:
+    low = str(topic).lower()
+    for fam, keys in TOPIC_FAMILIES.items():
+        if any(k.lower() in low for k in keys):
+            return fam
+    return "other"
+
+
+def _overused_families(done: list, window: int = 10) -> list:
+    recent = [t for t in done[-window:] if t]
+    if len(recent) < 4:
+        return []
+    counts = {}
+    for t in recent:
+        fam = _family_of(t)
+        counts[fam] = counts.get(fam, 0) + 1
+    return [f for f, c in counts.items()
+            if f != "other" and c / len(recent) > FAMILY_CAP]
+
+
+def _variety_rules(done: list, done_count: int) -> str:
+    """Prompt block that forces this video away from the last one's shape."""
+    form, how = _title_form(done_count)
+    recent_sigs = [_frame_signature(t) for t in done[-3:] if t]
+    banned = "\n".join(f'  - "{s}"' for s in recent_sigs if s)
+    over = _overused_families(done)
+    fam_note = ""
+    if over:
+        fam_note = (f"\nOVER-USED FAMILIES (do NOT write another one of these): "
+                    f"{', '.join(over)}. Pick a DIFFERENT angle: an "
+                    f"investigation, a scale comparison, a scientific "
+                    f"disagreement, or a single-object deep dive.\n")
+    return f"""
+TITLE VARIETY (mandatory \u2014 the channel must not look templated):
+- This video's title FORM is **{form}**: {how}.
+- The title must NOT end with the same phrase-shape as the last videos:
+{banned or "  (no history yet)"}
+  Reusing a trailing frame like "...\u0915\u0947 \u0938\u093e\u0925 \u0915\u094d\u092f\u093e \u0939\u094b\u0917\u093e?" across videos is BANNED.
+- Vary sentence length and rhythm from the previous title.
+{fam_note}"""
+
+
 def pick_topic(cfg: dict, api_key: str, done_file: str = "topics_done.txt",
                learnings: str = "") -> str:
     forced = os.environ.get("FORCED_TOPIC", "").strip()
@@ -611,6 +698,16 @@ def pick_topic(cfg: dict, api_key: str, done_file: str = "topics_done.txt",
                    if learnings else "")
     lang_note = ("\nWrite the topic itself in Hindi (Devanagari script).\n"
                  if _is_hindi(cfg) else "")
+    over = _overused_families(done)
+    _family_block = ""
+    if over:
+        _family_block = (
+            f"\nTOPIC FAMILY BALANCE \u2014 the channel has over-used: "
+            f"{', '.join(over)}. At least TWO of your three candidates must "
+            f"come from a DIFFERENT family (investigation / scale comparison / "
+            f"scientific disagreement / single-object deep dive). Repeating one "
+            f"formula makes the channel ineligible for monetization.\n")
+        print(f"[script] variety: steering away from over-used families: {over}")
     prompt = f"""You are the content strategist for a faceless YouTube channel.
 
 NICHE: {cfg['channel']['niche']}
@@ -620,6 +717,7 @@ Already-covered topics (NEVER repeat or closely paraphrase these, in any
 language):
 {json.dumps(done[-100:], indent=0, ensure_ascii=False)}
 
+{_family_block}
 Invent THREE candidate video topics with strong curiosity-gap appeal that can
 be illustrated with stock footage of landscapes, cities, nature, aerials and
 oceans plus occasional AI-generated stills (no specific people, no events
@@ -811,8 +909,60 @@ def _retention_pass(script: dict, cfg: dict, api_key: str, topic: str) -> dict:
     return script
 
 
-def generate_script(cfg: dict, topic: str, api_key: str, learnings: str = "") -> dict:
+def _done_titles(done_file: str) -> list:
+    """Titles/topics already shipped — drives title-form + family rotation."""
+    out = []
+    try:
+        with open(done_file, encoding="utf-8") as f:
+            for ln in f:
+                ln = ln.strip()
+                if ln and not ln.startswith("#") and not ln.startswith("NEXT:"):
+                    out.append(ln)
+    except OSError:
+        pass
+    return out
+
+
+def _enforce_title_variety(script: dict, done: list) -> None:
+    """Deterministic backstop for the prompt rule: if the new title reuses a
+    trailing frame from the last 3 videos, promote a title_option that does
+    not. Fail-open — never blocks a render."""
+    recent = {_frame_signature(t) for t in done[-3:] if t}
+    title = str(script.get("title", ""))
+    if not recent or _frame_signature(title) not in recent:
+        return
+    for alt in (script.get("title_options") or []):
+        if _frame_signature(alt) not in recent:
+            print(f"[script] title variety: '{title[:40]}...' reused a recent "
+                  f"frame -> swapped to '{alt[:40]}...'")
+            script["title_options"] = [title] + [
+                t for t in script["title_options"] if t != alt]
+            script["title"] = alt
+            return
+    print(f"[script] WARNING: title reuses a recent frame and no alternate "
+          f"differs \u2014 shipping as-is: {title[:60]}")
+
+
+def _skeleton_block(done_count: int) -> tuple:
+    """(name, prompt block) for this episode's narrative shape."""
+    name = retention_lint.skeleton_for(done_count)
+    s = retention_lint.SKELETONS[name]
+    lo, hi = s["reveal_window"]
+    roles = ", ".join(f"'{r}'" for r in s["must_include"])
+    return name, f"""
+NARRATIVE SHAPE for THIS episode: **{name}** — {s['note']}.
+- The main reveal must land between {lo:.0%} and {hi:.0%} of the script.
+- At least one scene must carry narrative_role {roles}.
+- Do NOT default to the build-up-then-reveal shape unless it is named above;
+  the channel rotates shapes so consecutive videos are structurally different.
+"""
+
+
+def generate_script(cfg: dict, topic: str, api_key: str, learnings: str = "",
+                    done: list | None = None) -> dict:
     v = cfg["video"]
+    done = done if done is not None else []
+    skel_name, skel_block = _skeleton_block(len(done))
     wpm = _wpm(cfg)
     words = int(v["target_minutes"] * wpm)
     ai_max = _ai_max(cfg)
@@ -829,7 +979,7 @@ count your words before returning and expand thin scenes with concrete
 material (never filler).
 TONE: {cfg['channel']['tone']}
 AUDIENCE: {cfg['channel']['audience']}
-{learn_block}{_lang_rules(cfg)}{_style_rules()}
+{learn_block}{_variety_rules(done, len(done))}{skel_block}{_lang_rules(cfg)}{_style_rules()}
 Write a scene-segmented script and return ONLY valid JSON with this exact shape:
 {{
   "title": "click-worthy but honest YouTube title, <= 70 chars",
@@ -1126,6 +1276,8 @@ DRAFT:
             if not script["word_budget"]["ok"]:
                 print(f"[script] WORD BUDGET MISS: {wc}/{words} — the release "
                       "will be flagged for review")
+            script["skeleton"] = skel_name
+            _enforce_title_variety(script, done)
             script = _retention_pass(script, cfg, api_key, topic)
             script = _plan_visual_beats(script, cfg, api_key)
             modes = [s["visual_mode"] for s in script["scenes"]]
@@ -1137,11 +1289,12 @@ DRAFT:
 
 
 def generate_short_script(cfg: dict, topic: str, api_key: str,
-                          learnings: str = "") -> dict:
+                          learnings: str = "", done: list | None = None) -> dict:
     """Script for a vertical Short/Reel: one idea, loop-friendly. Length is
     ADAPTIVE inside [min_seconds, max_seconds]: the story's promise decides,
     not a fixed clock — a checkpoint journey needs more runway than one fact
     (the #1 viewer complaint on fixed-length shorts was "feels cut off")."""
+    done = done if done is not None else []
     scfg = cfg.get("short", {})
     min_seconds = int(scfg.get("min_seconds", scfg.get("target_seconds", 40)))
     max_seconds = int(scfg.get("max_seconds",
@@ -1176,7 +1329,7 @@ gets swiped into oblivion. The second-to-last scene must resolve the CENTRAL
 question with a clear verdict (what it means / who survives / what remains),
 not just another fact.
 TONE: {cfg['channel']['tone']}, but faster and punchier than long-form
-{learn_block}{_lang_rules(cfg)}{_style_rules()}
+{learn_block}{_variety_rules(done, len(done))}{_lang_rules(cfg)}{_style_rules()}
 Return ONLY valid JSON:
 {{
   "title": "<= 80 chars, curiosity gap, no clickbait lies",
@@ -1267,6 +1420,7 @@ Shorts rules:
             script["topic"] = topic
             script = _critique(script, cfg, api_key, "short", 3)
             _enforce_short_payoff(script)
+            _enforce_title_variety(script, done)
             print(f"[script] SHORT '{script['title']}' — "
                   f"{[s['visual_mode'] for s in script['scenes']]}")
             return script

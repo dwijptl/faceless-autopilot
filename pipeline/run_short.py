@@ -152,7 +152,9 @@ def main() -> None:
         cfg["channel"]["wpm"] = measured_wpm  # beat counts track real pace
         print(f"[calib] short word budget uses measured pace: "
               f"{measured_wpm} wpm")
-    script = script_gen.generate_short_script(cfg, topic, gemini_key, learnings)
+    script = script_gen.generate_short_script(
+        cfg, topic, gemini_key, learnings,
+        done=script_gen._done_titles(DONE_FILE))
     # sentence-level visual beats — one free Gemini pass binds each spoken
     # idea to a concrete visual (same system as long-form, portrait ceilings)
     script = script_gen._plan_visual_beats(script, cfg, gemini_key)
