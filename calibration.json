@@ -40,5 +40,12 @@
     "words": 183,
     "seconds": 75.3,
     "wpm": 145.9
+  },
+  {
+    "stamp": "2026-07-21_2356",
+    "kind": "short",
+    "words": 208,
+    "seconds": 78.2,
+    "wpm": 159.6
   }
 ]
