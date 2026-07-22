@@ -976,13 +976,8 @@ Remotion. Brand: Terra Incognita.*
 
     script_gen.log_topic_done(topic, os.path.join(REPO_ROOT, "topics_done.txt"))
     style_packs.record_use(style, REPO_ROOT, is_short=False)
-    tease = str(script.get("next_tease_topic", "")).strip()
-    if tease:
-        # the on-screen tease is a promise — lock it as the next episode
-        with open(os.path.join(REPO_ROOT, "topics_done.txt"), "a",
-                  encoding="utf-8") as f:
-            f.write(f"NEXT: {tease}\n")
-        print(f"[script] next episode locked to the on-screen tease: {tease}")
+    # No automatic next-episode lock: the owner either adds a manual
+    # "NEXT: <topic>" line to topics_done.txt or lets pick_topic choose.
 
     gh_out = os.environ.get("GITHUB_OUTPUT")
     if gh_out:

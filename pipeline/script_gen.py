@@ -689,9 +689,9 @@ def pick_topic(cfg: dict, api_key: str, done_file: str = "topics_done.txt",
                     tease = ln[5:].strip()  # last marker wins
                 else:
                     done.append(ln)
-    # honor the previous episode's on-screen tease — the video made a promise
+    # honor a manual NEXT: override the owner added to topics_done.txt
     if tease and tease not in done:
-        print(f"[script] honoring previous episode's on-screen tease: {tease}")
+        print(f"[script] honoring manual NEXT: override: {tease}")
         return tease
 
     learn_block = (f"\nWHAT HAS WORKED ON THIS CHANNEL (analytics digest):\n{learnings}\n"
@@ -993,7 +993,6 @@ Write a scene-segmented script and return ONLY valid JSON with this exact shape:
   "changing_variable": {{"label": "SHORT ENGLISH metric the viewer watches change (DEPTH, SPEED, TIME, TEMP, SIZE)", "unit": "km"}},
   "hero_prompt": "ENGLISH text-to-image prompt for the episode's recurring HERO subject — one person/object/place the video returns to as conditions change: subject + setting + light + camera angle",
   "forbidden_visuals": ["3-6 short ENGLISH phrases describing footage that would BREAK the premise and must never appear (e.g. for an unprotected-human deep-sea premise: 'scuba diver', 'diving suit', 'oxygen tank', 'snorkeler')"],
-  "next_tease_topic": "the EXACT topic teased in the final scene, as a Hindi working title — the pipeline will make it the next episode, so it must be a producible topic (stock+AI illustrable) and the tease itself must be factually accurate",
   "retention_plan": {{
     "core_question": "the ONE Hindi question the whole video exists to answer — the title's promise, sharpened",
     "viewer_assumption": "what the target viewer already believes about this topic (Hindi)",
@@ -1126,8 +1125,7 @@ Script rules:
     footage does not belong in the video.
   * No more than two consecutive scenes share a narrative_role.
   * After the main reveal: one implication scene (what this means for the
-    viewer/world), then the tease. The tease is short and never replaces the
-    conclusion.
+    viewer/world), then a decisive conclusion that closes every open loop.
 - ENGINE NEVER GOES FLAT: milestone values must keep moving until at least
   ~75-80% of the script. If the changing_variable naturally reaches its
   destination earlier, hand the story to a SECOND engine (an investigation,
@@ -1166,11 +1164,8 @@ Script rules:
   that states the premise immediately and opens a curiosity gap. Deliver the
   first concrete answer by 45 seconds. Add one-sentence re-hooks near 25%, 50%
   and 75% of the runtime, each paired with a new visual mode. Final scene is a 20-second
-  payoff with a next-video tease. No "like and subscribe" begging.
-- THE TEASE IS A CONTRACT: the final scene's tease must describe
-  next_tease_topic exactly, and its claim must be factually accurate with the
-  correct comparison (Venus melts LEAD — it does not vaporize iron). The next
-  episode WILL be this topic — never tease something unproducible.
+  payoff that lands the answer with a strong, conclusive final line — NO
+  next-video tease, NO "like and subscribe" begging.
 - Narration is written for the EAR: short sentences, makes sense with eyes closed.
 - Facts must be well-established; when uncertain, phrase carefully rather than
   inventing precise numbers.
