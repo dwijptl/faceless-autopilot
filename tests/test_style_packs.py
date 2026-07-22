@@ -230,3 +230,12 @@ def test_apply_pacing_bends_config_within_bounds():
     style_packs.apply_pacing(cfg, "glacier", is_short=True)
     assert 1.4 <= cfg["video"]["max_shot_seconds"] <= 3.6
     assert 12 <= cfg["captions"]["max_chars"] <= 30
+
+
+def test_hinglish_topics_route_by_meaning():
+    # Latin-script (Hinglish) topics — how the owner types forced topics
+    assert style_packs.select("NASA Ko Earth Ke Andar Se Signal Mila") == "ember"
+    assert style_packs.select("sharir ke andar dimag kaise kaam karta hai") == "medical"
+    assert style_packs.select("samundar ki gehrai mein titanic ka raaz") == "abyss"
+    assert style_packs.select("ISRO ka naya rocket aur black hole") == "cosmos"
+    assert style_packs.select("purani sabhyata ki khudai mein mila pyramid") == "relic"

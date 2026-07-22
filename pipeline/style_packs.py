@@ -373,6 +373,74 @@ PACKS: dict[str, dict] = {
 
 _LEGACY_BASES = ("documentary", "kinetic", "editorial", "noir")
 
+# ── Hinglish / Latin-script topic cues ───────────────────────────────────
+# Owners and forced topics often arrive in Latin script ("NASA Ko Earth Ke
+# Andar Se Signal Mila"). Devanagari keywords alone can't route those, so
+# every pack also carries transliterated cues. Trailing spaces guard short
+# tokens against substring false-positives.
+HINGLISH_KEYWORDS: dict[str, list[str]] = {
+    "noir":       ["rahasya", "mystery", "gayab ", "lapata", "murder",
+                   "crime "],
+    "telemetry":  ["signal", "satellite", "mission", "telescope", "probe",
+                   "voyager"],
+    "archive":    ["itihas", "history", "raja ", "mughal", "british",
+                   "purana", "purani", " sadi "],
+    "manuscript": ["puran", "veda ", "vedas", "mandir", "sanskrit",
+                   "shastra", "granth", "devta", "rishi"],
+    "relic":      ["khandahar", "pyramid", "mummy", "civilization",
+                   "sabhyata", "harappa", "khudai", "archaeology"],
+    "bazaar":     ["tyohar", "festival", "khana ", "food ", "bazaar",
+                   "mela ", "shaadi", "diwali", "holi "],
+    "terracotta": ["gaon ", "kisan", "craft", "karigar", "mitti",
+                   "handmade", "village"],
+    "folklore":   ["kahani", "bhoot", "shraap", "legend", "myth ",
+                   "aatma", "darawni", "shaapit", "haunted"],
+    "cosmos":     ["nasa ", "isro ", "antariksh", "black hole", "brahmand",
+                   "rocket", "planet", "asteroid", "galaxy", "mangal grah",
+                   "chand ", "moon ", "mars "],
+    "quantum":    ["quantum", "atom ", "parmanu", "physics", "einstein",
+                   "gravity", "time travel", "light ki speed"],
+    "horizon":    ["khoj ", "expedition", "record ", "everest", "yatra",
+                   "explorer", "adventure"],
+    "abyss":      ["samundar", "samudra", "ocean", "gehrai", "shark",
+                   "whale", "titanic", "submarine", "underwater"],
+    "monsoon":    ["barish", "baarish", "monsoon", "nadi ", "jungle",
+                   "flood", "baadh ", "climate", "amazon"],
+    "storm":      ["toofan", "tufan", "cyclone", "bijli ", "aandhi",
+                   "tornado", "hurricane"],
+    "glacier":    ["baraf", "glacier", " ice ", "antarctica", "himalaya",
+                   "arctic", "frozen"],
+    "safari":     ["janwar", "tiger", "lion ", "elephant", "haathi",
+                   "saanp", "dinosaur", "animal", "shikar", "wildlife"],
+    "verdant":    ["paudha", "plant", "phool", "bacteria", "keede",
+                   "makkhi", "chinti", "fungi", "mushroom"],
+    "dune":       ["registan", "desert", "sahara", "thar ", "sookha"],
+    "ember":      ["volcano", "lava ", "earthquake", "bhukamp",
+                   "jwalamukhi", "tabahi", "disaster", "visfot", "blast",
+                   "zameen ke andar", "earth ke andar", "andar se",
+                   "dharti ke andar"],
+    "medical":    ["sharir", "dimag", "dimaag", "khoon", "body ", "brain",
+                   "neend", "bimari", "virus", " dna ", "heart ", "cells"],
+    "laboratory": ["experiment", "scientist", "vigyan", "research",
+                   "nobel", "science "],
+    "blueprint":  ["engine ", "machine", "bridge", " pul ", " dam ",
+                   "tunnel", "kaise kaam", "kaise banta", "kaise banti",
+                   "engineering"],
+    "circuit":    ["computer", "robot", "internet", " chip ", "smartphone",
+                   "cyber", "software", "digital", " ai "],
+    "neon-vice":  ["neon ", "tokyo", "vegas", "gaming", "metaverse",
+                   "night city", "future city", "raat ki"],
+    "metro":      ["sheher", "shahar", " city ", "metro ", "train ",
+                   "airport", "mumbai", "delhi", "skyscraper"],
+    "rustbelt":   ["factory", "karkhana", "khadan", "steel", " loha ",
+                   " ship ", " oil ", "industry"],
+    "signal":     ["khatra", "warning", "alert", "scam ", "ghotala",
+                   "saazish", "conspiracy", "jaanch"],
+}
+for _name, _extra in HINGLISH_KEYWORDS.items():
+    PACKS[_name]["keywords"] = list(PACKS[_name]["keywords"]) + _extra
+del _name, _extra
+
 # ── Pacing DNA: how each pack CUTS ───────────────────────────────────────
 # pace  -> multiplier on max shot length AND crossfade weight: snappy packs
 #          (<1) cut faster with shorter dissolves, contemplative packs (>1)
@@ -490,7 +558,7 @@ def select(title: str, extra: str = "", history: list[str] | None = None) -> str
     """Deterministic: keyword affinity first, then a title-hash tie-break
     among the top scorers, excluding the last RECENT_WINDOW packs used
     (unless that would empty the pool)."""
-    text = f"{title} {extra}".lower()
+    text = f" {title} {extra} ".lower()
     recent = set(history or [])
     scores = {name: _score(pack, text) for name, pack in PACKS.items()}
     pool = {n: s for n, s in scores.items() if n not in recent} or scores
