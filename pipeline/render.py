@@ -8,9 +8,19 @@ import glob
 import os
 import random
 
+import numpy as np
 from moviepy import (AudioFileClip, CompositeAudioClip, CompositeVideoClip,
                      ImageClip, TextClip, VideoFileClip, afx,
                      concatenate_videoclips, vfx)
+
+# Same palette family as assets._gradient_card so the fallback background
+# reads as part of the house style.
+_FALLBACK_PALETTES = [
+    ((10, 20, 40), (18, 35, 63)),
+    ((16, 12, 34), (70, 44, 108)),
+    ((8, 26, 26), (22, 78, 74)),
+    ((28, 18, 8), (104, 64, 26)),
+]
 
 FONT_CANDIDATES = [
     "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Bold.ttf",
@@ -43,8 +53,38 @@ def _ken_burns(img_path: str, duration: float, w: int, h: int, zoom_in: bool):
     return CompositeVideoClip([moving.with_position("center")], size=(w, h)).with_duration(duration)
 
 
+def _gradient_frame(w: int, h: int, seed: int):
+    """Vertical gradient as an (h, w, 3) uint8 array — no disk I/O."""
+    top, bottom = _FALLBACK_PALETTES[seed % len(_FALLBACK_PALETTES)]
+    ramp = np.linspace(0.0, 1.0, h, dtype=np.float32)[:, None]        # (h, 1)
+    top_a, bot_a = np.array(top, np.float32), np.array(bottom, np.float32)
+    col = top_a[None, :] + (bot_a - top_a)[None, :] * ramp            # (h, 3)
+    return np.repeat(col[:, None, :], w, axis=1).astype("uint8")      # (h, w, 3)
+
+
+def _fallback_visual(duration: float, w: int, h: int, seed: int, zoom_in: bool):
+    """Gentle Ken Burns over a house-palette gradient.
+
+    Map scenes (and any scene whose sourcing produced nothing) reach this
+    MoviePy fallback renderer with an empty asset list: Remotion draws their
+    background itself via MapZoom, but this renderer has no such component.
+    Rather than divide by zero, put a living gradient behind the voiceover —
+    the same "never fail" gradient-card fallback assets.fetch_scene_assets
+    uses for every other empty-asset path.
+    """
+    base = ImageClip(_gradient_frame(w, h, seed)).with_duration(duration)
+    base = base.resized(1.12)  # headroom so the move never exposes an edge
+    z0, z1 = (1.0, 1.08) if zoom_in else (1.08, 1.0)
+    moving = base.resized(lambda t: z0 + (z1 - z0) * (t / max(duration, 0.01)))
+    return CompositeVideoClip([moving.with_position("center")],
+                              size=(w, h)).with_duration(duration)
+
+
 def _scene_visual(assets: list[dict], duration: float, cfg: dict, rng: random.Random):
     w, h, max_shot = cfg["video"]["width"], cfg["video"]["height"], cfg["video"]["max_shot_seconds"]
+    if not assets:
+        return _fallback_visual(duration, w, h, int(rng.random() * 1000),
+                                rng.random() < 0.5)
     parts, remaining, i = [], duration, 0
     zoom_in = rng.random() < 0.5
     while remaining > 0.05:
