@@ -31,7 +31,7 @@ import sfx as sfx_mod               # noqa: E402
 import tts as tts_mod               # noqa: E402
 import vision_qc                    # noqa: E402
 import visual_beats as visual_beats_mod  # noqa: E402
-from run import _impact_start, _visual_beat_manifest  # noqa: E402
+from run import _impact_start, _visual_beat_manifest, _validate_scene_assets  # noqa: E402
 import style_packs                  # noqa: E402
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -245,6 +245,7 @@ def main() -> None:
     usage_log["pexels"] = sorted(used)
     usage_log["prompts"] = sorted(used_prompts)
     assets_mod.save_usage_log(log_path, usage_log)
+    _validate_scene_assets(scenes)  # drop vanished/corrupt files before render
 
     # 4) captions (small chunks = word-group pops) -----------------------------
     events, srt = captions_mod.build_captions(scenes, cfg["captions"]["max_chars"])

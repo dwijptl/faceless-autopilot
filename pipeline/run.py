@@ -189,6 +189,36 @@ def build_description(script: dict, is_short: bool = False,
     return "\n\n".join(p for p in parts if p)
 
 
+def _validate_scene_assets(scenes: list) -> None:
+    """RENDER GUARD — a manifest asset whose file is missing/corrupt kills
+    the Remotion render at the exact frame that needs it (observed: 404 on
+    s06_*.mp4 at frame 1236). Validate ON DISK right before the manifest is
+    written: drop vanished/zero-byte files; a non-graphic scene left empty
+    borrows its neighbor's footage so no scene ever renders from nothing."""
+    last_good: list | None = None
+    for sc in scenes:
+        def ok(a: dict) -> bool:
+            p = a.get("path") or ""
+            try:
+                return bool(p) and os.path.getsize(p) > 1024
+            except OSError:
+                return False
+        kept = [a for a in sc.get("assets", []) if ok(a)]
+        dropped = len(sc.get("assets", [])) - len(kept)
+        if dropped:
+            print(f"[render-guard] scene {sc.get('n')}: dropped {dropped} "
+                  f"missing/corrupt asset file(s)")
+        for beat in sc.get("visual_beats") or []:
+            beat["assets"] = [a for a in beat.get("assets", []) if ok(a)]
+        sc["assets"] = kept
+        if kept:
+            last_good = kept
+        elif str(sc.get("visual_mode", "broll")) != "map" and last_good:
+            sc["assets"] = list(last_good)
+            print(f"[render-guard] scene {sc.get('n')}: empty after guard — "
+                  f"borrowing previous scene's footage")
+
+
 def _asset_manifest(asset: dict) -> dict:
     return {
         "path": os.path.basename(asset["path"]),
@@ -614,6 +644,7 @@ def main() -> None:
     usage_log["pexels"] = sorted(used)
     usage_log["prompts"] = sorted(used_prompts)
     assets_mod.save_usage_log(log_path, usage_log)
+    _validate_scene_assets(scenes)  # drop vanished/corrupt files before render
     if hero_poses:
         _attach_hero(scenes, hero_poses)
 
