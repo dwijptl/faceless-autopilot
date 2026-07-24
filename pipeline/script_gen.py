@@ -16,6 +16,7 @@ import time
 import requests
 
 import retention_lint
+import topic_shape
 import visual_beats as visual_beats_mod
 
 API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
@@ -671,13 +672,15 @@ TITLE VARIETY (mandatory \u2014 the channel must not look templated):
 {fam_note}"""
 
 
-def pick_topic(cfg: dict, api_key: str, done_file: str = "topics_done.txt",
-               learnings: str = "") -> str:
-    forced = os.environ.get("FORCED_TOPIC", "").strip()
-    if forced:
-        print(f"[script] using forced topic: {forced}")
-        return forced
+def _score_template(shape: str) -> str:
+    """The "scores" object literal for pick_topic's JSON contract, matching
+    whichever rubric this run is using."""
+    return "{" + ", ".join(f'"{k}": 0' for k in topic_shape.score_keys(shape)) + "}"
 
+
+def _read_done(done_file: str) -> tuple:
+    """(topics, last NEXT: marker) from a topics_done file. Missing file is
+    not an error — a fresh channel has no history."""
     done, tease = [], ""
     if os.path.exists(done_file):
         with open(done_file, encoding="utf-8") as f:
@@ -689,8 +692,42 @@ def pick_topic(cfg: dict, api_key: str, done_file: str = "topics_done.txt",
                     tease = ln[5:].strip()  # last marker wins
                 else:
                     done.append(ln)
+    return done, tease
+
+
+def pick_topic(cfg: dict, api_key: str, done_file: str = "topics_done.txt",
+               learnings: str = "", shape: str = "any",
+               also_done: list | None = None, max_seconds: float = 90) -> str:
+    """Pick the next topic.
+
+    `shape` routes the candidate rubric (see topic_shape): "single_claim" for
+    Shorts, "any"/"checkpoint_journey" for long-form. Shorts and long-form used
+    to share the VISUAL JOURNEY TEST, which rewards "6+ escalating milestones"
+    — a promise a 45-second Short cannot keep, and the measured cause of the
+    channel's sub-40% Shorts retention.
+
+    `also_done` is the OTHER format's topic history. The two topics_done files
+    are separate namespaces, so before this parameter existed a Short could
+    duplicate a long-form topic — which is exactly what happened on 2026-07-22
+    and 07-23 (the same Earth-signal topic shipped as an 83s Short and a 399s
+    long-form one day apart; the Short did 78 views, the long-form did 4).
+    """
+    forced = os.environ.get("FORCED_TOPIC", "").strip()
+    if forced:
+        print(f"[script] using forced topic: {forced}")
+        return forced
+
+    done, tease = _read_done(done_file)
+    cross = [t for t in (also_done or []) if t]
+    if cross:
+        print(f"[script] cross-format dedupe: {len(cross)} topic(s) from the "
+              f"other format are off-limits too")
     # honor a manual NEXT: override the owner added to topics_done.txt
     if tease and tease not in done:
+        if shape != "any" and topic_shape.classify(tease) != shape:
+            print(f"[script] WARNING: manual NEXT: override is "
+                  f"{topic_shape.explain(tease)} but this run wants {shape} — "
+                  f"honoring the override anyway (owner intent wins)")
         print(f"[script] honoring manual NEXT: override: {tease}")
         return tease
 
@@ -715,7 +752,7 @@ AUDIENCE: {cfg['channel']['audience']}
 {learn_block}
 Already-covered topics (NEVER repeat or closely paraphrase these, in any
 language):
-{json.dumps(done[-100:], indent=0, ensure_ascii=False)}
+{json.dumps((done + cross)[-100:], indent=0, ensure_ascii=False)}
 
 {_family_block}
 Invent THREE candidate video topics with strong curiosity-gap appeal that can
@@ -725,46 +762,65 @@ needing news footage, nothing requiring licensed material). If the analytics
 digest above shows a topic family performing well, lean into that family
 without repeating covered topics.
 
-THE VISUAL JOURNEY TEST — score each candidate 1-10 on ALL of:
-- journey: is there ONE changing variable the viewer travels along
-  (depth, speed, time, temperature, scale)?
-- escalation: can it produce 6+ visibly escalating milestones?
-- number_hook: does it contain one concrete, quotable number?
-- human_stakes: is there a consequence a viewer can feel on their own body/city?
-- visual: does something VISIBLY change on screen every 30 seconds?
-- thumbnail: can it be drawn as ONE dramatic image?
-- feasibility: can stock footage + AI stills TRUTHFULLY illustrate it
-  (no reenactments, no specific people, no news footage)?
-- source_confidence: are its core facts well-established and easy to verify
-  with primary scientific/government sources?
-- sequel: does it naturally open an obvious next-episode question?
-A topic that is a list of facts ("types of X") must score low on journey.
+{topic_shape.rubric(shape, max_seconds)}
 REJECT any candidate that is interesting but cannot be shown truthfully
 (feasibility <= 4) or whose central claim cannot be verified
 (source_confidence <= 4) — an accurate, filmable topic beats a viral,
 unfilmable one.
 {lang_note}
 Return JSON exactly:
-{{"candidates": [{{"topic": "...", "scores": {{"journey": 0, "escalation": 0,
-"number_hook": 0, "human_stakes": 0, "visual": 0, "thumbnail": 0,
-"feasibility": 0, "source_confidence": 0, "sequel": 0}},
+{{"candidates": [{{"topic": "...", "scores": {_score_template(shape)},
 "total": 0}}],
 "topic": "<the candidate with the highest total>"}}"""
-    last_err = None
+
+    def _candidates(parsed) -> list:
+        out = []
+        head = str(parsed.get("topic") or "").strip()
+        if head:
+            out.append(head)
+        for c in sorted(parsed.get("candidates") or [],
+                        key=lambda c: -float(c.get("total", 0) or 0)):
+            t = str(c.get("topic") or "").strip()
+            if t and t not in out:
+                out.append(t)
+        return out
+
+    last_err, reject_note = None, ""
     for attempt in range(3):
         try:
-            parsed = _parse_json(_llm(prompt, cfg, api_key))
-            topic = str(parsed.get("topic") or "").strip()
-            if not topic:
-                cands = parsed.get("candidates") or []
-                cands = sorted(cands, key=lambda c: -float(c.get("total", 0)))
-                topic = str(cands[0]["topic"]).strip()
-            print(f"[script] auto-picked topic (journey-tested): {topic}")
-            return topic
+            parsed = _parse_json(_llm(prompt + reject_note, cfg, api_key))
+            cands = _candidates(parsed)
+            if not cands:
+                raise KeyError("topic")
+            if shape == "any":
+                print(f"[script] auto-picked topic: {cands[0]}")
+                return cands[0]
+            # Shape gate: take the best candidate that actually fits the format.
+            # The model is told the rule; this verifies it, because a rubric in
+            # a prompt is a request and a check is a guarantee.
+            for t in cands:
+                if topic_shape.classify(t) == shape and (
+                        shape != topic_shape.SINGLE_CLAIM
+                        or topic_shape.fits_in(t, max_seconds)):
+                    print(f"[script] auto-picked topic ({shape}): {t}")
+                    print(f"[script]   shape check: {topic_shape.explain(t)}")
+                    return t
+            worst = cands[0]
+            print(f"[script] shape reject (attempt {attempt + 1}): all "
+                  f"{len(cands)} candidates are wrong-shaped for {shape} — "
+                  f"e.g. '{worst[:50]}' is {topic_shape.explain(worst)}")
+            reject_note = f"""
+
+REJECTED — your previous candidates all failed the shape gate:
+{json.dumps(cands, ensure_ascii=False)}
+Each promises checkpoints or stages that cannot be paid off in
+{int(max_seconds)} seconds. Propose topics that resolve in ONE claim: no
+"हर N मिनट/मीटर", no "X से Y तक", no stage-by-stage timeline."""
         except (json.JSONDecodeError, KeyError, IndexError, TypeError) as e:
             last_err = e
             print(f"[script] bad topic JSON (attempt {attempt + 1}): {e}")
-    raise RuntimeError(f"Could not pick a topic after 3 attempts: {last_err}")
+    raise RuntimeError(f"Could not pick a {shape} topic after 3 attempts: "
+                       f"{last_err or 'every candidate failed the shape gate'}")
 
 
 def _plan_visual_beats(script: dict, cfg: dict, api_key: str) -> dict:
@@ -1299,7 +1355,6 @@ def generate_short_script(cfg: dict, topic: str, api_key: str,
     wpm = int(scfg.get("wpm", min(_wpm(cfg), 105)))
     min_words = int(min_seconds / 60 * wpm)
     words = int(max_seconds / 60 * wpm)
-    seconds = max_seconds
     short_ai_max = min(_ai_max(cfg), 2)
     learn_block = (f"\nCHANNEL LEARNINGS — apply to hook and pacing:\n{learnings}\n"
                    if learnings else "")
@@ -1307,27 +1362,35 @@ def generate_short_script(cfg: dict, topic: str, api_key: str,
 faceless channel (vertical video: voiceover + b-roll + big captions).
 
 TOPIC: {topic}
-LENGTH — the story decides, inside a hard band:
+ONE PROMISE (the hard rule for this format): this Short makes exactly ONE
+claim and settles it. A checkpoint or timeline promise ("हर 5 मिनट...",
+"1 सेकंड से 1 घंटे तक...", "minute by minute") belongs to a long-form
+episode, NOT here — in a Short those checkpoints cannot all appear, so the
+video reads as cut off. Measured on this channel: every checkpoint Short
+retained under 40% of its runtime; every one-claim Short retained over 55%,
+and the best two were replayed end-to-end. Do not write a checkpoint title
+and do not structure the scenes as a tour of stages.
+
+LENGTH — the claim decides, inside a hard band:
 HARD RANGE: {min_words}-{int(words * 1.05)} spoken words TOTAL
 ({min_seconds}-{max_seconds} seconds). Use the FEWEST words that COMPLETELY
-pay off the title's promise — one crisp fact fits the bottom of the band;
-a journey/timeline/checkpoint topic ("हर 1000 मीटर पर...", "minute by
-minute...") needs the top of the band, because every promised checkpoint
-must actually appear. Never stretch a small idea and never amputate a big
-one. Count your words before returning.
+settle the one claim — a jolting fact can land near the bottom of the band;
+a claim needing real evidence uses the top. Never stretch a small idea and
+never amputate a big one. Count your words before returning.
 
-PROMISE AUDIT (do this BEFORE writing scenes): list to yourself the 3-5
-questions your title makes the viewer expect. Every one of them must be
-answered on screen. If the title promises N checkpoints/minutes/stages, all
-N appear — a video that answers 2 of 5 expected questions feels cut off and
-gets swiped into oblivion. The second-to-last scene must resolve the CENTRAL
-question with a clear verdict (what it means / who survives / what remains),
-not just another fact.
+PROMISE AUDIT (do this BEFORE writing scenes): state to yourself the ONE
+question your title makes the viewer expect. It must be answered on screen,
+completely. If you find yourself listing three or more questions the title
+raises, the title is too big for this format — rewrite the title smaller
+rather than answering two of three. The second-to-last scene must resolve
+the CENTRAL question with a clear verdict (what it means / who survives /
+what remains), not just another fact.
 TONE: {cfg['channel']['tone']}, but faster and punchier than long-form
 {learn_block}{_variety_rules(done, len(done))}{_lang_rules(cfg)}{_style_rules()}
 Return ONLY valid JSON:
 {{
-  "title": "<= 80 chars, curiosity gap, no clickbait lies",
+  "title": "<= 80 chars, curiosity gap, no clickbait lies. ONE promise the video can settle — never 'हर N मिनट/मीटर', 'X से Y तक' or a stage-by-stage timeline; those need long-form runtime.",
+  "title_options": ["3 alternative Hindi titles, strongest first, each keeping the ONE-promise rule"],
   "thumb_text": "2-4 bold ENGLISH/Hinglish punch words (Latin script)",
   "delivery-note": "each scene also gets \"delivery\": hook | calm | reveal | urgent (scene 1 = hook; the twist scene = reveal); and may use visual_mode \"map\" with \"map\": {{\"lat\": 0.0, \"lon\": 0.0, \"label\": \"हिन्दी\"}} when one specific place is the star (0-1 map scenes)",
   "payoff": "ONE declarative Hindi sentence that ANSWERS the hook's question",
@@ -1414,7 +1477,9 @@ Shorts rules:
             script = _normalize(_parse_json(_llm(prompt, cfg, api_key)), 3)
             script["topic"] = topic
             script = _critique(script, cfg, api_key, "short", 3)
+            _enforce_short_hook(script)
             _enforce_short_payoff(script)
+            _enforce_title_scope(script, max_seconds)
             _enforce_title_variety(script, done)
             print(f"[script] SHORT '{script['title']}' — "
                   f"{[s['visual_mode'] for s in script['scenes']]}")
@@ -1423,6 +1488,108 @@ Shorts rules:
             print(f"[script] invalid short JSON (attempt {attempt + 1}): {e}")
     raise RuntimeError("Could not obtain a valid short script after 3 attempts")
 
+
+
+# Openings that cost the first seconds — the window a Short lives or dies in.
+# The measured failure: the channel's 24s Short averaged 3.6s of view time, so
+# viewers were gone before the first sentence finished. `_style_rules` has
+# banned these in the prompt since day one; nothing ever checked the output.
+_BANNED_OPENER = re.compile(
+    r"^\s*(?:"
+    r"नमस्कार|नमस्ते|हैलो|हेलो|दोस्तों|स्वागत है|"
+    r"क्या आप जानते ह|क्या आपने कभी|आइए जानते ह|आइये जानते ह|"
+    r"कल्पना क(?:ीजिए|रें)|चलिए शुरू करते ह|आज हम|इस वीडियो में|"
+    r"hello|hi there|hey guys|welcome back|"
+    r"have you ever wondered|did you know|imagine a world|let'?s dive in"
+    r")\S*[\s,–—-]*", re.I)
+
+_SENT_SPLIT = re.compile(r"(?<=[।.!?])\s+")
+
+HOOK_MAX_WORDS = 12
+
+
+def _enforce_short_hook(script: dict) -> None:
+    """Deterministic opening contract for a Short: no greeting, no stock
+    opener, and the hook fits inside HOOK_MAX_WORDS.
+
+    Mirrors `_enforce_short_payoff` at the other end of the script. Both fail
+    open — a warned-but-shipped hook beats a crashed pipeline — but the
+    banned-opener strip is a true repair, not a warning."""
+    scenes = script.get("scenes") or []
+    if not scenes:
+        return
+    first = scenes[0]
+    narration = str(first.get("narration") or "").strip()
+    if not narration:
+        return
+
+    stripped = narration
+    while True:
+        cut = _BANNED_OPENER.sub("", stripped, count=1).lstrip(" ,–—-")
+        if cut == stripped or not cut:
+            break
+        stripped = cut
+    if stripped != narration:
+        print(f"[script] hook contract: stripped stock opener "
+              f"({narration[:34]!r} -> {stripped[:34]!r})")
+        narration = stripped
+
+    words = narration.split()
+    if len(words) > HOOK_MAX_WORDS:
+        # Safe trim only: keep whole leading sentences while they fit, so we
+        # never amputate mid-clause.
+        kept, count = [], 0
+        for sent in _SENT_SPLIT.split(narration):
+            n = len(sent.split())
+            if kept and count + n > HOOK_MAX_WORDS:
+                break
+            kept.append(sent)
+            count += n
+        trimmed = " ".join(kept).strip()
+        if kept and count <= HOOK_MAX_WORDS and trimmed:
+            print(f"[script] hook contract: trimmed hook "
+                  f"{len(words)} -> {count} words")
+            narration = trimmed
+        else:
+            print(f"[script] WARNING: hook runs {len(words)} words "
+                  f"(max {HOOK_MAX_WORDS}) and has no clean sentence break — "
+                  f"shipping as-is: {narration[:60]}")
+
+    first["narration"] = narration
+
+
+def _enforce_title_scope(script: dict, max_seconds: float,
+                         shape: str = topic_shape.SINGLE_CLAIM) -> None:
+    """The title may not promise more than the format can pay off.
+
+    This is the belt to the topic gate's braces: `pick_topic(shape=...)` keeps
+    checkpoint TOPICS out of Shorts, but the model can still invent a
+    checkpoint TITLE for a single-claim topic. Both of the channel's
+    worst-retaining Shorts failed exactly here — a title promising a
+    minute-by-minute hour on a 24-second video (15.0% retention) and one
+    promising 90 seconds of stakes in a 78-second video (11.3%).
+
+    Shape is checked before runtime arithmetic: for a Short, ANY checkpoint
+    title is wrong even when the beat math happens to fit the band, because
+    the format's contract is one claim."""
+    def _ok(text: str) -> bool:
+        return (topic_shape.classify(text) == shape
+                and topic_shape.fits_in(text, max_seconds))
+
+    title = str(script.get("title") or "").strip()
+    if not title or _ok(title):
+        return
+    for alt in (script.get("title_options") or []):
+        alt = str(alt).strip()
+        if alt and _ok(alt):
+            print(f"[script] title scope: {topic_shape.explain(title)} does not "
+                  f"fit a {int(max_seconds)}s {shape} — swapped in alternate: "
+                  f"{alt[:60]}")
+            script["title"] = alt
+            return
+    print(f"[script] WARNING: title is {topic_shape.explain(title)}, which a "
+          f"{int(max_seconds)}s {shape} cannot deliver, and no alternate fits "
+          f"— shipping as-is: {title[:60]}")
 
 
 # Final constructions that leave a short feeling cut off mid-sentence.

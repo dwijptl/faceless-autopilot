@@ -28,6 +28,7 @@ import motion as motion_mod         # noqa: E402
 import postprocess                  # noqa: E402
 import script_gen                   # noqa: E402
 import sfx as sfx_mod               # noqa: E402
+import topic_shape                  # noqa: E402
 import tts as tts_mod               # noqa: E402
 import vision_qc                    # noqa: E402
 import visual_beats as visual_beats_mod  # noqa: E402
@@ -120,6 +121,7 @@ def main() -> None:
     # so each Short funnels viewers into it (set it as the Short's related
     # video in Studio). Never a full summary — ONE shocking fact/mechanism.
     trailer_hint = ""
+    long_topics = []
     try:
         with open(os.path.join(REPO_ROOT, "topics_done.txt"),
                   encoding="utf-8") as f:
@@ -135,8 +137,15 @@ def main() -> None:
                 "Short topic.")
     except Exception:
         pass
-    topic = script_gen.pick_topic(cfg, gemini_key, DONE_FILE,
-                                  (learnings or "") + trailer_hint)
+    # Shorts get the single-claim rubric, not the long-form journey test, and
+    # they see the long-form history so the two formats can no longer ship the
+    # same topic days apart (2026-07-22/23: same Earth-signal topic as an 83s
+    # Short and a 399s long-form; the long-form got 4 views).
+    short_max_seconds = float(cfg.get("short", {}).get("max_seconds", 90))
+    topic = script_gen.pick_topic(
+        cfg, gemini_key, DONE_FILE, (learnings or "") + trailer_hint,
+        shape=topic_shape.SINGLE_CLAIM, also_done=long_topics,
+        max_seconds=short_max_seconds)
 
     # topic-driven style pack (mystery -> noir family, space -> cosmos...),
     # rotating away from the last few Shorts. Replaces done_count % N.
