@@ -30,6 +30,38 @@ from PIL import Image, ImageDraw
 import ai_images
 import vision_qc
 
+# NASA/Wikimedia originals can be gigapixel (a 162 MP space still crashed a
+# Short render in Chrome). We downscale every image before it reaches
+# Remotion, so raise PIL's decompression-bomb guard from a hard error to
+# something we handle deliberately in _downscale_image.
+Image.MAX_IMAGE_PIXELS = None
+
+# Longest edge any still is allowed to reach the renderer at. 2560 covers
+# 1080p and vertical 1080x1920 with headroom for Ken Burns push-in; anything
+# larger only burns GPU memory and risks a Chrome tab crash mid-render.
+MAX_IMAGE_SIDE = 2560
+
+
+def _downscale_image(path: str, max_side: int = MAX_IMAGE_SIDE) -> None:
+    """Shrink an over-large still in place so Remotion never composites a
+    gigapixel image. No-op for images already within bounds or unreadable
+    (a genuinely broken file is caught later by the render guard)."""
+    try:
+        with Image.open(path) as im:
+            w, h = im.size
+            if max(w, h) <= max_side:
+                return
+            scale = max_side / float(max(w, h))
+            im = im.convert("RGB").resize(
+                (max(1, round(w * scale)), max(1, round(h * scale))),
+                Image.LANCZOS)
+            im.save(path, quality=90)
+        print(f"[assets] downscaled {os.path.basename(path)} "
+              f"{w}x{h} -> {round(w * scale)}x{round(h * scale)}")
+    except Exception as exc:
+        print(f"[assets] downscale skipped for "
+              f"{os.path.basename(path)} ({exc})")
+
 VIDEO_API = "https://api.pexels.com/videos/search"
 PHOTO_API = "https://api.pexels.com/v1/search"
 
@@ -266,8 +298,10 @@ def _nasa_asset(scene: dict, outdir: str, used: set, cfg: dict,
                         "~mobile.mp4" in h,
                     ))
                 else:
-                    cands = ([h for h in hrefs
-                              if h.endswith(("~large.jpg", "~orig.jpg"))]
+                    # prefer NASA's ~large (web-sized) over ~orig (can be
+                    # gigapixel — the 162 MP still that crashed the render)
+                    cands = ([h for h in hrefs if h.endswith("~large.jpg")]
+                             or [h for h in hrefs if h.endswith("~orig.jpg")]
                              or [h for h in hrefs if h.endswith(".jpg")])
                 if not cands:
                     continue
@@ -280,6 +314,8 @@ def _nasa_asset(scene: dict, outdir: str, used: set, cfg: dict,
                 except Exception:
                     continue
                 kind = "video" if media == "video" else "image"
+                if kind == "image":
+                    _downscale_image(path)
                 if not _visual_ok(path, kind,
                                   f"scene {scene['n']} NASA {nasa_id}", cfg):
                     used.add(f"n{nasa_id}")
@@ -418,6 +454,7 @@ def _stock_photo(scene, outdir, api_key, used, orientation="landscape",
             path = os.path.join(outdir, f"s{scene['n']:02d}_{key}.jpg")
             try:
                 _download(ph["src"]["large2x"], path)
+                _downscale_image(path)
             except Exception:
                 continue
             if not _visual_ok(path, "image",

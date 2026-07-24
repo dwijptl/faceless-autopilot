@@ -32,3 +32,18 @@ def test_portrait_file_selection_rejects_blurry_crop():
         {"width": 1920, "height": 1080, "link": "landscape"},
     ]}
     assert assets._best_video_file(video, 1080, 1920, 1.25) is None
+
+
+# ── gigapixel-image downscale (Make Short #22 render-crash postmortem) ────
+def test_downscale_image_clamps_gigapixel(tmp_path):
+    import assets
+    from PIL import Image
+    big = tmp_path / "nasa_orig.jpg"
+    Image.new("RGB", (12740, 12750)).save(big)   # ~162 MP, crashed a render
+    assets._downscale_image(str(big))
+    w, h = Image.open(big).size
+    assert max(w, h) == assets.MAX_IMAGE_SIDE     # clamped to 2560 longest edge
+    small = tmp_path / "ok.jpg"
+    Image.new("RGB", (1080, 1920)).save(small)    # within bounds -> untouched
+    assets._downscale_image(str(small))
+    assert Image.open(small).size == (1080, 1920)
