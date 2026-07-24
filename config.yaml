@@ -154,11 +154,23 @@ ai_images:
 
 short:                     # vertical Shorts/Reels (Make Short workflow, Tue/Thu/Sat)
   # ADAPTIVE length: the script decides inside this band — one crisp fact
-  # lands near min; journey/checkpoint topics use the top. Fixed 28s cut
-  # stories off mid-promise (viewer: "feels incomplete").
-  min_seconds: 40          # verdict after 25-32s tests: under 40s never satisfies
-  max_seconds: 55
-  target_seconds: 45       # midpoint; used for overrun warning + loop tail
+  # lands near min; a richer single claim uses the top.
+  #
+  # Band widened 40-55 -> 25-90 on 2026-07-24 from the first analytics window.
+  # The three best-retaining Shorts all sat OUTSIDE the old band and were only
+  # produced because the word budget was never enforced:
+  #   83s "NASA ... सिग्नल मिला"        185.5% (loops)
+  #   21s "गायब होते द्वीप"             104.4% (loops)
+  #   68s "सौरमंडल में ... मेहमान"       58.6%
+  # Everything inside 40-55s retained 27-38%. Length was never the variable —
+  # topic SHAPE was (see pipeline/topic_shape.py); the band just has to be
+  # wide enough to stop truncating a claim that needs 80s and stop padding one
+  # that is done in 25s.
+  topic_shape: single_claim  # Shorts take one-claim topics only; checkpoint
+                             # journeys route to long-form, which can pay them off
+  min_seconds: 25          # a single jolting claim can land this fast (21s -> 104%)
+  max_seconds: 90
+  target_seconds: 55       # midpoint; used for overrun warning + loop tail
   rescue_budget: 3         # AI stills for scenes where stock found nothing
   wpm: 100                 # REAL Sarvam Hindi pace incl. pauses (measured ~95-105;
                            # the 130 planning rate produced 38s shorts from 28s targets)
