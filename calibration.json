@@ -75,5 +75,12 @@
     "words": 203,
     "seconds": 68.6,
     "wpm": 177.5
+  },
+  {
+    "stamp": "2026-07-25_0004",
+    "kind": "short",
+    "words": 142,
+    "seconds": 47.6,
+    "wpm": 179.1
   }
 ]
