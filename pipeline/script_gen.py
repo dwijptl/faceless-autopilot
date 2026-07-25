@@ -1448,7 +1448,7 @@ Shorts rules:
     "क्या होगा?", "...साबित करते हैं", "तो अगली बार", "इसीलिए" — any
     construction that leaves the sentence hanging. The video must feel
     complete even when autoplay does not replay it.
-- Exactly 1-2 "kinetic" scenes, 0-1 "stat", 0-{short_ai_max} "ai_image"
+- Exactly 0 "kinetic" scenes, 0-1 "stat", 0-{short_ai_max} "ai_image"
   (put an ai_image on the hook when the topic's strongest visual doesn't
   exist as stock), rest "broll".
 - A stat may add max (ring gauge), baseline (before/after) or 2-4 bars. Keep a
