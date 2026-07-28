@@ -616,8 +616,28 @@ TOPIC_FAMILIES = {
 FAMILY_CAP = 0.40   # no family may exceed this share of recent output
 
 
-def _title_form(done_count: int) -> tuple:
-    return TITLE_FORMS[done_count % len(TITLE_FORMS)]
+# Descent/extreme-place topics are the channel's proven core, and its two
+# best-performing titles were claim/number forms (Kola: rank-1 day-one reach;
+# Mariana: 13.6% CTR). For that family, bias the rotation toward those two
+# forms — alternating so consecutive descent videos still differ — while
+# every other family keeps the full 6-form rotation.
+# Data: 2026-07 window — docs/CHANNEL_OPTIMIZATION_PLAN.md (A2).
+DESCENT_HINTS = ("मीटर", "किमी", "नीचे", "गहरा", "गहरे", "गहराई", "सतह",
+                 "ट्रेंच", "meter", "metre", "deep", "depth", "descent",
+                 "borehole", "trench", "beneath")
+_DESCENT_FORMS = ("claim", "number")
+
+
+def _is_descent_topic(topic: str) -> bool:
+    low = str(topic).lower()
+    return any(h in low for h in DESCENT_HINTS)
+
+
+def _title_form(done_count: int, topic: str = "") -> tuple:
+    form = TITLE_FORMS[done_count % len(TITLE_FORMS)]
+    if _is_descent_topic(topic) and form[0] not in _DESCENT_FORMS:
+        form = TITLE_FORMS[2] if done_count % 2 else TITLE_FORMS[1]
+    return form
 
 
 def _frame_signature(title: str) -> str:
@@ -650,9 +670,9 @@ def _overused_families(done: list, window: int = 10) -> list:
             if f != "other" and c / len(recent) > FAMILY_CAP]
 
 
-def _variety_rules(done: list, done_count: int) -> str:
+def _variety_rules(done: list, done_count: int, topic: str = "") -> str:
     """Prompt block that forces this video away from the last one's shape."""
-    form, how = _title_form(done_count)
+    form, how = _title_form(done_count, topic)
     recent_sigs = [_frame_signature(t) for t in done[-3:] if t]
     banned = "\n".join(f'  - "{s}"' for s in recent_sigs if s)
     over = _overused_families(done)
@@ -1035,12 +1055,12 @@ count your words before returning and expand thin scenes with concrete
 material (never filler).
 TONE: {cfg['channel']['tone']}
 AUDIENCE: {cfg['channel']['audience']}
-{learn_block}{_variety_rules(done, len(done))}{skel_block}{_lang_rules(cfg)}{_style_rules()}
+{learn_block}{_variety_rules(done, len(done), topic)}{skel_block}{_lang_rules(cfg)}{_style_rules()}
 Write a scene-segmented script and return ONLY valid JSON with this exact shape:
 {{
   "title": "click-worthy but honest YouTube title, <= 70 chars",
   "title_options": ["5 alternative Hindi titles, strongest first: one conservative, one high-curiosity, one number-driven among them"],
-  "thumb_text": "3-5 bold ENGLISH/Hinglish keywords for the thumbnail (Latin script)",
+  "thumb_text": "2-4 bold ENGLISH/Hinglish punch words for the thumbnail (Latin script), ONE number mandatory (e.g. '12262 METERS DOWN')",
   "thumb_headline": "4-7 word DRAMATIC Hindi headline (Devanagari) — the emotional hook of the thumbnail, high intensity but 100% provable by the video (e.g. 'मारियाना ट्रेंच का खूनी सच!'); never a fabricated claim",
   "thumb_question": "3-5 word Hindi curiosity question for a small thumbnail annotation (e.g. 'शरीर का क्या होगा?'); empty string if none fits",
   "thumb_prompt": "ENGLISH text-to-image prompt for the thumbnail. NON-NEGOTIABLE: ONE dramatic subject FILLING 50-70% of the frame, strong rim light separating it clearly from the background, at least one vivid color accent; mid-dark background WITH visible depth — NEVER a mostly-black or murky image (it must read instantly at 160px feed size); keep the bottom third relatively empty for the title text",
@@ -1057,8 +1077,8 @@ Write a scene-segmented script and return ONLY valid JSON with this exact shape:
     "main_reveal_scene": 0,
     "open_loops": [{{"question": "a Hindi question the viewer is left holding", "opens_scene": 1, "partial_scene": 4, "closes_scene": 7}}]
   }},
-  "description": "2-3 sentences in HINDI (Devanagari) — line 1 restates the hook as a question a viewer would ask, line 2-3 tease the payoff WITHOUT spoiling it. No hashtags here (the pipeline appends them).",
-  "tags": ["8-12 tags a HINDI-SPEAKING viewer in India would actually type. At least 6 in Devanagari (e.g. 'मंगल ग्रह', 'ब्रह्मांड के रहस्य'), 2-3 Hinglish in Latin script (e.g. 'mangal grah', 'space hindi'), rest English topic terms. No generic single words like 'science'."],
+  "description": "2-3 sentences in HINDI (Devanagari) — line 1 restates the hook as a question a viewer would ask, line 2-3 tease the payoff WITHOUT spoiling it. Name the episode's REAL anchor entity (place/machine/mission, e.g. 'कोला सुपरडीप बोरहोल') once — recommendations key on entities. No hashtags here (the pipeline appends them).",
+  "tags": ["8-12 tags a HINDI-SPEAKING viewer in India would actually type. At least 6 in Devanagari (e.g. 'मंगल ग्रह', 'ब्रह्मांड के रहस्य'), 2-3 Hinglish in Latin script (e.g. 'mangal grah', 'space hindi'), rest English topic terms. Include 2-3 tags naming the episode's REAL anchor entity in BOTH scripts (e.g. 'Kola Superdeep Borehole', 'कोला सुपरडीप'). No generic single words like 'science'."],
   "scenes": [
     {{
       "n": 1,
@@ -1386,7 +1406,7 @@ rather than answering two of three. The second-to-last scene must resolve
 the CENTRAL question with a clear verdict (what it means / who survives /
 what remains), not just another fact.
 TONE: {cfg['channel']['tone']}, but faster and punchier than long-form
-{learn_block}{_variety_rules(done, len(done))}{_lang_rules(cfg)}{_style_rules()}
+{learn_block}{_variety_rules(done, len(done), topic)}{_lang_rules(cfg)}{_style_rules()}
 Return ONLY valid JSON:
 {{
   "title": "<= 80 chars, curiosity gap, no clickbait lies. ONE promise the video can settle — never 'हर N मिनट/मीटर', 'X से Y तक' or a stage-by-stage timeline; those need long-form runtime.",
