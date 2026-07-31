@@ -1,9 +1,6 @@
 name: Update Learnings
 
 on:
-  schedule:
-    # Sunday 07:00 UTC — digest whatever CSVs are in analytics/
-    - cron: "0 7 * * 0"
   workflow_dispatch: {}
 
 permissions:
