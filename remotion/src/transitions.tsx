@@ -89,3 +89,36 @@ export const blurWhip = (
   component: BlurWhip,
   props: {direction},
 });
+
+// ── hold push ───────────────────────────────────────────────────────────
+// The revelation cut: the outgoing shot HOLDS in silence for the first 45%
+// of the transition (a breath), then the incoming shot punches through with
+// an accelerating push. Pair with generous timings (14-18 frames).
+const HoldPush: React.FC<
+  TransitionPresentationComponentProps<Record<string, never>>
+> = ({children, presentationDirection, presentationProgress}) => {
+  const hold = 0.45;
+  const p = presentationProgress <= hold
+    ? 0
+    : smooth((presentationProgress - hold) / (1 - hold));
+  const entering = presentationDirection === 'entering';
+  const scale = entering ? 0.9 + 0.1 * p : 1 + 0.08 * p;
+  const blur = entering ? 8 * (1 - p) : 10 * p;
+  const opacity = entering ? Math.min(p * 2.4, 1) : 1 - p;
+  return (
+    <AbsoluteFill
+      style={{
+        transform: `scale(${scale})`,
+        filter: `blur(${blur.toFixed(2)}px)`,
+        opacity,
+      }}
+    >
+      {children}
+    </AbsoluteFill>
+  );
+};
+
+export const holdPush = (): TransitionPresentation<Record<string, never>> => ({
+  component: HoldPush,
+  props: {},
+});

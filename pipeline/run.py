@@ -29,6 +29,7 @@ import assets as assets_mod         # noqa: E402
 import calibration                  # noqa: E402
 import captions as captions_mod     # noqa: E402
 import factcheck                    # noqa: E402
+import families as families_mod     # noqa: E402
 import hero_shots                   # noqa: E402
 import mapgen                       # noqa: E402
 import motion as motion_mod         # noqa: E402
@@ -220,12 +221,17 @@ def _validate_scene_assets(scenes: list) -> None:
 
 
 def _asset_manifest(asset: dict) -> dict:
-    return {
+    entry = {
         "path": os.path.basename(asset["path"]),
         "kind": asset["kind"],
         "duration": round(asset["duration"], 2) if asset.get("duration") else None,
         "ai": bool(asset.get("ai")),
     }
+    if asset.get("graphic"):
+        entry["graphic"] = asset["graphic"]
+    if asset.get("family"):
+        entry["family"] = asset["family"]
+    return entry
 
 
 def _pad_reveal_pause(wav_path: str, seconds: float = 0.35) -> float:
@@ -423,7 +429,7 @@ def _impact_start(sc: dict, overlay_seconds: float) -> float:
 def _visual_beat_manifest(scene: dict) -> list[dict]:
     result = []
     for index, beat in enumerate(scene.get("visual_beats") or []):
-        result.append({
+        entry = {
             "start": round(float(beat.get("start", 0)), 3),
             "duration": round(float(beat.get("duration", 0)), 3),
             "cue": str(beat.get("cue", "")),
@@ -431,7 +437,16 @@ def _visual_beat_manifest(scene: dict) -> list[dict]:
             "searchTerms": list(beat.get("search_terms") or []),
             "assets": [_asset_manifest(a) for a in scene.get("assets", [])
                        if a.get("beat_index") == index],
-        })
+        }
+        if beat.get("family"):
+            entry["family"] = str(beat["family"])
+            entry["intensity"] = int(beat.get("intensity", 1))
+            spec = families_mod.get_spec(beat["family"])
+            if spec:
+                entry["camera"] = spec.camera
+        if beat.get("graphic"):
+            entry["graphic"] = beat["graphic"]
+        result.append(entry)
     return result
 
 
@@ -634,11 +649,26 @@ def main() -> None:
     else:
         ai_budget = [int(aicfg.get("max_per_video", 2))]
     rescue_budget = [int(aicfg.get("rescue_budget", 0))]
+    # visual director — narrative-intent pass: domain pack, priority-ranked
+    # AI-credit grants, then family-aware media resolution per beat
+    director_budget = None
+    domain_pack = ""
+    if families_mod.enabled(cfg):
+        domain_pack = families_mod.pick_domain_pack(topic, script)
+        for sc in scenes:
+            sc["domain_pack"] = domain_pack
+        director_budget = [families_mod.ai_still_budget(cfg)]
+        granted = families_mod.allocate_ai(scenes, director_budget[0])
+        tagged = sum(1 for sc in scenes
+                     for b in (sc.get("visual_beats") or []) if b.get("family"))
+        print(f"[director] pack={domain_pack} · {tagged} beats tagged · "
+              f"{granted} AI grants (budget {director_budget[0]})")
     for sc in scenes:
         sc["forbidden_visuals"] = script.get("forbidden_visuals") or []
         sc["assets"] = assets_mod.fetch_scene_assets(
             sc, sc["audio_duration"], workdir, cfg, pexels_key, gemini_key,
-            used, used_prompts, ai_budget, rescue_budget=rescue_budget)
+            used, used_prompts, ai_budget, rescue_budget=rescue_budget,
+            director_budget=director_budget)
         for a in sc["assets"]:
             a["duration"] = probe_duration(a["path"]) if a["kind"] == "video" else None
     usage_log["pexels"] = sorted(used)
@@ -650,6 +680,12 @@ def main() -> None:
 
     # 3b) animated hero shots — hook + reveal come alive (fail-open) --------
     _animate_hero_shots(scenes, workdir, cfg, gemini_key)
+
+    # 3c) transition pair grammar — the cut between scenes is chosen by what
+    # the story is DOING (descend→descend continues; anything→revelation
+    # holds a silence beat then pushes), with a high-energy pacing cap.
+    if families_mod.enabled(cfg):
+        families_mod.plan_scene_transitions(scenes)
 
     # 4) captions ------------------------------------------------------------
     events, srt = captions_mod.build_captions(scenes, cfg["captions"]["max_chars"])
@@ -726,6 +762,7 @@ def main() -> None:
         "thumbQuestion": script.get("thumb_question", ""),
         "thumbAiPath": thumb_ai,
         "motionSeed": motion_seed,
+        "domainPack": domain_pack,
         "cta": cta_event,
         "sfx": sfx_events,
         "musicPath": music_path,
@@ -743,6 +780,8 @@ def main() -> None:
             "start": round(sc["start"], 3),
             "impactStart": sc.get("impact_start", 0.0),
             "delivery": sc.get("delivery", "calm"),
+            "family": sc.get("family", ""),
+            "familyTransition": sc.get("family_transition", ""),
             "milestone": sc.get("milestone") or {},
             "title": sc.get("title", ""),
             "visualMode": sc.get("visual_mode", "broll"),

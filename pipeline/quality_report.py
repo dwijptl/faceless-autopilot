@@ -5,6 +5,66 @@ import json
 import os
 import subprocess
 
+import families as families_mod
+
+# families whose repetition is legitimate (continuous chains)
+_CHAIN_FAMILIES = {"descend", "ascend_return", "timeline_advance",
+                   "penetrate_layers"}
+
+
+def _audit_director(manifest: dict, cfg: dict,
+                    errors: list, warnings: list) -> dict:
+    """Narrative-intent semantic audit — replaces checkbox coverage with
+    questions a human editor would ask: does every beat have a story
+    function, is the episode custom-visual first (AI + programmatic vs raw
+    stock), and does any family drone on? Fail-open: warnings by default."""
+    vd = (cfg or {}).get("visual_director", {}) or {}
+    beat_total = 0
+    tagged = 0
+    media = {"ai": 0, "graphic": 0, "stock_video": 0, "stock_image": 0}
+    prev_family, run_len = None, 0
+    for scene in manifest.get("scenes", []):
+        for beat in scene.get("visualBeats") or []:
+            beat_total += 1
+            family = str(beat.get("family", ""))
+            if family:
+                tagged += 1
+            if family and family == prev_family:
+                run_len += 1
+                if run_len == 3 and family not in _CHAIN_FAMILIES:
+                    warnings.append(
+                        f"family '{family}' repeats 3+ beats in a row "
+                        f"(scene {scene.get('n')}) — vary the story function")
+            else:
+                prev_family, run_len = family, 1
+            for asset in beat.get("assets") or []:
+                kind = str(asset.get("kind", ""))
+                if kind == "graphic":
+                    media["graphic"] += 1
+                elif asset.get("ai"):
+                    media["ai"] += 1
+                elif kind == "video":
+                    media["stock_video"] += 1
+                else:
+                    media["stock_image"] += 1
+    total_assets = max(sum(media.values()), 1)
+    custom_ratio = (media["ai"] + media["graphic"]) / total_assets
+    coverage = tagged / max(beat_total, 1)
+    if beat_total:
+        min_cov = float(vd.get("min_family_coverage", 0.85))
+        if coverage < min_cov:
+            warnings.append(f"only {coverage:.0%} of beats carry a "
+                            f"narrative-intent family (want {min_cov:.0%})")
+        min_custom = float(vd.get("min_custom_ratio", 0.45))
+        if custom_ratio < min_custom:
+            warnings.append(
+                f"custom visuals (AI + programmatic) are only "
+                f"{custom_ratio:.0%} of beat assets (want {min_custom:.0%}) — "
+                f"episode leans stock-first")
+    return {"family_coverage": round(coverage, 3),
+            "custom_visual_ratio": round(custom_ratio, 3),
+            "media_mix": media}
+
 
 def _expected_duration(manifest: dict) -> float:
     scenes = manifest.get("scenes", [])
@@ -55,13 +115,17 @@ def audit_manifest(manifest: dict, cfg: dict) -> dict:
     if beat_count and coverage < float(settings.get("min_semantic_coverage", 0.9)):
         errors.append(f"semantic beat coverage only {coverage:.0%}")
 
+    metrics = {"visual_beats": beat_count,
+               "semantic_coverage": round(coverage, 3),
+               "unique_assets": len(asset_uses)}
+    if families_mod.enabled(cfg):
+        metrics["director"] = _audit_director(manifest, cfg, errors, warnings)
+
     return {
         "passed": not errors,
         "errors": errors,
         "warnings": warnings,
-        "metrics": {"visual_beats": beat_count,
-                    "semantic_coverage": round(coverage, 3),
-                    "unique_assets": len(asset_uses)},
+        "metrics": metrics,
     }
 
 

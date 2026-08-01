@@ -5,7 +5,7 @@ channel:
   # The seed for ALL auto-generated topics. Change this to pivot the channel.
   niche: >
     Hidden places and mind-bending realities of Earth and the universe —
-    cinematic documentary explainers across three families, WEIGHTED BY
+    cinematic documentary explainers across four families, WEIGHTED BY
     CHANNEL DATA (2026-07 window — docs/CHANNEL_OPTIMIZATION_PLAN.md):
     (1) EARTH'S EXTREMES & MYSTERIES — the proven core, ~7 of every 8
     long-forms: a real, NAMED place or machine (Kola Superdeep, Mariana
@@ -15,9 +15,15 @@ channel:
     descents); abstract cosmology (white holes, quantum theory) capped at
     ~1 in 8 long-forms — it has this channel's worst retention; (3) WHAT-IF
     SCENARIOS grounded in real physics: Earth stops spinning, humans vanish,
-    oceans drain. Hard rules: every topic must be illustrable with
-    nature/space stock footage plus AI stills — no news events, no real or
-    named people, no religion or mythology, no politics or conspiracies.
+    oceans drain; (4) FACTUAL MYSTERIES: documented historical mysteries,
+    disappearances, unexplained events and abandoned places — evidence-led
+    storytelling that presents established facts and competing scientific
+    explanations, never asserting a conspiracy or supernatural cause as
+    fact. Hard rules: every topic must be illustrable with stock footage,
+    AI stills and programmatic graphics — no recent news events, no living
+    named people (long-deceased historical figures may be referenced
+    respectfully, never depicted with recognizable faces), no religion or
+    mythology, no politics, no conspiracy claims.
   tone: "curious, cinematic, documentary — like a calm narrator revealing something surprising"
   audience: "curious Hindi-speaking adults who love maps, space and science"
   language: "hi-IN"        # BCP-47; drives script language + Sarvam TTS.
@@ -56,6 +62,25 @@ retention:
   engine_active_until: 0.75  # milestone variable must keep moving until here
   rehook_tolerance: 0.12     # re-hook must exist near 25/50/75% (±12%)
   duration_tolerance: 0.10   # rendered narration within ±10% of target
+
+# ── Visual director — narrative-intent families (pipeline/families.py) ──
+# Every visual beat is tagged with ONE of 65 universal story-function
+# families (evidence_reveal, descend, hypothesis_branch, revelation…).
+# The family decides composition, camera move, media policy and the
+# transition grammar BEFORE anything is generated. Beats whose family
+# prefers a diagram render a free programmatic graphic (timeline / scale /
+# branch / chart / cutaway) instead of spending stock or AI credits.
+# docs/VISUAL_DIRECTOR.md has the full design. Fail-open everywhere:
+# enabled: false (or any per-beat miss) restores legacy stock-first behaviour.
+visual_director:
+  enabled: true
+  mode: economy            # economy | balanced | premium (AI-still budget)
+  modes:
+    economy:  {ai_stills: 18}   # ~$0.90/video at FLUX dev prices
+    balanced: {ai_stills: 28}
+    premium:  {ai_stills: 36}
+  min_family_coverage: 0.85  # QC warning below this share of tagged beats
+  min_custom_ratio: 0.45     # QC warning when AI+graphic assets fall below
 
 # Six-minute quality system. The free Gemini beat-planning pass binds each
 # spoken idea to a concrete visual instead of rotating loosely related assets.

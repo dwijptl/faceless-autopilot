@@ -40,7 +40,40 @@ import {GlassCard} from './glass';
 import {CausalDiagram, EvidenceFrame, ScaleComparator} from './explainers';
 import {MetricReadout, TelemetryHUD} from './hud';
 import type {Milestone} from './hud';
-import {blurWhip, zoomPunch} from './transitions';
+import {blurWhip, holdPush, zoomPunch} from './transitions';
+
+// ── Transition pair grammar (visual director) ───────────────────────────
+// python's families.plan_scene_transitions attaches a transition KIND to
+// each scene from what the story is doing (descend chains continue, the
+// revelation gets a silence-beat hold-push, a twist match-cuts). The kind
+// maps to a presentation + its own timing here; scenes without a kind keep
+// the legacy style-biased choice below.
+// NOTE: every transition keeps the manifest's xfadeFrames duration — python
+// computes scene starts (captions, HUD, sfx sync) assuming one constant
+// overlap, so the grammar varies the CHARACTER of the cut, never its length.
+const grammarTransition = (kind: string, seed: string): any | null => {
+  switch (kind) {
+    case 'cut':
+    case 'dissolve':
+    case 'fade':
+      return fade();
+    case 'push_down':
+      return slide({direction: 'from-bottom'});
+    case 'push_up':
+      return slide({direction: 'from-top'});
+    case 'whip':
+      return blurWhip(random(`whip-${seed}`) < 0.5 ? 'from-right' : 'from-left');
+    case 'wipe':
+      return wipe({direction: 'from-left'});
+    case 'zoom_punch':
+    case 'match_cut':
+      return zoomPunch();
+    case 'hold_push':
+      return holdPush();
+    default:
+      return null;
+  }
+};
 
 // Deterministic transition choice, biased by the video's style pack.
 // Remotion's transition presentations are invariant generic types; this helper
@@ -292,10 +325,15 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
         {i > 0 ? <LightLeak seed={`scene-${scene.n}`} /> : null}
       </TransitionSeries.Sequence>
     );
+    // grammar-aware cut INTO the next scene; outro keeps the style default
+    const incoming = m.scenes[i + 1] as any;
+    const grammar = incoming?.familyTransition
+      ? grammarTransition(String(incoming.familyTransition), `s${scene.n}`)
+      : null;
     items.push(
       <TransitionSeries.Transition
         key={`t-${scene.n}`}
-        presentation={pickTransition(i, style)}
+        presentation={grammar ?? pickTransition(i, style)}
         timing={linearTiming({durationInFrames: m.xfadeFrames})}
       />
     );

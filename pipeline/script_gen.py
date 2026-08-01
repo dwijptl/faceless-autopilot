@@ -15,6 +15,7 @@ import time
 
 import requests
 
+import families as families_mod
 import retention_lint
 import topic_shape
 import visual_beats as visual_beats_mod
@@ -866,7 +867,29 @@ CONTINUITY CONTRACT (breaking it ruins the episode):
   Beats about the protagonist are carried by that hero image — write those
   beats' queries for the surrounding ENVIRONMENT, never for stock humans.
 """
-    prompt = f"""You are the visual editor of a premium science documentary.
+    director_on = families_mod.enabled(cfg)
+    director_fields = ""
+    director_rules = ""
+    if director_on:
+        director_fields = """,
+  "family":"ONE narrative-intent family key from the menu below — what this beat DOES in the story",
+  "intensity":1,
+  "graphic":{"kind":"timeline|scale|branch|chart|cutaway","title":"short ENGLISH title","unit":"km","items":[{"label":"short label","value":0}]}"""
+        director_rules = f"""
+NARRATIVE-INTENT FAMILIES (pick by story function, never by subject):
+{families_mod.prompt_hint_lines()}
+- "family" is REQUIRED per beat; "intensity" is 1 (calm) to 3 (peak moment),
+  at most one 3 per scene.
+- "graphic" ONLY for beats whose family is diagram-like (timeline_advance,
+  scale_comparison, hypothesis_branch, data_story, cause_chain, measurement,
+  mechanism_cutaway, penetrate_layers, countdown): give 2-6 items with short
+  ENGLISH labels and real numeric values from the narration. Omit "graphic"
+  for every other beat.
+- Families in the hypothesis cluster mark competing explanations; use
+  hypothesis_branch exactly where the narration lists multiple theories.
+- The final beat of the last scene should be lingering_question, legacy or
+  haunting_echo — never a random subject."""
+    prompt = f"""You are the visual editor of a premium factual-mystery documentary.
 Turn the FINAL Hindi narration below into a sentence-level visual beat sheet.
 {contract}
 
@@ -874,7 +897,7 @@ Return ONLY JSON:
 {{"scenes":[{{"n":1,"visual_beats":[{{
   "cue":"an EXACT 3-8 word verbatim phrase from the Hindi narration where this visual starts",
   "search_terms":["one exact concrete ENGLISH Pexels query","one fallback query"],
-  "purpose":"what the viewer must understand from this visual"
+  "purpose":"what the viewer must understand from this visual"{director_fields}
 }}]}}]}}
 
 Rules:
@@ -886,6 +909,7 @@ Rules:
 - Never use metaphorical offices, typing, food, drinks, products or captive wildlife.
 - Vary scale and camera language across consecutive beats.
 - Do not request generated art, text, logos or copyrighted characters.
+{director_rules}
 
 SCENES:
 {json.dumps(payload, ensure_ascii=False)}"""

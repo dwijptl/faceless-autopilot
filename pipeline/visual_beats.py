@@ -9,6 +9,8 @@ from __future__ import annotations
 import math
 import unicodedata
 
+import families
+
 
 def _tokens(text: str) -> list[str]:
     tokens = []
@@ -52,6 +54,33 @@ def _fallback_beats(scene: dict, count: int) -> list[dict]:
     return beats
 
 
+def _normalize_graphic(raw) -> dict:
+    """Bound the optional programmatic-graphic payload a beat may carry."""
+    data = raw if isinstance(raw, dict) else {}
+    kind = str(data.get("kind", "")).strip().lower()
+    if kind not in families.PG_KINDS:
+        return {}
+    items = []
+    for item in (data.get("items") or [])[:6]:
+        if not isinstance(item, dict):
+            continue
+        try:
+            value = float(item.get("value"))
+        except (TypeError, ValueError):
+            value = None
+        label = str(item.get("label", ""))[:28].strip()
+        if not label:
+            continue
+        entry = {"label": label}
+        if value is not None and math.isfinite(value):
+            entry["value"] = value
+        items.append(entry)
+    return {"kind": kind,
+            "title": str(data.get("title", ""))[:60],
+            "unit": str(data.get("unit", ""))[:10],
+            "items": items}
+
+
 def normalize_plan(script: dict, raw_plan: dict | None, cfg: dict) -> dict:
     """Attach a safe beat list to every scene; malformed plans fail open."""
     planned = {}
@@ -63,7 +92,9 @@ def normalize_plan(script: dict, raw_plan: dict | None, cfg: dict) -> dict:
                 except (TypeError, ValueError):
                     pass
 
-    for index, scene in enumerate(script.get("scenes", [])):
+    director_on = families.enabled(cfg)
+    scenes = script.get("scenes", [])
+    for index, scene in enumerate(scenes):
         target = target_beat_count(scene, cfg, index)
         candidates = planned.get(int(scene.get("n", index + 1)), [])
         clean = []
@@ -77,11 +108,23 @@ def normalize_plan(script: dict, raw_plan: dict | None, cfg: dict) -> dict:
             terms = [str(t).strip() for t in (terms or []) if str(t).strip()][:3]
             if not cue or not terms:
                 continue
-            clean.append({
+            beat = {
                 "cue": cue[:140],
                 "search_terms": terms,
                 "purpose": str(item.get("purpose", ""))[:100],
-            })
+            }
+            if director_on:
+                spec = families.get_spec(item.get("family"))
+                if spec:
+                    beat["family"] = spec.key
+                try:
+                    beat["intensity"] = min(max(int(item.get("intensity", 1)), 1), 3)
+                except (TypeError, ValueError):
+                    beat["intensity"] = 1
+                graphic = _normalize_graphic(item.get("graphic"))
+                if graphic:
+                    beat["graphic"] = graphic
+            clean.append(beat)
 
         # A short model response is worse than a deterministic complete plan.
         if len(clean) < max(2, target - 1):
@@ -89,6 +132,19 @@ def normalize_plan(script: dict, raw_plan: dict | None, cfg: dict) -> dict:
         elif len(clean) > target + 1:
             clean = clean[:target + 1]
         scene["visual_beats"] = clean
+
+    # Narrative-intent pass: every beat gets a family (LLM tag first, then the
+    # deterministic keyword classifier). Fail-open — an untagged beat simply
+    # keeps the legacy stock-first path in assets.py.
+    if director_on:
+        for index, scene in enumerate(scenes):
+            for bi, beat in enumerate(scene.get("visual_beats", [])):
+                if not beat.get("family"):
+                    found = families.classify_beat(beat, scene, index, bi,
+                                                   len(scenes))
+                    if found:
+                        beat["family"] = found
+                beat.setdefault("intensity", 1)
     return script
 
 

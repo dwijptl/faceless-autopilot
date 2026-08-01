@@ -28,6 +28,7 @@ import requests
 from PIL import Image, ImageDraw
 
 import ai_images
+import families as families_mod
 import vision_qc
 
 # NASA/Wikimedia originals can be gigapixel (a 162 MP space still crashed a
@@ -484,10 +485,62 @@ def _stock_photo(scene, outdir, api_key, used, orientation="landscape",
     return None
 
 
+def _director_beat_asset(scene: dict, beat: dict, index: int, outdir: str,
+                         cfg: dict, gemini_key: str, used_prompts: set,
+                         director_budget: list | None) -> dict | None:
+    """Narrative-intent media resolution for one beat (visual director).
+
+    Walks the beat family's media preference order:
+      pg    -> a free programmatic graphic (timeline/scale/branch/chart/
+               cutaway) drawn by Remotion from the planner's data payload
+      ai    -> a family-composed AI still (only when this beat holds one of
+               the priority-ranked grants, so the hook/reveal never lose
+               their credit to an early filler beat)
+      stock -> defer to the legacy exact-subject stock chain (returns None)
+    Fail-open: any miss returns None and the legacy chain takes over.
+    """
+    family = beat.get("family")
+    if not (families_mod.enabled(cfg) and family):
+        return None
+    for medium in families_mod.media_order(family):
+        if medium == "pg" and beat.get("graphic"):
+            print(f"[director] scene {scene['n']} beat {index + 1}: "
+                  f"programmatic {beat['graphic'].get('kind')} ({family})")
+            return {"path": f"s{scene['n']:02d}_b{index:02d}_graphic",
+                    "kind": "graphic", "graphic": beat["graphic"],
+                    "family": family}
+        if medium == "ai" and beat.get("ai_grant") and director_budget \
+                and director_budget[0] > 0:
+            subject = (str(beat.get("purpose") or "").strip()
+                       or str(beat.get("cue", "")).strip())
+            if not subject:
+                continue
+            prompt = families_mod.compose_prompt(
+                subject, family, scene.get("domain_pack"))
+            ph = hashlib.sha1(prompt.lower().encode()).hexdigest()[:16]
+            if ph in used_prompts:
+                continue
+            path = os.path.join(outdir,
+                                f"s{scene['n']:02d}_b{index:02d}_fam.png")
+            aspect = ("9:16 tall vertical" if _orientation(cfg) == "portrait"
+                      else "16:9 wide")
+            if ai_images.generate(prompt, path, gemini_key, cfg, aspect):
+                used_prompts.add(ph)
+                director_budget[0] -= 1
+                print(f"[director] scene {scene['n']} beat {index + 1}: "
+                      f"AI still ({family}, {director_budget[0]} credits left)")
+                return {"path": path, "kind": "image", "ai": True,
+                        "family": family}
+        if medium == "stock":
+            return None  # legacy exact-subject stock chain owns this beat
+    return None
+
+
 def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
                        pexels_key: str, gemini_key: str, used: set,
                        used_prompts: set, ai_budget: list,
-                       rescue_budget: list | None = None) -> list[dict]:
+                       rescue_budget: list | None = None,
+                       director_budget: list | None = None) -> list[dict]:
     """Returns [{path, kind, ai(optional)}]. `used`/`used_prompts` are mutated;
     ai_budget is a single-element list acting as a mutable counter."""
     os.makedirs(outdir, exist_ok=True)
@@ -524,6 +577,12 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
         for index, beat in enumerate(beats):
             beat_assets = [a for a in assets if a.get("beat_index") == index]
             if not beat_assets:
+                directed = _director_beat_asset(scene, beat, index, outdir, cfg,
+                                                gemini_key, used_prompts,
+                                                director_budget)
+                if directed:
+                    beat_assets.append(directed)
+            if not beat_assets:
                 beat_scene = {
                     **scene,
                     "search_terms": beat.get("search_terms") or scene.get("search_terms", []),
@@ -544,6 +603,10 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
                     # narration binding matters most (docs/HERO_SHOTS_SPEC.md)
                     rp = " ".join(x for x in (beat.get("cue", ""),
                                               beat.get("purpose", "")) if x).strip()
+                    if rp and families_mod.enabled(cfg) and beat.get("family"):
+                        # rescue stills speak the family's visual language too
+                        rp = families_mod.compose_prompt(
+                            rp, beat["family"], scene.get("domain_pack"))
                     if rp:
                         path = os.path.join(
                             outdir, f"s{scene['n']:02d}_b{index:02d}_rescue.png")

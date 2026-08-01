@@ -16,6 +16,8 @@ import {
 import {BRAND, StylePack, hexA} from './styles';
 import {stackFor} from './fonts';
 import {DEFAULT_VARIATION, Variation} from './variation';
+import {FamilyCamera, FamilyGraphic} from './graphics';
+import type {GraphicData} from './graphics';
 
 // ── Fonts ──────────────────────────────────────────────────────────────
 // Each style pack declares its own heading/body pairing (fonts.ts loads
@@ -27,8 +29,14 @@ export const headingFamily = (style?: StylePack): string =>
 export const bodyFamily = (style?: StylePack): string =>
   stackFor(style?.fontBody);
 
-type Asset = {path: string; kind: string; duration?: number; ai?: boolean};
-type VisualBeat = {start: number; duration: number; assets: Asset[]};
+type Asset = {
+  path: string; kind: string; duration?: number; ai?: boolean;
+  graphic?: GraphicData; family?: string;
+};
+type VisualBeat = {
+  start: number; duration: number; assets: Asset[];
+  family?: string; camera?: string; intensity?: number; graphic?: GraphicData;
+};
 
 // ── Ken Burns still ────────────────────────────────────────────────────
 export const KenBurnsImage: React.FC<{
@@ -163,8 +171,10 @@ export const SceneVisual: React.FC<{
 }> = ({assets, visualBeats = [], sceneFrames, fps, maxShotSeconds, sceneN, style, dim,
   gradeOpacity}) => {
   const maxShot = Math.round(maxShotSeconds * fps);
-  const shots: {from: number; frames: number; asset: Asset; idx: number}[] = [];
-  const addShots = (from: number, frames: number, pool: Asset[], seedOffset: number) => {
+  const shots: {from: number; frames: number; asset: Asset; idx: number;
+    camera?: string; intensity?: number}[] = [];
+  const addShots = (from: number, frames: number, pool: Asset[],
+    seedOffset: number, camera?: string, intensity?: number) => {
     if (frames <= 0 || pool.length === 0) return;
     const count = Math.max(1, Math.ceil(frames / Math.max(maxShot, 1)));
     const base = Math.floor(frames / count);
@@ -172,7 +182,7 @@ export const SceneVisual: React.FC<{
     for (let i = 0; i < count; i++) {
       const length = base + (i < frames % count ? 1 : 0);
       shots.push({from: from + cursor, frames: length,
-        asset: pool[i % pool.length], idx: seedOffset + i});
+        asset: pool[i % pool.length], idx: seedOffset + i, camera, intensity});
       cursor += length;
     }
   };
@@ -181,7 +191,8 @@ export const SceneVisual: React.FC<{
       const from = Math.max(0, Math.round(beat.start * fps));
       const frames = Math.min(Math.max(Math.round(beat.duration * fps), 1),
         Math.max(sceneFrames - from, 0));
-      addShots(from, frames, beat.assets?.length ? beat.assets : assets, index * 100);
+      addShots(from, frames, beat.assets?.length ? beat.assets : assets,
+        index * 100, beat.camera, beat.intensity);
     });
   } else {
     addShots(0, sceneFrames, assets, 0);
@@ -191,9 +202,18 @@ export const SceneVisual: React.FC<{
       <AbsoluteFill style={{filter: style.visualFilter}}>
         {shots.map((s) => (
           <Sequence key={s.idx} from={s.from} durationInFrames={s.frames}>
-            {s.asset.kind === 'video' ? (
+            {s.asset.kind === 'graphic' && s.asset.graphic ? (
+              <FamilyGraphic graphic={s.asset.graphic} style={style}
+                durationInFrames={s.frames} />
+            ) : s.asset.kind === 'video' ? (
               <VideoShot asset={s.asset} shotFrames={s.frames} fps={fps}
                 seed={`${sceneN}-${s.idx}`} />
+            ) : s.camera ? (
+              // directed beat: the family's camera move, with parallax
+              // depth on AI stills
+              <FamilyCamera camera={s.camera} intensity={s.intensity}
+                src={staticFile(s.asset.path)} durationInFrames={s.frames}
+                seed={`${sceneN}-${s.idx}`} depth={Boolean(s.asset.ai)} />
             ) : s.asset.ai ? (
               <ParallaxKenBurns src={staticFile(s.asset.path)}
                 durationInFrames={s.frames} seed={`${sceneN}-${s.idx}`}
