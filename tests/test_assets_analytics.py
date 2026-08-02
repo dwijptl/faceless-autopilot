@@ -15,7 +15,9 @@ def test_usage_log_is_bounded_and_defaults(tmp_path):
 
 def test_analytics_override_clamps_values():
     data = analytics.parse_overrides("```yaml\noverrides:\n  target_minutes: 99\n  tts_speed: 0\n  scenes_max: 99\n```")
-    assert data == {"target_minutes": 12, "tts_speed": .85, "scenes_max": 14}
+    assert data == {"target_minutes": 22, "tts_speed": .85, "scenes_max": 28}
+    low = analytics.parse_overrides("```yaml\noverrides:\n  target_minutes: 1\n  scenes_max: 1\n```")
+    assert low == {"target_minutes": 10, "scenes_max": 12}
 
 
 def test_portrait_file_selection_prefers_native_portrait():

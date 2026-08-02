@@ -470,6 +470,9 @@ def main() -> None:
     overrides = analytics_mod.parse_overrides(learnings) if learnings else {}
     if overrides.get("target_minutes"):
         cfg["video"]["target_minutes"] = overrides["target_minutes"]
+        # an explicit analytics override collapses the adaptive length band
+        cfg["video"]["min_minutes"] = overrides["target_minutes"]
+        cfg["video"]["max_minutes"] = overrides["target_minutes"]
     if overrides.get("scenes_max"):
         cfg["video"]["scenes_max"] = overrides["scenes_max"]
     if overrides.get("tts_speed"):
@@ -583,7 +586,12 @@ def main() -> None:
     scenes[0]["start"] = 0.0
     print(f"[tts] {tts_mod.usage_summary()}")
     total_speech = scenes[-1]["start"] + scenes[-1]["audio_duration"]
-    target_s = float(cfg["video"]["target_minutes"]) * 60
+    # ADAPTIVE runtime contract: anything inside [min_minutes, max_minutes]
+    # (± tolerance) is on target — the story chose its length pre-TTS.
+    v_len = cfg["video"]
+    min_s = float(v_len.get("min_minutes", v_len["target_minutes"])) * 60
+    max_s = float(v_len.get("max_minutes", v_len["target_minutes"])) * 60
+    target_s = (min_s + max_s) / 2
     # close the calibration loop: measure the ACTUAL pace of this run so the
     # next run's word budget is grounded in reality
     narration_words = sum(len(str(sc.get("narration", "")).split())
@@ -593,12 +601,12 @@ def main() -> None:
                                       narration_seconds, stamp)
     duration_tol = float(cfg.get("retention", {}).get("duration_tolerance",
                                                       0.10))
-    runtime_ok = abs(total_speech - target_s) <= duration_tol * target_s
+    runtime_ok = (min_s * (1 - duration_tol) <= total_speech
+                  <= max_s * (1 + duration_tol))
     if not runtime_ok:
-        print(f"[warn] narration runs {total_speech / 60:.1f} min vs "
-              f"{target_s / 60:.1f} min target "
-              f"({total_speech / target_s * 100:.0f}%) — outside the "
-              f"±{duration_tol:.0%} band; release will be flagged for review")
+        print(f"[warn] narration runs {total_speech / 60:.1f} min vs the "
+              f"{min_s / 60:g}-{max_s / 60:g} min band "
+              f"(±{duration_tol:.0%}); release will be flagged for review")
     voice_fallback = (str(cfg.get("tts", {}).get("engine", "")).lower() == "sarvam"
                       and tts_mod.fallback_used())
 
@@ -934,8 +942,9 @@ def main() -> None:
                     + ([f"words {word_budget.get('actual')}/"
                         f"{word_budget.get('target')}"]
                        if not word_budget.get("ok", True) else [])
-                    + ([f"runtime {total_speech / 60:.1f}/"
-                        f"{target_s / 60:.1f} min"] if not runtime_ok else []))
+                    + ([f"runtime {total_speech / 60:.1f} min vs "
+                        f"{min_s / 60:g}-{max_s / 60:g} min band"]
+                       if not runtime_ok else []))
         + ")" if retention_requires_review else "OK")
     retention_banner = (
         "> ⚠️ **STORY/RUNTIME AUDIT — REVIEW BEFORE PUBLISHING:** "
@@ -999,6 +1008,8 @@ Remotion. Brand: Terra Incognita.*
                        "report": retention_report,
                        "word_budget": word_budget,
                        "runtime": {"target_s": round(target_s, 1),
+                                   "min_s": round(min_s, 1),
+                                   "max_s": round(max_s, 1),
                                    "actual_s": round(total_speech, 1),
                                    "ok": runtime_ok},
                        "wpm_measured_used": measured_wpm,

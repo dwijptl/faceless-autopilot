@@ -31,10 +31,16 @@ channel:
   wpm: 130                 # spoken words/minute (Hindi narration ~130; English 150)
 
 video:
-  target_minutes: 6.25     # aim: story finishes naturally inside 5:30-7:00;
-                           # word budget enforced pre-TTS (see channel.wpm)
-  scenes_min: 8
-  scenes_max: 12
+  # ADAPTIVE length (same philosophy as the Shorts band): the story decides
+  # its natural end inside [min_minutes, max_minutes]. A documentary/mystery
+  # that resolves at 15 min is NOT padded to 20; one that needs 20 is NOT
+  # truncated. Word budget enforced pre-TTS (see channel.wpm).
+  min_minutes: 15
+  max_minutes: 20
+  target_minutes: 17.5     # band midpoint — planning fallback + analytics
+                           # overrides collapse the band to this single value
+  scenes_min: 16           # ~45-60s per scene across the 15-20 min band
+  scenes_max: 26
   width: 1920
   height: 1080
   fps: 30
@@ -82,7 +88,7 @@ visual_director:
   min_family_coverage: 0.85  # QC warning below this share of tagged beats
   min_custom_ratio: 0.45     # QC warning when AI+graphic assets fall below
 
-# Six-minute quality system. The free Gemini beat-planning pass binds each
+# Long-form quality system. The free Gemini beat-planning pass binds each
 # spoken idea to a concrete visual instead of rotating loosely related assets.
 longform_quality:
   visual_beats:
@@ -90,7 +96,7 @@ longform_quality:
     hook_max_seconds: 3.8  # faster semantic changes during the cold open
     max_seconds: 5.0       # matches the renderer's normal shot ceiling
     min_per_scene: 2
-    max_per_scene: 12
+    max_per_scene: 14      # covers scenes up to ~70s at the 5s beat ceiling
   dynamic_music:
     enabled: true
     transition_seconds: 0.45
@@ -246,7 +252,8 @@ qc:
                            # (free tier; fail-open — never blocks a run)
   frames: 3                # sample 20/50/80% of each stock clip, not just one frame
   max_upscale: 1.25        # reject obvious blur after portrait crop/upscale
-  max_requests_per_video: 20  # hard cost/rate-limit ceiling for vision QC
+  max_requests_per_video: 48  # hard rate-limit ceiling for vision QC (free
+                              # Gemini tier) — scaled with the 15-20 min band
   render_audit_required: false  # true = a skipped/errored post-render audit is
                                 # INDETERMINATE and drafts the release (enable
                                 # after several clean scheduled runs)

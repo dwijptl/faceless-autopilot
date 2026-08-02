@@ -61,6 +61,10 @@ def short_cfg(cfg: dict) -> dict:
     c["video"].update({
         "width": 1080, "height": 1920,
         "target_minutes": s.get("target_seconds", 25) / 60,
+        # pin the long-form adaptive band out of the shorts config so no
+        # shared code path ever picks up 15-20 min for a vertical Short
+        "min_minutes": s.get("min_seconds", 25) / 60,
+        "max_minutes": s.get("max_seconds", 90) / 60,
         "scenes_min": s.get("scenes_min", 5),
         "scenes_max": s.get("scenes_max", 7),
         "crossfade": s.get("crossfade", 0.25),

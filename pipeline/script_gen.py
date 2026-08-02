@@ -1064,7 +1064,15 @@ def generate_script(cfg: dict, topic: str, api_key: str, learnings: str = "",
     done = done if done is not None else []
     skel_name, skel_block = _skeleton_block(len(done))
     wpm = _wpm(cfg)
-    words = int(v["target_minutes"] * wpm)
+    # ADAPTIVE long-form length (mirrors the Shorts band): the story decides
+    # its natural end inside [min_minutes, max_minutes] — a mystery that
+    # resolves at 15 min is not padded to 20, and a documentary that needs
+    # 20 is not truncated. Falls back to fixed target_minutes if no band set.
+    t_min = float(v.get("min_minutes", v["target_minutes"]))
+    t_max = float(v.get("max_minutes", v["target_minutes"]))
+    min_words = int(t_min * wpm)
+    max_words = int(t_max * wpm)
+    words = (min_words + max_words) // 2  # planning midpoint
     ai_max = _ai_max(cfg)
     learn_block = (f"\nCHANNEL LEARNINGS — apply these to hook style, pacing, and "
                    f"thumbnail text:\n{learnings}\n" if learnings else "")
@@ -1072,11 +1080,14 @@ def generate_script(cfg: dict, topic: str, api_key: str, learnings: str = "",
 (voiceover + b-roll + motion graphics + captions, no on-camera host).
 
 TOPIC: {topic}
-TARGET: ~{words} spoken words total (about {v['target_minutes']} minutes at {wpm} wpm)
-HARD RANGE: {int(words * 0.92)}-{int(words * 1.08)} spoken words across all
-scenes. Under {int(words * 0.92)} produces a video shorter than promised;
-count your words before returning and expand thin scenes with concrete
-material (never filler).
+TARGET: ADAPTIVE — the story decides its own natural length between
+{t_min:g} and {t_max:g} minutes ({min_words}-{max_words} spoken words at
+{wpm} wpm). End the video exactly where the mystery is fully resolved and
+the documentary promise feels satisfied — never pad toward the ceiling,
+never truncate a payoff to fit.
+HARD RANGE: {min_words}-{max_words} spoken words across all scenes. Under
+{min_words} produces a video shorter than promised; count your words before
+returning and expand thin scenes with concrete material (never filler).
 TONE: {cfg['channel']['tone']}
 AUDIENCE: {cfg['channel']['audience']}
 {learn_block}{_variety_rules(done, len(done), topic)}{skel_block}{_lang_rules(cfg)}{_style_rules()}
@@ -1285,12 +1296,13 @@ Script rules:
             # warning) and run.py drafts the release (retention.gate).
             for _pass in range(2):
                 wc = _word_count(script)
-                if wc >= int(words * 0.88):
+                if wc >= int(min_words * 0.94):
                     break
-                print(f"[script] undershoot ({wc}/{words} words) — "
-                      f"expansion pass {_pass + 1}")
+                print(f"[script] undershoot ({wc}/{min_words}-{max_words} "
+                      f"words) — expansion pass {_pass + 1}")
                 exp = f"""The draft below runs {wc} spoken words but must run
-{int(words * 0.95)}-{int(words * 1.05)} words. Expand the THINNEST scenes with
+at least {min_words} words (band {min_words}-{max_words}; stop where the
+story naturally resolves). Expand the THINNEST scenes with
 concrete, specific material — mechanisms, named places, numbers, consequences
 — never filler, never repetition. Keep the same JSON schema, scene count,
 visual modes and every non-narration field unchanged.
@@ -1320,19 +1332,19 @@ DRAFT:
                 except Exception as exc:
                     print(f"[script] expansion skipped ({exc})")
                     break
-            # overshoot is a miss too: a 6-minute promise delivered as 8
-            # minutes dilutes pacing and trips the runtime gate at render.
+            # overshoot is a miss too: running past the band's ceiling
+            # dilutes pacing and trips the runtime gate at render.
             # Trim verbose scenes BEFORE TTS (free), mirroring the expansion.
             for _pass in range(2):
                 wc = _word_count(script)
-                if wc <= int(words * 1.10):
+                if wc <= int(max_words * 1.05):
                     break
-                print(f"[script] overshoot ({wc}/{words} words) — "
-                      f"trim pass {_pass + 1}")
+                print(f"[script] overshoot ({wc}/{min_words}-{max_words} "
+                      f"words) — trim pass {_pass + 1}")
                 trim = f"""The draft below runs {wc} spoken words but must stay
-under {int(words * 1.08)} words (target {words}). TRIM the most verbose
-scenes: cut adjectives, repeated ideas and any sentence that adds no new
-information — NEVER cut milestone values, reveals, numbers that graphics
+under {int(max_words * 1.03)} words (band {min_words}-{max_words}). TRIM the
+most verbose scenes: cut adjectives, repeated ideas and any sentence that adds
+no new information — NEVER cut milestone values, reveals, numbers that graphics
 display, or the promise-ladder structure. Keep the same JSON schema, scene
 count, visual modes and every non-narration field unchanged.
 {_lang_rules(cfg)}
@@ -1363,13 +1375,14 @@ DRAFT:
                     break
             wc = _word_count(script)
             script["word_budget"] = {
-                "target": words, "min": int(words * 0.92),
-                "max": int(words * 1.08), "actual": wc,
+                "target": words, "min": min_words,
+                "max": max_words, "actual": wc,
                 "wpm_used": wpm,
-                "ok": int(words * 0.88) <= wc <= int(words * 1.15),
+                "ok": int(min_words * 0.90) <= wc <= int(max_words * 1.10),
             }
             if not script["word_budget"]["ok"]:
-                print(f"[script] WORD BUDGET MISS: {wc}/{words} — the release "
+                print(f"[script] WORD BUDGET MISS: {wc} vs band "
+                      f"{min_words}-{max_words} — the release "
                       "will be flagged for review")
             script["skeleton"] = skel_name
             _enforce_title_variety(script, done)

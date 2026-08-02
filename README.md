@@ -179,7 +179,7 @@ lives in the workflow files.
 | Sarvam 422 in the log | `SARVAM_SPEAKER` doesn't match bulbul:v3 — re-copy the cloned voice ID from the dashboard |
 | `Gemini call failed on all models` | Update `llm.model` in config.yaml to a current free-tier Flash model from ai.google.dev |
 | Hindi text shows as boxes (tofu) | Workflow installs `fonts-noto-core` — check that apt step succeeded |
-| Video too short / scenes feel empty | Raise `video.target_minutes`, or add more specific `niche` wording |
+| Video too short / scenes feel empty | Raise the `video.min_minutes`/`max_minutes` band (story picks its length inside it), or add more specific `niche` wording |
 | No captions visible | `captions.enabled: true` in config.yaml |
 | Scheduled run didn't start | GitHub pauses cron on repos inactive for 60 days — push any commit, or use manual runs |
 
