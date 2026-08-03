@@ -267,6 +267,66 @@ HOW A HUMAN NARRATOR ACTUALLY SOUNDS (write like this):
 """
 
 
+def _case_rules() -> str:
+    """The detective engine — long-form rules for the case-file channel
+    (2026-08 pivot, docs/CASE_FILE_PIVOT.md). Injected into every long-form
+    script prompt after the skeleton block."""
+    return """
+THE CASE FILE ENGINE (one real unexplained case per episode — these rules
+outrank everything below except the JSON schema):
+- COLD OPEN CONTRACT: the first two sentences contain NO year, NO date, NO
+  place name and NO proper noun. They state the impossible human moment in
+  plain Hindi ("पाँच दोस्त एक बास्केटबॉल गेम देखकर घर निकले। घर कोई नहीं
+  पहुंचा।"). Names, places and dates enter only AFTER the viewer feels the
+  mystery — from scene 2 onwards. Viewers do not care about 1978 until they
+  care about the people.
+- PROPER-NOUN BUDGET: at most 5-6 unfamiliar foreign names in the whole
+  script. After introducing a person once, call them by role (ड्राइवर, सबसे
+  छोटा भाई, जांच अधिकारी, लाइटहाउस कीपर). WHAT happened always beats WHERE
+  exactly it happened — unfamiliar geography is cognitive load, not detail.
+- DETECTIVE RHYTHM: the script is a chain of clue → theory → problem, not a
+  chronicle of events. EVERY scene must do exactly one of: (a) introduce a
+  NEW verified clue, (b) break the currently-leading theory with a
+  contradiction from the record, or (c) replace it with a stronger theory.
+  The viewer's best guess about what happened must flip at least 3 times
+  across the video — they are solving the case WITH you, not listening to
+  a summary of it.
+- NEVER SOLVED EARLY: the case must not feel explained before the final
+  10%. The strongest explanation lands at the main_reveal — and the final
+  scene then names, specifically and honestly, what that explanation STILL
+  cannot account for. That unanswered remainder IS the ending. Never
+  manufacture closure; never invent a resolution the record doesn't hold.
+- HUMAN FLOOR: at least 2 scenes step out of the evidence and back to the
+  human beings — the last normal moment, what the families did, what the
+  searchers found instead. One line of felt detail beats a paragraph of
+  facts: "उन्हें बस टायर बदलना था। किसी को अंदाज़ा नहीं था कि यह उनकी
+  ज़िंदगी का आख़िरी सामान्य पल था।"
+- EVIDENCE DISCIPLINE: every theory gets its supporting evidence AND its
+  fatal problem, both from the real record (जांच रिपोर्ट, post-mortem
+  findings, witness statements, dated documents). Supernatural or
+  conspiracy readings may be reported only as what some people believe —
+  never as findings. NON-GRAPHIC ALWAYS: narration and visuals stay on
+  clues, documents, maps, timelines and places — never on gore, bodies or
+  suffering.
+- CASE VARIABLE: for a case, changing_variable is the investigation itself
+  — TIME (घंटे लापता, दिन की तलाश), CLUES (सबूत #1, #2, #3...) or DISTANCE
+  (सही रास्ते से कितना दूर). Milestones track it scene by scene exactly
+  like a physical journey.
+
+PACKAGING (the title and thumbnail sell the PREMISE, never the case's name):
+- The title is the premise in plain spoken Hindi — a stranger with zero
+  context must get it in one breath. An unfamiliar proper noun may appear
+  only at the very END after a separator ("... | Hinterkaifeck Mystery"),
+  never as the hook. BANNED as title openers: case names, place names,
+  years.
+- Target 45-65 characters before any trailing "| Name" tag; the title
+  implies exactly ONE unanswered question, not three.
+- thumb_headline carries the case's single most impossible VERIFIED fact —
+  never a generic "रहस्य!"/"डरावना सच" and never a claim the video can't
+  prove.
+"""
+
+
 def _ai_max(cfg: dict) -> int:
     """AI-image budget per video — richer when a FLUX (fal.ai) key is set."""
     aicfg = cfg.get("ai_images", {})
@@ -606,13 +666,21 @@ TITLE_FORMS = [
 ]
 
 # Topic families — no single family may dominate the channel.
+# 2026-08 case-file pivot: families are now CASE TYPES. The variety engine
+# keeps the channel from becoming eight disappearances in a row while every
+# episode still keeps the one identity: a real case, investigated.
 TOPIC_FAMILIES = {
-    "survival_timeline": ["\u0936\u0930\u0940\u0930", "\u092e\u093f\u0928\u091f", "\u0918\u0902\u091f", "\u0938\u0947\u0915\u0902\u0921",
-                          "body", "survive", "minute", "hour"],
-    "vanishing_whatif": ["\u0905\u0917\u0930", "\u0917\u093e\u092f\u092c", "what if", "vanish", "disappear"],
-    "mystery_investigation": ["\u0930\u0939\u0938\u094d\u092f", "\u0916\u094b\u091c", "mystery", "discover", "unexplained"],
-    "scale_comparison": ["\u0924\u0941\u0932\u0928", "\u0917\u0941\u0928\u093e", "\u092c\u0921\u093c\u093e", "scale", "compare", "size"],
-    "disagreement": ["\u0935\u0948\u091c\u094d\u091e\u093e\u0928\u093f\u0915", "\u092c\u0939\u0938", "disagree", "debate", "theory"],
+    "disappearance": ["गायब", "लापता", "बेपता", "vanish", "disappear",
+                      "missing"],
+    "strange_death": ["मौत", "हत्या", "मारा", "कंकाल", "death", "murder",
+                      "killed", "died"],
+    "maritime_expedition": ["जहाज़", "जहाज", "समुद्र", "टापू", "अभियान",
+                            "आर्कटिक", "ship", "sea", "island", "expedition",
+                            "crew", "lighthouse"],
+    "scientific_anomaly": ["सिग्नल", "आवाज़", "रोशनी", "पक्षी", "signal",
+                           "sound", "light", "anomaly", "phenomenon"],
+    "lost_object_place": ["खज़ाना", "किताब", "गड्ढा", "नक्शा", "treasure",
+                          "manuscript", "cipher", "code"],
 }
 FAMILY_CAP = 0.40   # no family may exceed this share of recent output
 
@@ -716,6 +784,28 @@ def _read_done(done_file: str) -> tuple:
     return done, tease
 
 
+def _next_from_queue(done_file: str, done: list, cross: list) -> str:
+    """First topics_queue.txt entry not yet produced in either format.
+
+    The queue is the owner's ORDERED slate (the 8-case pivot plan): while it
+    has unproduced entries, the pipeline executes the plan instead of
+    inventing topics, so a strategy decided once actually ships in order.
+    This function never mutates the queue — a produced topic drops out
+    naturally because log_topic_done wrote the same line to topics_done.txt.
+    Missing file or exhausted queue = "" (normal auto-pick resumes)."""
+    qpath = os.path.join(os.path.dirname(os.path.abspath(done_file)),
+                         "topics_queue.txt")
+    if not os.path.exists(qpath):
+        return ""
+    produced = {t.strip() for t in list(done) + list(cross)}
+    with open(qpath, encoding="utf-8") as f:
+        for ln in f:
+            ln = ln.strip()
+            if ln and not ln.startswith("#") and ln not in produced:
+                return ln
+    return ""
+
+
 def pick_topic(cfg: dict, api_key: str, done_file: str = "topics_done.txt",
                learnings: str = "", shape: str = "any",
                also_done: list | None = None, max_seconds: float = 90) -> str:
@@ -751,6 +841,15 @@ def pick_topic(cfg: dict, api_key: str, done_file: str = "topics_done.txt",
                   f"honoring the override anyway (owner intent wins)")
         print(f"[script] honoring manual NEXT: override: {tease}")
         return tease
+
+    # the owner's ordered slate (topics_queue.txt) — long-form runs only;
+    # Shorts keep auto-picking single-claim teasers around the slate
+    if shape == "any":
+        queued = _next_from_queue(done_file, done, cross)
+        if queued:
+            print(f"[script] using next queued topic (topics_queue.txt): "
+                  f"{queued}")
+            return queued
 
     learn_block = (f"\nWHAT HAS WORKED ON THIS CHANNEL (analytics digest):\n{learnings}\n"
                    if learnings else "")
@@ -1090,7 +1189,7 @@ HARD RANGE: {min_words}-{max_words} spoken words across all scenes. Under
 returning and expand thin scenes with concrete material (never filler).
 TONE: {cfg['channel']['tone']}
 AUDIENCE: {cfg['channel']['audience']}
-{learn_block}{_variety_rules(done, len(done), topic)}{skel_block}{_lang_rules(cfg)}{_style_rules()}
+{learn_block}{_variety_rules(done, len(done), topic)}{skel_block}{_case_rules()}{_lang_rules(cfg)}{_style_rules()}
 Write a scene-segmented script and return ONLY valid JSON with this exact shape:
 {{
   "title": "click-worthy but honest YouTube title, <= 70 chars",
@@ -1427,6 +1526,15 @@ video reads as cut off. Measured on this channel: every checkpoint Short
 retained under 40% of its runtime; every one-claim Short retained over 55%,
 and the best two were replayed end-to-end. Do not write a checkpoint title
 and do not structure the scenes as a tour of stages.
+
+CASE TEASER MODE (this is a real-case investigation channel): when the topic
+is a real case, this Short is a teaser for the channel's long-form
+investigations. Pick the case's single most impossible VERIFIED fact and
+settle THAT fact completely — that is this Short's one claim ("टेंट अंदर से
+काटा गया था। यह जांच रिपोर्ट में दर्ज है।"). The CASE stays open: end on the
+case's unanswered question, never on a resolution. No year, place name or
+unfamiliar proper noun in the first sentence — the human moment first.
+Non-graphic always: clues and documents, never gore.
 
 LENGTH — the claim decides, inside a hard band:
 HARD RANGE: {min_words}-{int(words * 1.05)} spoken words TOTAL
