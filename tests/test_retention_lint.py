@@ -210,9 +210,14 @@ def test_title_form_and_skeleton_rotate():
     forms = {sg._title_form(i)[0] for i in range(len(sg.TITLE_FORMS))}
     assert len(forms) == len(sg.TITLE_FORMS)          # every form is reachable
     assert sg._title_form(0) != sg._title_form(1)     # consecutive differ
-    skels = [rl.skeleton_for(i) for i in range(3)]
-    assert len(set(skels)) == 3                       # three distinct shapes
-    assert rl.skeleton_for(0) == rl.skeleton_for(3)   # deterministic cycle
+    cycle = len(rl.SKELETON_ORDER)
+    skels = [rl.skeleton_for(i) for i in range(cycle)]
+    assert set(skels) == set(rl.SKELETONS)            # every shape reachable
+    # case-file pivot: investigation is the native engine — twice per cycle
+    assert skels.count("investigation") == 2
+    assert rl.skeleton_for(0) == "investigation"
+    assert rl.skeleton_for(0) == rl.skeleton_for(cycle)  # deterministic cycle
+    assert rl.skeleton_for(1) != rl.skeleton_for(0)   # consecutive differ
 
 
 def test_enforce_title_variety_swaps_templated_title():
@@ -235,11 +240,11 @@ def test_enforce_title_variety_leaves_distinct_title_alone():
 
 def test_overused_family_is_detected():
     import script_gen as sg
-    done = ["शरीर के साथ क्या होगा 1", "शरीर के साथ क्या होगा 2",
-            "शरीर के साथ क्या होगा 3", "समुद्र का रहस्य"]
-    assert "survival_timeline" in sg._overused_families(done)
-    varied = ["समुद्र का रहस्य", "ब्रह्मांड की तुलना",
-              "वैज्ञानिक बहस", "शरीर के साथ क्या होगा"]
+    done = ["पाँच लोग गायब हुए 1", "तीन आदमी गायब हुए 2",
+            "एक परिवार लापता 3", "समुद्र में मिला जहाज़"]
+    assert "disappearance" in sg._overused_families(done)
+    varied = ["पाँच लोग गायब हुए", "एक जहाज़ खाली मिला",
+              "आसमान में रहस्यमयी रोशनी का सिग्नल", "230 साल पुराना गड्ढा और खज़ाना"]
     assert sg._overused_families(varied) == []
 
 
