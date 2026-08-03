@@ -3,44 +3,61 @@
 
 channel:
   # The seed for ALL auto-generated topics. Change this to pivot the channel.
+  # ── 2026-08 PIVOT (docs/CASE_FILE_PIVOT.md): from mixed science/what-if
+  # explainers to ONE identity — real-case investigation mysteries. ──
   niche: >
-    Hidden places and mind-bending realities of Earth and the universe —
-    cinematic documentary explainers across four families, WEIGHTED BY
-    CHANNEL DATA (2026-07 window — docs/CHANNEL_OPTIMIZATION_PLAN.md):
-    (1) EARTH'S EXTREMES & MYSTERIES — the proven core, ~7 of every 8
-    long-forms: a real, NAMED place or machine (Kola Superdeep, Mariana
-    Trench, Venera probes, Challenger Deep) + a descent/exposure premise +
-    a running human-stakes variable (depth, temperature, seconds survived);
-    (2) SPACE & THE COSMOS — concrete and filmable only (probes, surfaces,
-    descents); abstract cosmology (white holes, quantum theory) capped at
-    ~1 in 8 long-forms — it has this channel's worst retention; (3) WHAT-IF
-    SCENARIOS grounded in real physics: Earth stops spinning, humans vanish,
-    oceans drain; (4) FACTUAL MYSTERIES: documented historical mysteries,
-    disappearances, unexplained events and abandoned places — evidence-led
-    storytelling that presents established facts and competing scientific
-    explanations, never asserting a conspiracy or supernatural cause as
-    fact. Hard rules: every topic must be illustrable with stock footage,
-    AI stills and programmatic graphics — no recent news events, no living
-    named people (long-deceased historical figures may be referenced
-    respectfully, never depicted with recognizable faces), no religion or
-    mythology, no politics, no conspiracy claims.
-  tone: "curious, cinematic, documentary — like a calm narrator revealing something surprising"
-  audience: "curious Hindi-speaking adults who love maps, space and science"
+    TERRA INCOGNITA is a Hindi real-mystery INVESTIGATION channel. Every
+    long-form episode opens ONE real, documented, unexplained case and
+    walks the viewer through the evidence like a detective working the
+    file. The channel promise never changes: "एक असली केस, असली सबूत, और एक
+    सवाल जिसका जवाब आज तक नहीं मिला।" CASE FAMILIES (rotate; never let one
+    dominate): (1) DISAPPEARANCES & STRANGE DEATHS of real people (Dyatlov
+    Pass, Yuba County Five, Flannan Isles) — the core family: human beings
+    first, objects second; (2) INDIAN CASES every 2nd or 3rd episode
+    (Roopkund skeleton lake, the Stoneman killings, Jatinga) — closer to
+    the audience and untouched in this format in Hindi; (3) MARITIME &
+    EXPEDITION mysteries (Mary Celeste, Franklin Expedition, Oak Island);
+    (4) SCIENTIFIC ANOMALIES with real investigations (the Bloop,
+    Hessdalen lights) capped at ~1 in 4 episodes — human-centered cases
+    outperform object/anomaly cases. ONE-BREATH TEST for every topic: the
+    premise, spoken in one plain-Hindi sentence with ZERO unfamiliar
+    proper nouns, must make a stranger ask a question back. Hard rules:
+    real documented cases only, told evidence-first — investigation
+    records, named sources, competing theories weighed honestly, and an
+    ending that admits exactly what remains unexplained. NEVER assert a
+    supernatural, paranormal or conspiracy explanation as fact (report
+    them only as beliefs some hold). NON-GRAPHIC ALWAYS: the camera stays
+    on clues, documents, maps, places and timelines — never gore, bodies
+    or suffering (advertiser-safe real mystery, not true-crime shock).
+    No cases fresher than ~15 years, no ongoing investigations or trials,
+    no living private individuals as subjects, no recent news, no
+    religion or mythology, no politics. Every topic must be illustrable
+    with stock footage, AI stills, maps, documents and programmatic
+    graphics — long-deceased people may be referenced respectfully,
+    never depicted with recognizable faces.
+  tone: "शांत जांचकर्ता — a calm investigator laying out evidence; suspenseful and respectful, never shouty or sensational"
+  audience: "Hindi-speaking viewers who love solving real mysteries — evidence, competing theories, and questions nobody has answered"
   language: "hi-IN"        # BCP-47; drives script language + Sarvam TTS.
                            # Switch back to "en-us" for English.
   wpm: 130                 # spoken words/minute (Hindi narration ~130; English 150)
 
 video:
   # ADAPTIVE length (same philosophy as the Shorts band): the story decides
-  # its natural end inside [min_minutes, max_minutes]. A documentary/mystery
-  # that resolves at 15 min is NOT padded to 20; one that needs 20 is NOT
-  # truncated. Word budget enforced pre-TTS (see channel.wpm).
-  min_minutes: 15
-  max_minutes: 20
-  target_minutes: 17.5     # band midpoint — planning fallback + analytics
+  # its natural end inside [min_minutes, max_minutes]. Word budget enforced
+  # pre-TTS (see channel.wpm).
+  #
+  # 2026-08: band lowered 15-20 -> 8-12. Current long-form AVD is 1:30-2:20;
+  # viewers watch MINUTES, not percentages, so a 16-min video would show
+  # ~15-20% average-viewed and poison the browse signal. EARN length first.
+  # PROMOTION RULE (docs/CASE_FILE_PIVOT.md): raise the band to 12-15 (then
+  # 15-20) only after 3 consecutive uploads hold average view duration
+  # above ~4.5 minutes with a gradual (not cliff-shaped) retention curve.
+  min_minutes: 8
+  max_minutes: 12
+  target_minutes: 10       # band midpoint — planning fallback + analytics
                            # overrides collapse the band to this single value
-  scenes_min: 16           # ~45-60s per scene across the 15-20 min band
-  scenes_max: 26
+  scenes_min: 10           # ~45-60s per scene across the 8-12 min band
+  scenes_max: 16
   width: 1920
   height: 1080
   fps: 30
@@ -143,7 +160,7 @@ llm:
 
 brand:
   name: "TERRA INCOGNITA"
-  tagline: "दुनिया की छुपी जगहों की खोज"   # metadata only — not shown on outro
+  tagline: "असली केस। असली सबूत। बिना जवाब के सवाल।"   # metadata only — not shown on outro
   watermark_opacity: 0.08  # corner logo watermark on every frame
 
 render:
