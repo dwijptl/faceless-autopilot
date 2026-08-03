@@ -153,6 +153,13 @@ niche, tone, video length, voice settings (`tts.speed`, `temperature`,
 fallback `voice`), caption style, music volume, crossfade timing. Schedule
 lives in the workflow files.
 
+**Topic slate:** `topics_queue.txt` is the owner's ordered topic list —
+long-form runs produce its first unproduced line before inventing anything,
+so a strategy decided once actually ships in order. The current slate and
+the strategy behind it: `docs/CASE_FILE_PIVOT.md` (2026-08 pivot to
+real-case investigation mysteries, 8–12 min band, detective script
+engine).
+
 ## Licensing & monetization notes (important)
 
 - **Pexels** footage/photos: free for commercial use, no attribution — monetization-safe.
