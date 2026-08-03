@@ -213,16 +213,22 @@ single-claim Short retained over 55%. Propose ONE-CLAIM topics only."""
 
 _JOURNEY_RUBRIC = """THE VISUAL JOURNEY TEST — score each candidate 1-10 on ALL of:
 - journey: is there ONE changing variable the viewer travels along
-  (depth, speed, time, temperature, scale)?
+  (a case timeline — hours missing, days of searching, clues found — or
+  depth, speed, time, temperature, scale)?
 - escalation: can it produce 6+ visibly escalating milestones?
 - number_hook: does it contain one concrete, quotable number?
+- human_first: does it lead with PEOPLE (the vanished, the witnesses, the
+  searchers) rather than an object or a place? "5 लोग गायब हुए" beats "एक
+  पांडुलिपि जो कोई नहीं पढ़ सका" — humans are the strongest hook.
 - human_stakes: is there a consequence a viewer can feel on their own body/city?
+- one_breath: can the premise be said in ONE plain-Hindi sentence, with zero
+  unfamiliar proper nouns, and still force a question back?
 - visual: does something VISIBLY change on screen every 30 seconds?
 - thumbnail: can it be drawn as ONE dramatic image?
 - feasibility: can stock footage + AI stills TRUTHFULLY illustrate it
   (no reenactments, no specific people, no news footage)?
 - source_confidence: are its core facts well-established and easy to verify
-  with primary scientific/government sources?
+  with primary sources (investigation records, scientific/government archives)?
 - sequel: does it naturally open an obvious next-episode question?
 A topic that is a list of facts ("types of X") must score low on journey."""
 
@@ -239,5 +245,6 @@ def score_keys(shape: str) -> list:
     if shape == SINGLE_CLAIM:
         return ["one_claim", "jolt", "instant_stakes", "one_image", "closure",
                 "loop", "feasibility", "source_confidence"]
-    return ["journey", "escalation", "number_hook", "human_stakes", "visual",
-            "thumbnail", "feasibility", "source_confidence", "sequel"]
+    return ["journey", "escalation", "number_hook", "human_first",
+            "human_stakes", "one_breath", "visual", "thumbnail",
+            "feasibility", "source_confidence", "sequel"]
