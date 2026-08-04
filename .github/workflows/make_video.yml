@@ -1,6 +1,11 @@
 name: Make Video
 
 on:
+  schedule:
+    # Long-form case investigation: Mon + Thu 05:00 UTC = 10:30 AM IST.
+    # Render in the morning, review, publish 4-5:30 PM IST (peak 6-8 PM).
+    # Cadence: 2 long + 2 Shorts/week (docs/CASE_FILE_PIVOT.md).
+    - cron: "0 5 * * 1,4"
   workflow_dispatch:
     inputs:
       topic:
