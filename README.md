@@ -15,9 +15,11 @@ topic (Gemini, auto) ─→ Hindi script (Gemini) ─→ grounded claim review �
 ```
 
 **Cost per video:** everything is $0 (Gemini free tier, Pexels, GitHub Actions,
-Kokoro) **except the voice**: Sarvam gives ₹100 free credit on signup, then TTS
-is ~₹30 per 10,000 characters — roughly **₹15–20 per long video, ~₹2 per
-short**. If Sarvam is unreachable or out of credits, the pipeline automatically
+Kokoro) **except the voice and the script writer**: Sarvam gives ₹100 free
+credit on signup, then TTS is ~₹30 per 10,000 characters — roughly **₹15–20
+per long video, ~₹2 per short** — and a long-form script costs **~$0.20
+(≈₹17)** with GPT-5.6 Terra or Claude Sonnet (both $15/M output tokens at
+today's 8–12 min scripts); the Gemini fallback writer is free. If Sarvam is unreachable or out of credits, the pipeline automatically
 falls back to the free Kokoro Hindi voice so scheduled runs never fail.
 
 ---
@@ -38,7 +40,7 @@ Already done if you're reading this on your own repo.
 | `SARVAM_SPEAKER` | dashboard.sarvam.ai → your **cloned voice ID** | Clone needs a 30–60s consented sample. Any preset (`amit`, `kavya`…) also works |
 | `FAL_KEY` *(optional)* | fal.ai → Keys | Turns on **FLUX signature shots** (~$0.05/img, ~$0.20/video). Without it: free Gemini images |
 | `OPENAI_API_KEY` *(recommended)* | platform.openai.com → API keys | GPT-5.6 Terra writes the scripts (config `llm.provider: "openai"`, ~$0.20/script). Without it: Claude, then free Gemini |
-| `ANTHROPIC_API_KEY` *(optional)* | console.anthropic.com | Claude fallback writer (~$0.05/script) when GPT is unkeyed or down. Without both: free Gemini |
+| `ANTHROPIC_API_KEY` *(optional)* | console.anthropic.com | Claude Sonnet fallback writer (same ~$0.20/script — $3/M in, $15/M out) when GPT is unkeyed or down. Without both: free Gemini |
 
 Add each: **Settings → Secrets and variables → Actions → New repository secret**
 (exact names above).
