@@ -142,10 +142,17 @@ tts:
   fail_on_fallback: false  # true = fail workflow after preserving a draft for inspection
 
 llm:
-  provider: "auto"         # "auto" = Claude for scripts when ANTHROPIC_API_KEY
-                           # secret exists (crisper writing, ~₹4/script),
-                           # otherwise Gemini free tier. Claude failures
-                           # auto-fall back to Gemini.
+  provider: "openai"       # "openai" = GPT writes the scripts when the
+                           # OPENAI_API_KEY secret exists; failures fall
+                           # back to Claude (if keyed), then Gemini free
+                           # tier — a scheduled run never blocks on a
+                           # provider outage. "auto" = same chain;
+                           # "anthropic"/"gemini" pin those instead.
+  openai_model: "gpt-5.6-terra"  # 2026-08 switch: Terra ($2.50/M in,
+                                 # $15/M out) writes long-form + Shorts.
+                                 # If a name 404s the pipeline asks the API
+                                 # what GPT-5.x YOUR key has and self-heals.
+  openai_fallback_models: ["gpt-5.6-luna"]
   anthropic_model: "claude-sonnet-4-6" # newest sonnet this key actually
                                        # serves (claude-sonnet-5 404s on the
                                        # generate endpoint — Test Script #2).
