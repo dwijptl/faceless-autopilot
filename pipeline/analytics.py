@@ -237,12 +237,14 @@ def parse_overrides(learnings_text: str) -> dict:
         return {}
     safe = {}
     if isinstance(o.get("target_minutes"), (int, float)):
-        # bounds track the adaptive long-form band (video.min/max_minutes)
-        safe["target_minutes"] = min(max(float(o["target_minutes"]), 10), 22)
+        # bounds track the adaptive long-form band (video.min/max_minutes).
+        # 2026-08 pivot: 8-12 until retention EARNS a longer band — the
+        # promotion rule lives in config.yaml (video:) / docs/CASE_FILE_PIVOT.md
+        safe["target_minutes"] = min(max(float(o["target_minutes"]), 8), 12)
     if isinstance(o.get("tts_speed"), (int, float)):
         safe["tts_speed"] = min(max(float(o["tts_speed"]), 0.85), 1.15)
     if isinstance(o.get("scenes_max"), int):
-        safe["scenes_max"] = min(max(o["scenes_max"], 12), 28)
+        safe["scenes_max"] = min(max(o["scenes_max"], 10), 16)
     return safe
 
 
@@ -310,8 +312,8 @@ Rewrite the channel's learnings file. Requirements:
    supports (omit keys you have no evidence for):
 ```yaml
 overrides:
-  target_minutes: <10-22>
-  scenes_max: <12-28>
+  target_minutes: <8-12>
+  scenes_max: <10-16>
 ```
 Output ONLY the markdown file content."""
 

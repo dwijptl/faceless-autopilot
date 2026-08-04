@@ -84,16 +84,23 @@ def _jaccard(a, b) -> float:
 
 
 # ── Narrative skeletons (inauthentic-content policy, bucket 1) ───────────
-# Enforcing ONE structure on every video is itself a template. Three
-# skeletons rotate per episode: each moves the reveal to a different point
-# and asks for a different role mix, so consecutive videos do not share a
-# shape. reveal_window is (min, max) as a fraction of the script's words.
+# Enforcing ONE structure on every video is itself a template. Skeletons
+# rotate per episode: each moves the reveal to a different point and asks
+# for a different role mix, so consecutive videos do not share a shape.
+# reveal_window is (min, max) as a fraction of the script's words.
+#
+# 2026-08 case-file pivot: "investigation" is the channel's native engine
+# (clue -> contradiction -> verdict) so it appears twice per cycle; the
+# journey and reveal_first variants keep consecutive episodes structurally
+# different without leaving the case-file identity.
 
 SKELETONS = {
     "journey": {          # classic: build -> reveal late
         "reveal_window": (0.55, 0.85),
         "must_include": ("escalation",),
-        "note": "one changing variable escalates until a late reveal",
+        "note": ("one changing variable escalates until a late reveal — for "
+                 "a case, that variable is the timeline itself (hours "
+                 "missing, days of searching, kilometers off-route)"),
     },
     "investigation": {    # question -> evidence -> reversal -> reveal mid
         "reveal_window": (0.45, 0.75),
@@ -103,10 +110,12 @@ SKELETONS = {
     "reveal_first": {     # answer up front, then consequences
         "reveal_window": (0.15, 0.40),
         "must_include": ("implication", "escalation"),
-        "note": "give the answer early, then spend the video on what it costs",
+        "note": ("open on the verdict/discovery, then spend the video on how "
+                 "investigators got there — and what the verdict still "
+                 "cannot explain"),
     },
 }
-SKELETON_ORDER = ("journey", "investigation", "reveal_first")
+SKELETON_ORDER = ("investigation", "journey", "investigation", "reveal_first")
 
 
 def skeleton_for(done_count: int) -> str:

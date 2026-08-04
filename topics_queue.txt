@@ -1,0 +1,17 @@
+# topics_queue.txt — the owner's ORDERED topic slate.
+# Long-form runs take the FIRST line here that is not already in
+# topics_done.txt / topics_done_shorts.txt, before inventing any topic.
+# Reorder or delete lines anytime; lines starting with # are ignored.
+# A produced topic drops out automatically (log_topic_done records it).
+#
+# ── THE 8-CASE PIVOT SLATE (2026-08 — docs/CASE_FILE_PIVOT.md) ──
+# Human-centered, evidence-first real cases; Indian case every 2nd-3rd slot.
+# Titles are premise-first: no proper noun before the viewer feels the case.
+हिमालय की एक झील हर गर्मी में सैकड़ों इंसानी कंकाल उगलती है — 1,200 साल से | Roopkund
+समुद्र में एक जहाज़ मिला — सामान पूरा, खाना गर्म, लेकिन इंसान एक भी नहीं | Mary Celeste
+तीन आदमी एक टापू के लाइटहाउस पर थे। दरवाज़ा अंदर से बंद। तीनों गायब। | Flannan Isles
+एक ही शहर में 13 हत्याएं, हथियार सिर्फ़ पत्थर — और कातिल का आज तक कोई नाम नहीं | Stoneman
+असम की एक घाटी में हर साल एक ही रात हज़ारों पक्षी खुद मौत की तरफ़ उड़ते हैं | Jatinga
+230 साल से लोग एक गड्ढा खोद रहे हैं — नीचे से हर बार एक नया राज़ निकलता है | Oak Island
+समुद्र की सबसे तेज़ आवाज़ सिर्फ़ एक बार सुनाई दी — स्रोत आज तक नहीं मिला | The Bloop
+129 आदमी, 2 जहाज़, आर्कटिक की बर्फ़ — और फिर 170 साल की खामोशी | Franklin Expedition

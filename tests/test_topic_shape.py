@@ -207,3 +207,30 @@ def test_cross_format_history_reaches_the_prompt(
                           also_done=["NASA को पृथ्वी के अंदर से सिग्नल मिला"],
                           max_seconds=90)
     assert "NASA को पृथ्वी के अंदर से सिग्नल मिला" in seen["prompt"]
+
+
+def test_topics_queue_runs_before_auto_pick_and_skips_produced(
+        monkeypatch, tmp_path, no_forced_topic):
+    """Long-form runs execute the owner's ordered slate (topics_queue.txt)
+    before inventing topics; already-produced entries drop out."""
+    (tmp_path / "topics_queue.txt").write_text(
+        "# slate\ncase one | A\ncase two | B\n", encoding="utf-8")
+    (tmp_path / "done.txt").write_text("case one | A\n", encoding="utf-8")
+    monkeypatch.setattr(
+        script_gen, "_llm",
+        lambda *a, **k: (_ for _ in ()).throw(
+            AssertionError("queue must satisfy long-form picks without LLM")))
+    got = script_gen.pick_topic(CFG, "key", str(tmp_path / "done.txt"))
+    assert got == "case two | B"
+
+
+def test_topics_queue_is_ignored_for_shorts(
+        monkeypatch, tmp_path, no_forced_topic):
+    """Shorts auto-pick single-claim teasers; the slate is long-form only."""
+    (tmp_path / "topics_queue.txt").write_text("case one | A\n",
+                                               encoding="utf-8")
+    monkeypatch.setattr(script_gen, "_llm",
+                        lambda *a, **k: _reply("धरती के अंदर से आया वो सिग्नल"))
+    got = script_gen.pick_topic(CFG, "key", str(tmp_path / "done.txt"),
+                                shape=ts.SINGLE_CLAIM, max_seconds=90)
+    assert got == "धरती के अंदर से आया वो सिग्नल"
