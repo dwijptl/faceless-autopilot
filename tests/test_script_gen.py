@@ -105,3 +105,30 @@ def test_short_ending_keeps_complete_replay_cue():
     assert script["scenes"][-1]["narration"].endswith(
         "सवाल फिर वहीं लौटता है।"
     )
+
+
+def test_llm_routes_openai_first_then_anthropic_then_gemini(monkeypatch):
+    """provider "openai": GPT writes; its failure falls through to Claude,
+    then Gemini — a scheduled run never blocks on one provider."""
+    import script_gen as sg
+    cfg = {"llm": {"provider": "openai", "model": "gemini-2.5-flash"}}
+    monkeypatch.setenv("OPENAI_API_KEY", "ok-key")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "ak-key")
+    monkeypatch.setattr(sg, "_openai", lambda *a, **k: '{"from": "gpt"}')
+    monkeypatch.setattr(sg, "_anthropic", lambda *a, **k: '{"from": "claude"}')
+    monkeypatch.setattr(sg, "_gemini", lambda *a, **k: '{"from": "gemini"}')
+    assert sg._llm("p", cfg, "gk") == '{"from": "gpt"}'
+    assert sg.PROVIDER_USED.startswith("openai:")
+
+    def boom(*a, **k):
+        raise RuntimeError("openai down")
+    monkeypatch.setattr(sg, "_openai", boom)
+    assert sg._llm("p", cfg, "gk") == '{"from": "claude"}'
+
+    monkeypatch.setattr(sg, "_anthropic", boom)
+    assert sg._llm("p", cfg, "gk") == '{"from": "gemini"}'
+    assert sg.PROVIDER_USED.startswith("gemini:")
+
+    monkeypatch.delenv("OPENAI_API_KEY")
+    monkeypatch.setattr(sg, "_anthropic", lambda *a, **k: '{"from": "claude"}')
+    assert sg._llm("p", cfg, "gk") == '{"from": "claude"}'  # no key -> skip GPT
