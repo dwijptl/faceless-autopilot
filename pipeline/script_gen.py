@@ -22,6 +22,7 @@ import visual_beats as visual_beats_mod
 
 API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
+OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 
 
 _anthropic_available: list | None = None
@@ -97,16 +98,99 @@ def _anthropic(prompt: str, cfg: dict, api_key: str) -> str:
     raise RuntimeError(f"Anthropic call failed on all models: {last_err}")
 
 
+_openai_available: list | None = None
+OPENAI_MODEL_USED = ""
+
+
+def _openai_discover(headers: dict) -> list[str]:
+    """Ask the API which GPT-5.x models this key can use (newest first).
+    Cached per run; failure just returns [] and we rely on config names."""
+    global _openai_available
+    if _openai_available is None:
+        try:
+            r = requests.get("https://api.openai.com/v1/models",
+                             headers=headers, timeout=30)
+            r.raise_for_status()
+            ids = [m["id"] for m in r.json().get("data", [])]
+            _openai_available = sorted(
+                (i for i in ids if i.startswith("gpt-5")), reverse=True)
+            print(f"[script] openai models available: "
+                  f"{_openai_available[:6]}")
+        except Exception:
+            _openai_available = []
+    return _openai_available
+
+
+def _openai(prompt: str, cfg: dict, api_key: str) -> str:
+    """GPT for script writing — used when OPENAI_API_KEY is set."""
+    headers = {"Authorization": f"Bearer {api_key}",
+               "content-type": "application/json"}
+    models = [cfg["llm"].get("openai_model", "gpt-5.6-terra")] + list(
+        cfg["llm"].get("openai_fallback_models", ["gpt-5.6-luna"]))
+    # self-heal: append whatever GPT-5.x this key really has access to
+    models += _openai_discover(headers)
+    seen: set = set()
+    models = [m for m in models if not (m in seen or seen.add(m))]
+
+    last_err = None
+    for model in models:
+        body = {
+            "model": model,
+            # same headroom rationale as _anthropic: the Devanagari script
+            # JSON runs ~20-30k chars and must never truncate mid-object
+            "max_completion_tokens": 32000,
+            "messages": [
+                {"role": "system",
+                 "content": ("You are a JSON API. Respond with ONLY the "
+                             "requested JSON object — no preamble, no "
+                             "markdown fences, no commentary after the "
+                             "closing brace.")},
+                {"role": "user", "content": prompt},
+            ],
+        }
+        for attempt in range(3):
+            try:
+                r = requests.post(OPENAI_URL, json=body, headers=headers,
+                                  timeout=180)
+                if r.status_code == 404 or (r.status_code == 400
+                                            and "model" in r.text.lower()):
+                    print(f"[script] openai model {model} unavailable, next")
+                    last_err = r.text[:200]
+                    break
+                if r.status_code in (429, 500, 503, 529):
+                    wait = 20 * (attempt + 1)
+                    print(f"[script] openai busy, sleeping {wait}s")
+                    time.sleep(wait)
+                    continue
+                r.raise_for_status()
+                global OPENAI_MODEL_USED
+                OPENAI_MODEL_USED = model
+                return r.json()["choices"][0]["message"]["content"]
+            except requests.RequestException as e:
+                last_err = str(e)
+                time.sleep(5 * (attempt + 1))
+    raise RuntimeError(f"OpenAI call failed on all models: {last_err}")
+
+
 PROVIDER_USED = ""  # which provider wrote the last CREATIVE call (see _llm)
 
 
 def _llm(prompt: str, cfg: dict, gemini_key: str) -> str:
-    """Route to Claude when a key exists (better scripts), else Gemini.
-    Any Claude failure silently falls back to Gemini — runs never block."""
+    """Route creative calls by llm.provider, falling through on any failure
+    so a scheduled run never blocks: openai (when configured and keyed) ->
+    anthropic (when keyed) -> gemini free tier."""
     global PROVIDER_USED
+    ok = os.environ.get("OPENAI_API_KEY", "").strip()
     ak = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     provider = str(cfg["llm"].get("provider", "auto")).lower()
-    if ak and provider in ("auto", "anthropic"):
+    if ok and provider in ("auto", "openai"):
+        try:
+            out = _openai(prompt, cfg, ok)
+            PROVIDER_USED = f"openai:{OPENAI_MODEL_USED or '?'}"
+            return out
+        except Exception as e:
+            print(f"[script] openai failed ({e}) -> next provider")
+    if ak and provider in ("auto", "anthropic", "openai"):
         try:
             out = _anthropic(prompt, cfg, ak)
             PROVIDER_USED = f"anthropic:{ANTHROPIC_MODEL_USED or '?'}"
