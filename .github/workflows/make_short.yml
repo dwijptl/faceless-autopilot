@@ -1,6 +1,11 @@
 name: Make Short
 
 on:
+  schedule:
+    # Case-teaser Shorts: Tue + Fri 05:00 UTC = 10:30 AM IST.
+    # Review, then publish 6-8 PM IST (scroll peak 7-10 PM).
+    # Cadence: 2 long + 2 Shorts/week (docs/CASE_FILE_PIVOT.md).
+    - cron: "0 5 * * 2,5"
   workflow_dispatch:
     inputs:
       topic:
