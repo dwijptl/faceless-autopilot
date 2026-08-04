@@ -1,6 +1,10 @@
 name: Update Learnings
 
 on:
+  schedule:
+    # Weekly analytics digest: Sun 03:00 UTC = 08:30 AM IST.
+    # No-op unless new Studio CSV exports were dropped into analytics/.
+    - cron: "0 3 * * 0"
   workflow_dispatch: {}
 
 permissions:
