@@ -37,7 +37,8 @@ Already done if you're reading this on your own repo.
 | `SARVAM_API_KEY` | dashboard.sarvam.ai → API Keys | ₹100 free credit; then ~₹30/10k chars |
 | `SARVAM_SPEAKER` | dashboard.sarvam.ai → your **cloned voice ID** | Clone needs a 30–60s consented sample. Any preset (`amit`, `kavya`…) also works |
 | `FAL_KEY` *(optional)* | fal.ai → Keys | Turns on **FLUX signature shots** (~$0.05/img, ~$0.20/video). Without it: free Gemini images |
-| `ANTHROPIC_API_KEY` *(optional)* | console.anthropic.com | Claude writes the scripts (crisper hooks, ~$0.05/script). Without it: free Gemini |
+| `OPENAI_API_KEY` *(recommended)* | platform.openai.com → API keys | GPT-5.6 Terra writes the scripts (config `llm.provider: "openai"`, ~$0.20/script). Without it: Claude, then free Gemini |
+| `ANTHROPIC_API_KEY` *(optional)* | console.anthropic.com | Claude fallback writer (~$0.05/script) when GPT is unkeyed or down. Without both: free Gemini |
 
 Add each: **Settings → Secrets and variables → Actions → New repository secret**
 (exact names above).
