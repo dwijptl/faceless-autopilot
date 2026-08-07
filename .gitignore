@@ -6,3 +6,11 @@ out/
 node_modules/
 remotion/node_modules/
 npm-debug.log*
+
+# secrets — NEVER commit these
+.env
+.env.*
+
+# local junk
+.DS_Store
+_to_delete/
