@@ -43,7 +43,8 @@ def _download(url: str, out_path: str) -> bool:
 
 
 # ── FLUX via fal.ai ──────────────────────────────────────────────────────
-def _flux(prompt: str, out_path: str, cfg: dict, aspect: str) -> bool:
+def _flux(prompt: str, out_path: str, cfg: dict, aspect: str,
+          models: list[str] | None = None) -> bool:
     key = os.environ.get("FAL_KEY", "").strip()
     if not key:
         return False
@@ -54,8 +55,8 @@ def _flux(prompt: str, out_path: str, cfg: dict, aspect: str) -> bool:
         else {"width": 1920, "height": 1080},
         "portrait_16_9" if portrait else "landscape_16_9",  # enum fallback
     ]
-    models = [aicfg.get("flux_model", "fal-ai/flux/dev"),
-              aicfg.get("flux_fallback", "fal-ai/flux/schnell")]
+    models = models or [aicfg.get("flux_model", "fal-ai/flux/dev"),
+                        aicfg.get("flux_fallback", "fal-ai/flux/schnell")]
     full_prompt = f"{prompt.strip()}. {_style_wrapper(cfg)}{COMMON_SUFFIX}"
     headers = {"Authorization": f"Key {key}", "Content-Type": "application/json"}
 
@@ -129,11 +130,24 @@ def _gemini_image(prompt: str, out_path: str, api_key: str, cfg: dict,
 # ── public API (signature unchanged — assets.py keeps working) ──────────
 def generate(prompt: str, out_path: str, api_key: str, cfg: dict,
              aspect: str = "16:9 wide", provider: str = "auto") -> bool:
-    """provider: "auto" (FLUX then Gemini), "gemini" (free tier only — used
-    for thumbnails so paid FLUX credits stay reserved for in-video shots)."""
+    """Generate one image through the requested quality lane.
+
+    provider:
+      auto     — normal FLUX model, then Gemini
+      gemini   — free tier only (used by thumbnails)
+      premium  — premium-hook FLUX model, then the normal fail-open chain
+    """
     aicfg = cfg.get("ai_images", {})
     if not aicfg.get("enabled", True):
         return False
+    if provider == "premium":
+        hook_cfg = aicfg.get("premium_hook", {})
+        model = str(hook_cfg.get("model", "fal-ai/flux-2-pro")).strip()
+        if model and _flux(prompt, out_path, cfg, aspect, models=[model]):
+            return True
+        if not hook_cfg.get("fallback_to_standard", False):
+            print("[ai-img] premium hook provider failed")
+            return False
     if provider != "gemini" and _flux(prompt, out_path, cfg, aspect):
         return True
     if _gemini_image(prompt, out_path, api_key, cfg, aspect):

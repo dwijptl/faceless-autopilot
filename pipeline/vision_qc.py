@@ -8,8 +8,9 @@ When the episode declares forbidden_visuals (its continuity contract), any
 frame showing them is rejected even if it matches the scene semantically —
 this is what keeps a scuba diver out of an unprotected-human premise.
 
-FAIL-OPEN by design: any error/timeout accepts the asset — QC must never
-block a scheduled run.
+Generated assets fail open on transient vision errors so rendering can
+continue. Stock assets fail closed: an unchecked cultural or historical
+substitute is worse than the truthful card fallback.
 """
 import base64
 import io
@@ -94,6 +95,10 @@ def frame_ok(media_path: str, kind: str, scene_desc: str, search_term: str,
         return True
     images = _frame_jpegs_b64(media_path, kind, int(cfg.get("qc", {}).get("frames", 3)))
     if not images:
+        if source == "stock":
+            print(f"[qc] could not inspect stock; rejecting: "
+                  f"{os.path.basename(media_path)}")
+            return False
         return True
     contract = ""
     if forbidden:
@@ -103,7 +108,7 @@ def frame_ok(media_path: str, kind: str, scene_desc: str, search_term: str,
             "These break this episode's premise even when they otherwise "
             "match the scene.\n")
     prompt = (
-        "You are the visual editor of a premium nature/space documentary "
+        "You are the visual editor of a premium factual documentary "
         "channel. These frames were fetched for the scene below.\n"
         f'SCENE NARRATION (Hindi): "{scene_desc[:280]}"\n'
         f'SEARCH INTENT: "{search_term}"\n'
@@ -117,7 +122,12 @@ def frame_ok(media_path: str, kind: str, scene_desc: str, search_term: str,
         "unrelated embedded English subtitles, captions, watermarks or UI. "
         "Also REJECT studio/commercial/product imagery, food or beverages, "
         "offices, hands/typing, captive animals (zoo, enclosure, fences), "
-        "text-heavy graphics, or anything clearly unrelated to the scene.\n"
+        "text-heavy graphics, or anything clearly unrelated to the scene. "
+        "For historical or culturally specific scenes, REJECT the wrong "
+        "country, religion, architecture or era, including modern cars, air "
+        "conditioners, satellite dishes, Western office/business imagery, "
+        "crosses or unrelated deities unless the narration explicitly calls "
+        "for them.\n"
         'Answer ONLY JSON: {"match": true} or {"match": false, "reason": "<5 words>"}')
     parts = [{"inline_data": {"mime_type": "image/jpeg", "data": image}}
              for image in images]
@@ -149,9 +159,13 @@ def frame_ok(media_path: str, kind: str, scene_desc: str, search_term: str,
                       f"{os.path.basename(media_path)}")
                 return False
             return True
-        except Exception:
-            return True  # fail-open
-    return True
+        except Exception as exc:
+            if source == "stock":
+                print(f"[qc] stock check failed; rejecting "
+                      f"{os.path.basename(media_path)} ({exc})")
+                return False
+            return True
+    return source != "stock"
 
 
 def _models_list(cfg: dict) -> list[str]:
@@ -164,7 +178,8 @@ def pick_best(candidates: list, scene_desc: str, search_term: str,
     """G4 candidate ranking — ONE vision call compares candidate assets for a
     beat and picks the semantically better one. candidates = [(path, kind)].
     Returns 0-based index of the winner, or -1 when NONE is acceptable.
-    Fail-open: any problem returns 0 (first candidate)."""
+    Any inspection failure rejects the stock candidate set instead of
+    silently choosing the first unchecked result."""
     global _requests_remaining
     if len(candidates) < 2:
         return 0
@@ -173,12 +188,12 @@ def pick_best(candidates: list, scene_desc: str, search_term: str,
     if _requests_remaining is None:
         begin_run(cfg)
     if _requests_remaining <= 0:
-        return 0
+        return -1
     parts = []
     for i, (path, kind) in enumerate(candidates):
         frames = _frame_jpegs_b64(path, kind, 1)
         if not frames:
-            return 0
+            return -1
         parts.append({"text": f"CANDIDATE {i + 1}:"})
         parts.append({"inline_data": {"mime_type": "image/jpeg",
                                       "data": frames[0]}})
@@ -187,14 +202,15 @@ def pick_best(candidates: list, scene_desc: str, search_term: str,
         contract = ("REJECT any candidate showing: "
                     f"{', '.join(str(f) for f in forbidden[:6])}. ")
     parts.append({"text": (
-        "You are the visual editor of a premium nature/space documentary. "
+        "You are the visual editor of a premium factual documentary. "
         f'SCENE NARRATION (Hindi): "{scene_desc[:280]}"\n'
         f'SEARCH INTENT: "{search_term}"\n' + contract +
         "Pick the candidate that best and most TRUTHFULLY illustrates this "
         "scene. Reject blurry, pixelated/upscaled, stretched, screen-recorded "
         "or unrelated text/watermarked footage. Rank semantic accuracy first, "
         "then clean native-looking resolution, composition, light, and how "
-        "well it reads behind captions. "
+        "well it reads behind captions. Reject wrong-country, wrong-religion, "
+        "anachronistic or generic cultural substitutes. "
         'Answer ONLY JSON: {"best": <1-based candidate number, or 0 if NONE '
         'is acceptable>, "reason": "<5 words>"}')})
     body = {"contents": [{"parts": parts}],
@@ -219,13 +235,89 @@ def pick_best(candidates: list, scene_desc: str, search_term: str,
                 return -1
             return min(best, len(candidates)) - 1
         except Exception:
-            return 0  # fail-open to first candidate
+            return -1
+    return -1
+
+
+def pick_hook_still(candidates: list, scene_desc: str, title: str,
+                    search_intent: str, api_key: str, cfg: dict,
+                    forbidden: list | None = None) -> int:
+    """Choose the opening still that earns attention without losing trust.
+
+    Unlike generic beat ranking, this scores the image specifically as frame
+    zero: immediate premise clarity, one dominant subject, phone-size read,
+    caption-safe composition and truthful documentary detail. Returns a
+    0-based index, or -1 when every candidate is misleading/unusable.
+    """
+    global _requests_remaining
+    if not candidates:
+        return -1
+    if not cfg.get("qc", {}).get("visual_check", True) or not api_key:
+        return 0
+    if _requests_remaining is None:
+        begin_run(cfg)
+    if _requests_remaining <= 0:
+        return 0
+
+    parts = []
+    for i, (path, kind) in enumerate(candidates):
+        frames = _frame_jpegs_b64(path, kind, 1)
+        if not frames:
+            return 0
+        parts.append({"text": f"OPENING CANDIDATE {i + 1}:"})
+        parts.append({"inline_data": {"mime_type": "image/jpeg",
+                                      "data": frames[0]}})
+    contract = ""
+    if forbidden:
+        contract = ("REJECT any image showing: "
+                    f"{', '.join(str(f) for f in forbidden[:6])}. ")
+    parts.append({"text": (
+        "You are selecting FRAME ZERO for a premium Hindi factual-mystery "
+        "documentary. It must stop a scroll and make the spoken premise "
+        "instantly understandable without behaving like clickbait.\n"
+        f'TITLE: "{title[:180]}"\n'
+        f'OPENING NARRATION: "{scene_desc[:320]}"\n'
+        f'EXACT VISUAL INTENT: "{search_intent[:180]}"\n' + contract +
+        "First reject factual lookalikes, invented evidence, supernatural "
+        "claims presented as real, recognizable/fake faces, malformed "
+        "objects, embedded text, logos, watermarks, blur and muddy near-black "
+        "frames. Then choose the image with ONE immediately legible subject, "
+        "the strongest unresolved visual tension, clear foreground-to-"
+        "background depth, cinematic contrast, and an uncluttered lower third "
+        "for Hindi captions. It must still read on a phone at 160 pixels wide. "
+        "Truthfulness outranks drama; clarity outranks decorative detail. "
+        'Answer ONLY JSON: {"best": <1-based candidate number, or 0 if NONE '
+        'is acceptable>, "reason": "<8 words>"}')})
+    body = {"contents": [{"parts": parts}],
+            "generationConfig": {"response_mime_type": "application/json",
+                                 "temperature": 0.1}}
+    for model in _models_list(cfg)[:2]:
+        try:
+            _requests_remaining -= 1
+            r = requests.post(f"{API_BASE}/{model}:generateContent?key={api_key}",
+                              json=body, timeout=75)
+            if r.status_code == 429:
+                time.sleep(10)
+                continue
+            if r.status_code in (400, 404):
+                continue
+            r.raise_for_status()
+            text = r.json()["candidates"][0]["content"]["parts"][0]["text"]
+            text = re.sub(r"^```(json)?|```$", "", text.strip(),
+                          flags=re.MULTILINE).strip()
+            best = int(json.loads(text).get("best", 0))
+            if best <= 0:
+                return -1
+            return min(best, len(candidates)) - 1
+        except Exception:
+            return 0  # fail-open to the strongest local candidate
     return 0
 
 
 def audit_render(final_path: str, cfg: dict, api_key: str,
                  forbidden: list | None = None,
-                 out_path: str | None = None) -> dict:
+                 out_path: str | None = None,
+                 context: str = "") -> dict:
     """G11 post-render contact-sheet audit. Extracts one frame every ~12s,
     tiles them into a single sheet and asks ONE vision question: would the
     final publish reviewer flag anything? A `serious` issue flips
@@ -269,16 +361,19 @@ def audit_render(final_path: str, cfg: dict, api_key: str,
         if forbidden:
             contract = ("This episode's premise FORBIDS showing: "
                         f"{', '.join(str(f) for f in forbidden[:6])}. ")
+        episode = (f'EPISODE CONTEXT: "{context[:600]}". ' if context else "")
         prompt = (
             "This contact sheet holds frames sampled at equal intervals "
-            "(left-to-right, top-to-bottom) from a finished Hindi science "
-            "documentary. " + contract +
+            "(left-to-right, top-to-bottom) from a finished Hindi factual "
+            "documentary. " + episode + contract +
             "Audit it as the final publish reviewer. Flag ONLY real problems: "
             "(1) a frame contradicting the premise/forbidden list, "
             "(2) near-black, blurry, pixelated, upscaled or stretched footage, "
             "(3) a screen recording or unrelated embedded English text/UI, "
             "(4) obviously identical repeated shots, (5) broken/overlapping "
-            "captions. Severity serious "
+            "captions or visible Markdown asterisks, (6) imagery from the wrong "
+            "country, religion, architecture or era, including anachronistic "
+            "cars, air conditioners or satellite dishes. Severity serious "
             "means a viewer would notice and lose trust; else `minor`. "
             'Return ONLY JSON: {"issues":[{"severity":"serious","note":'
             '"<10 words>","frame":3}]} — empty list when clean.')

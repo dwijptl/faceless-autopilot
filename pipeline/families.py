@@ -41,6 +41,17 @@ TRANSITIONS = ("cut", "dissolve", "fade", "push_down", "push_up", "whip",
 
 # programmatic-graphic kinds the renderer draws for free (graphics.tsx)
 PG_KINDS = ("timeline", "scale", "branch", "chart", "cutaway")
+SOURCE_POLICIES = ("custom", "primary", "stock")
+
+_PRIMARY_FAMILIES = {
+    "document_focus", "photo_examine", "last_known", "legacy",
+    "evidence_scan", "specimen_focus",
+}
+_CUSTOM_FAMILIES = {
+    "establish_era", "witness_account", "human_toll", "hands_at_work",
+    "reconstruct_scene", "moment_freeze", "before_after", "flashback",
+    "absence", "arrival_threshold",
+}
 
 
 @dataclass(frozen=True)
@@ -590,6 +601,21 @@ def media_order(family: str | None) -> tuple:
     return spec.media if spec else ("stock",)
 
 
+def source_policy(beat: dict, scene: dict | None = None) -> str:
+    """Truth-first source policy for a beat, with deterministic fallback."""
+    explicit = str((beat or {}).get("source_policy", "")).strip().lower()
+    if explicit in SOURCE_POLICIES:
+        return explicit
+    family = str((beat or {}).get("family", ""))
+    if str((scene or {}).get("visual_mode", "")) == "evidence":
+        return "primary"
+    if family in _PRIMARY_FAMILIES:
+        return "primary"
+    if family in _CUSTOM_FAMILIES:
+        return "custom"
+    return "stock"
+
+
 def credit_rank(family: str | None) -> int:
     spec = get_spec(family)
     return spec.prio if spec else 5
@@ -607,12 +633,20 @@ def allocate_ai(scenes: list[dict], budget: int) -> int:
     for si, sc in enumerate(scenes):
         for bi, beat in enumerate(sc.get("visual_beats") or []):
             spec = get_spec(beat.get("family"))
-            if spec and "ai" in spec.media:
+            policy = source_policy(beat, sc)
+            beat["source_policy"] = policy
+            if policy == "primary":
+                continue
+            custom = policy == "custom"
+            if custom and (not spec or spec.media[0] != "pg"):
+                prio = spec.prio if spec else 3
+                candidates.append((0, prio, 0, si, bi, beat))
+            elif spec and "ai" in spec.media:
                 ai_first = 0 if spec.media[0] == "ai" else 1
-                candidates.append((spec.prio, ai_first, si, bi, beat))
-    candidates.sort(key=lambda c: (c[0], c[1], c[2], c[3]))
+                candidates.append((1, spec.prio, ai_first, si, bi, beat))
+    candidates.sort(key=lambda c: c[:-1])
     granted = candidates[:max(int(budget), 0)]
-    for _, _, _, _, beat in granted:
+    for *_, beat in granted:
         beat["ai_grant"] = True
     return len(granted)
 

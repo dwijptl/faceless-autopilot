@@ -97,13 +97,14 @@ retention:
 # enabled: false (or any per-beat miss) restores legacy stock-first behaviour.
 visual_director:
   enabled: true
-  mode: economy            # economy | balanced | premium (AI-still budget)
+  mode: premium            # correctness-first: custom stills beat wrong stock
   modes:
     economy:  {ai_stills: 18}   # ~$0.90/video at FLUX dev prices
     balanced: {ai_stills: 28}
-    premium:  {ai_stills: 36}
+    premium:  {ai_stills: 40}   # ~$2.00; specific/cultural beats are first
   min_family_coverage: 0.85  # QC warning below this share of tagged beats
-  min_custom_ratio: 0.45     # QC warning when AI+graphic assets fall below
+  min_custom_ratio: 0.65     # wrong generic stock is the current failure mode
+  strict_custom_ratio: true  # below this becomes a publish-blocking QC error
 
 # Long-form quality system. The free Gemini beat-planning pass binds each
 # spoken idea to a concrete visual instead of rotating loosely related assets.
@@ -123,7 +124,7 @@ longform_quality:
     urgent_factor: 0.66
   render_qc:
     enabled: true
-    gate: false            # report problems; set true only after several clean runs
+    gate: true             # failed semantic/source-policy checks draft release
     min_semantic_coverage: 0.90
     max_asset_uses: 2
   overlay_seconds: 5.0     # impact window for kinetic/stat/card/glass graphics
@@ -199,6 +200,21 @@ thumbnail:
 
 ai_images:
   enabled: true            # AI-generated stills for scenes stock can't cover
+  # Frame-zero quality lane: three genuinely different FLUX.2 Pro concepts,
+  # one opening-specific Gemini vision judge, and only the winner ships.
+  # At 1920x1080 the estimate is ~$0.12/candidate (~$0.36/video); the hard
+  # ceiling prevents config mistakes from turning this into open-ended spend.
+  premium_hook:
+    enabled: true
+    longform_only: true
+    model: "fal-ai/flux-2-pro"
+    candidates: 3
+    estimated_usd_per_candidate: 0.12
+    max_usd_per_video: 0.40
+    min_luma: 30           # reject murky first frames before vision ranking
+    min_contrast: 18       # reject flat/washed-out generations locally
+    fallback_to_standard: false # avoid a second paid call; normal beat fallback
+                                # still runs if the Pro candidate lane fails
   # FLUX via fal.ai — used automatically when the FAL_KEY secret is set.
   # Signature-shot quality; ~$0.05/image (dev) — a video costs ~$0.20.
   flux_model: "fal-ai/flux/dev"
@@ -273,14 +289,12 @@ sfx:                       # synthesized sound design (whoosh/riser/hit)
 
 qc:
   visual_check: true       # Gemini vision sanity-checks every stock clip
-                           # (free tier; fail-open — never blocks a run)
+                           # unchecked stock fails closed to a truthful card
   frames: 3                # sample 20/50/80% of each stock clip, not just one frame
   max_upscale: 1.25        # reject obvious blur after portrait crop/upscale
-  max_requests_per_video: 48  # hard rate-limit ceiling for vision QC (free
-                              # Gemini tier) — scaled with the 15-20 min band
-  render_audit_required: false  # true = a skipped/errored post-render audit is
-                                # INDETERMINATE and drafts the release (enable
-                                # after several clean scheduled runs)
+  max_requests_per_video: 72  # more exact-place/cultural checks before fallback
+  render_audit_required: true  # skipped/errored audit is INDETERMINATE and
+                               # drafts the release instead of claiming clean
 
 maps:
   enabled: true            # animated map-zoom scenes for place-based topics
@@ -303,7 +317,7 @@ captions:
 
 factcheck:
   enabled: true            # Gemini Google Search review before TTS
-  max_claims: 10           # narration + packaging (title/thumb/tease) claims
-  gate: high_risk          # high_risk = unsupported HIGH-RISK claims mark the
-                           # release DRAFT-DO-NOT-PUBLISH · true = any
-                           # unsupported claim blocks · false = advisory only
+  max_claims: 24           # broad enough to catch folklore presented as fact
+  batch_size: 8            # three smaller grounded reviews beat one shallow pass
+  gate: true               # ANY unsupported public claim drafts the release
+  required: true           # provider failure is indeterminate, never "clean"

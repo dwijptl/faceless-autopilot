@@ -119,15 +119,34 @@ def test_ai_budget_modes():
 
 def test_allocate_ai_prefers_hero_beats():
     scenes = [
-        {"visual_beats": [{"family": "establish_place"},   # prio 4, ai-fallback
-                          {"family": "hands_at_work"}]},   # prio 4
-        {"visual_beats": [{"family": "revelation"},        # prio 1 -> wins
-                          {"family": "descend"}]},         # prio 2 -> wins
+        {"visual_beats": [{"family": "establish_place", "source_policy": "stock"},
+                          {"family": "hands_at_work", "source_policy": "stock"}]},
+        {"visual_beats": [{"family": "revelation", "source_policy": "stock"},
+                          {"family": "descend", "source_policy": "stock"}]},
     ]
     granted = families.allocate_ai(scenes, 2)
     assert granted == 2
     assert scenes[1]["visual_beats"][0].get("ai_grant") is True
     assert scenes[1]["visual_beats"][1].get("ai_grant") is True
+    assert not scenes[0]["visual_beats"][0].get("ai_grant")
+
+
+def test_allocate_ai_puts_custom_reconstructions_before_generic_beats():
+    scenes = [
+        {"visual_beats": [{"family": "hands_at_work",
+                           "source_policy": "custom"}]},
+        {"visual_beats": [{"family": "revelation",
+                           "source_policy": "stock"}]},
+    ]
+    families.allocate_ai(scenes, 1)
+    assert scenes[0]["visual_beats"][0]["ai_grant"] is True
+    assert not scenes[1]["visual_beats"][0].get("ai_grant")
+
+
+def test_primary_source_beats_never_receive_ai_grants():
+    scenes = [{"visual_beats": [{"family": "document_focus",
+                                  "source_policy": "primary"}]}]
+    assert families.allocate_ai(scenes, 5) == 0
     assert not scenes[0]["visual_beats"][0].get("ai_grant")
 
 

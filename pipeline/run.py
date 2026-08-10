@@ -190,6 +190,20 @@ def build_description(script: dict, is_short: bool = False,
     return "\n\n".join(p for p in parts if p)
 
 
+def _fact_requires_review(report: dict, cfg: dict) -> bool:
+    """Publication decision for the grounded fact pass."""
+    fc = cfg.get("factcheck", {})
+    status = str(report.get("status", "unknown"))
+    if fc.get("required", False) and status not in ("ok", "no-checkable-claims"):
+        return True
+    gate_mode = str(fc.get("gate", False)).strip().lower()
+    if gate_mode in ("true", "1", "all"):
+        return report.get("unsupported", 0) > 0
+    if gate_mode == "high_risk":
+        return bool(report.get("high_risk_unsupported"))
+    return False
+
+
 def _validate_scene_assets(scenes: list) -> None:
     """RENDER GUARD — a manifest asset whose file is missing/corrupt kills
     the Remotion render at the exact frame that needs it (observed: 404 on
@@ -199,6 +213,8 @@ def _validate_scene_assets(scenes: list) -> None:
     last_good: list | None = None
     for sc in scenes:
         def ok(a: dict) -> bool:
+            if a.get("kind") == "graphic":
+                return bool(a.get("graphic"))
             p = a.get("path") or ""
             try:
                 return bool(p) and os.path.getsize(p) > 1024
@@ -231,7 +247,45 @@ def _asset_manifest(asset: dict) -> dict:
         entry["graphic"] = asset["graphic"]
     if asset.get("family"):
         entry["family"] = asset["family"]
+    if asset.get("premium_hook"):
+        entry["premiumHook"] = True
+        entry["hookCandidates"] = int(asset.get("hook_candidates", 1))
+    if asset.get("source_policy"):
+        entry["sourcePolicy"] = str(asset["source_policy"])
+    if asset.get("source"):
+        entry["source"] = str(asset["source"])
+    if asset.get("attribution"):
+        entry["attribution"] = asset["attribution"]
     return entry
+
+
+def _write_asset_credits(scenes: list[dict], outdir: str) -> str:
+    """Persist reusable-source attribution and return YouTube-ready lines."""
+    credits = []
+    seen = set()
+    for scene in scenes:
+        for asset in scene.get("assets", []):
+            item = asset.get("attribution") or {}
+            key = str(item.get("sourceUrl") or item.get("title") or "").strip()
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            title = str(item.get("title") or "Wikimedia Commons image").strip()
+            source_url = str(item.get("sourceUrl") or "").strip()
+            artist = str(item.get("artist") or "Wikimedia Commons contributor").strip()
+            license_name = str(item.get("license") or "").strip()
+            license_url = str(item.get("licenseUrl") or "").strip()
+            title_md = f"[{title}]({source_url})" if source_url else title
+            license_md = (f"[{license_name}]({license_url})"
+                          if license_name and license_url else license_name)
+            credits.append(f"- {title_md} — {artist} — {license_md}".rstrip(" —"))
+    if not credits:
+        return ""
+    body = "### Wikimedia Commons credits\n\n" + "\n".join(credits) + "\n"
+    with open(os.path.join(outdir, "asset_credits.md"), "w",
+              encoding="utf-8") as f:
+        f.write(body)
+    return body
 
 
 def _pad_reveal_pause(wav_path: str, seconds: float = 0.35) -> float:
@@ -263,8 +317,18 @@ def _attach_hero(scenes: list[dict], poses: dict) -> None:
         path = wanted.get(sc["n"])
         if not path:
             continue
+        if (sc is scenes[0]
+                and any(a.get("premium_hook") for a in sc.get("assets", []))):
+            # The premium opening prompt already incorporates hero_prompt.
+            # Do not silently replace the judged winner with an unranked pose.
+            continue
         beats = sc.get("visual_beats") or []
         bi = max(len(beats) - 1, 0) if sc["n"] == scenes[-1]["n"] else 0
+        if (bi < len(beats)
+                and beats[bi].get("source_policy") == "primary"):
+            print(f"[hero] scene {sc['n']}: primary-source beat — "
+                  "not replacing it with a generated pose")
+            continue
         sc["assets"].insert(0, {"path": path, "kind": "image",
                                 "ai": True, "duration": None,
                                 "beat_index": bi})
@@ -285,6 +349,10 @@ def _animate_hero_shots(scenes: list[dict], workdir: str, cfg: dict,
     targets = hero_shots.select_targets(scenes, int(hcfg.get("max_per_video", 2)))
     for sc, bi in targets:
         beats = sc.get("visual_beats") or []
+        if (bi < len(beats)
+                and beats[bi].get("source_policy") == "primary"):
+            print(f"[hero] scene {sc['n']}: primary-source beat — no AI motion")
+            continue
         cue = ((beats[bi].get("cue") if bi < len(beats) else "")
                or sc.get("narration", "")[:160])
         if hero_shots.should_skip(cue):
@@ -446,6 +514,8 @@ def _visual_beat_manifest(scene: dict) -> list[dict]:
                 entry["camera"] = spec.camera
         if beat.get("graphic"):
             entry["graphic"] = beat["graphic"]
+        if beat.get("source_policy"):
+            entry["sourcePolicy"] = str(beat["source_policy"])
         result.append(entry)
     return result
 
@@ -673,6 +743,8 @@ def main() -> None:
               f"{granted} AI grants (budget {director_budget[0]})")
     for sc in scenes:
         sc["forbidden_visuals"] = script.get("forbidden_visuals") or []
+        sc["episode_title"] = script.get("title", "")
+        sc["hero_prompt"] = hp
         sc["assets"] = assets_mod.fetch_scene_assets(
             sc, sc["audio_duration"], workdir, cfg, pexels_key, gemini_key,
             used, used_prompts, ai_budget, rescue_budget=rescue_budget,
@@ -835,6 +907,12 @@ def main() -> None:
         os.path.join(outdir, "quality_report.json"))
     try:  # hero telemetry travels with the audit (docs/HERO_SHOTS_SPEC.md)
         quality_report.setdefault("metrics", {}).update(hero_shots.metrics())
+        premium_assets = [a for sc in scenes for a in sc.get("assets", [])
+                          if a.get("premium_hook")]
+        quality_report["metrics"]["premium_hook_still"] = bool(premium_assets)
+        quality_report["metrics"]["premium_hook_candidates"] = max(
+            (int(a.get("hook_candidates", 1)) for a in premium_assets),
+            default=0)
         with open(os.path.join(outdir, "quality_report.json"), "w",
                   encoding="utf-8") as f:
             json.dump(quality_report, f, indent=2, ensure_ascii=False)
@@ -844,7 +922,9 @@ def main() -> None:
     render_audit = vision_qc.audit_render(
         final_path, cfg, gemini_key,
         forbidden=script.get("forbidden_visuals") or [],
-        out_path=os.path.join(outdir, "render_audit.json"))
+        out_path=os.path.join(outdir, "render_audit.json"),
+        context=(str(script.get("title", "")) + " | "
+                 + " | ".join(str(sc.get("title", "")) for sc in scenes)))
     # a skipped/errored audit is INDETERMINATE, not clean — when the owner
     # requires a completed audit, absence of review blocks publication
     if (cfg.get("qc", {}).get("render_audit_required", False)
@@ -893,17 +973,12 @@ def main() -> None:
 
     # 8) metadata ----------------------------------------------------------------
     n_ai = sum(1 for sc in scenes for a in sc["assets"] if a.get("ai"))
+    commons_credits = _write_asset_credits(scenes, outdir)
     voice_line = tts_mod.ENGINE_USED or "unknown"
     fact_line = factcheck.markdown(fact_report)
     # gate modes: false = advisory · high_risk = block on unsupported
     # high-risk claims only · true/all = block on any unsupported claim
-    gate_mode = str(cfg.get("factcheck", {}).get("gate", False)).strip().lower()
-    if gate_mode in ("true", "1", "all"):
-        fact_requires_review = fact_report.get("unsupported", 0) > 0
-    elif gate_mode == "high_risk":
-        fact_requires_review = bool(fact_report.get("high_risk_unsupported"))
-    else:
-        fact_requires_review = False
+    fact_requires_review = _fact_requires_review(fact_report, cfg)
     quality_requires_review = (
         bool(cfg.get("longform_quality", {}).get("render_qc", {}).get("gate", False))
         and not quality_report.get("passed", False))
@@ -916,17 +991,28 @@ def main() -> None:
                      or quality_requires_review or audit_requires_review
                      or retention_requires_review)
     status_voice = "⚠️ FALLBACK — DO NOT PUBLISH" if voice_fallback else "OK (cloned)"
-    status_fact = (f"⚠️ REVIEW CLAIMS ({fact_report.get('unsupported', 0)} unsupported)"
+    fact_indeterminate = (str(fact_report.get("status", "unknown"))
+                          not in ("ok", "no-checkable-claims"))
+    status_fact = ((f"⚠️ INDETERMINATE ({fact_report.get('status', 'unknown')})"
+                    if fact_indeterminate else
+                    f"⚠️ REVIEW CLAIMS ({fact_report.get('unsupported', 0)} unsupported)")
                    if fact_requires_review else fact_report.get("status", "unknown"))
     status_quality = ("OK" if quality_report.get("passed") else
                       f"⚠️ REVIEW ({len(quality_report.get('errors', []))} errors)")
     voice_banner = ("> ⚠️ **VOICE FALLBACK — DO NOT PUBLISH.** This run used Kokoro, "
                     "not your cloned Sarvam voice. Re-run when Sarvam is available.\n\n"
                     if voice_fallback else "")
-    fact_banner = ("> ⚠️ **UNSUPPORTED HIGH-RISK CLAIMS — DO NOT PUBLISH** until "
-                   "verified/removed: "
-                   + "; ".join(fact_report.get("high_risk_unsupported", [])[:3])
-                   + "\n\n" if fact_requires_review else "")
+    if fact_requires_review and fact_indeterminate:
+        fact_banner = ("> ⚠️ **FACT CHECK INDETERMINATE — DO NOT PUBLISH.** "
+                       f"Grounded review status: {fact_report.get('status')}.\n\n")
+    elif fact_requires_review:
+        blocked = ([str(i.get("claim", "")) for i in fact_report.get("items", [])
+                    if i.get("verdict") == "unsupported"]
+                   or fact_report.get("high_risk_unsupported", []))
+        fact_banner = ("> ⚠️ **UNSUPPORTED CLAIMS — DO NOT PUBLISH** until "
+                       "verified/removed: " + "; ".join(blocked[:3]) + "\n\n")
+    else:
+        fact_banner = ""
     audit_banner = ("> ⚠️ **RENDER AUDIT — DO NOT PUBLISH:** "
                     + "; ".join(str(i.get("note", "")) for i in
                                 render_audit.get("issues", [])
@@ -963,6 +1049,8 @@ def main() -> None:
 
 {build_description(script, is_short=False, chapters=_chapters_block(scenes))}
 
+{commons_credits}
+
 ### Tags
 
 {', '.join(_india_tags(script.get('tags', []), is_short=False))}
@@ -991,7 +1079,7 @@ def main() -> None:
 - [ ] Occasionally drop fresh Studio analytics CSVs into analytics/ so the
       channel keeps learning
 
-*Assets: Pexels + Gemini AI images (commercial-safe). Voice: {voice_line}
+*Assets: Pexels + licensed AI images{(' + Wikimedia Commons' if commons_credits else '')}. Voice: {voice_line}
 (your cloned Sarvam voice; Kokoro Apache-2.0 fallback). Motion design:
 Remotion. Brand: Terra Incognita.*
 """

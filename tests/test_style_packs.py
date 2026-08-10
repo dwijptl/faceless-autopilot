@@ -102,6 +102,7 @@ def test_selection_is_topic_driven():
     assert style_packs.select("समुद्र की गहराई में व्हेल का गाना") == "abyss"
     assert style_packs.select("ज्वालामुखी का लावा और तबाही") == "ember"
     assert style_packs.select("मुग़ल इतिहास का भूला हुआ राजा") == "archive"
+    assert style_packs.select("कुलधरा का रातों-रात गायब होने का रहस्य") == "dune"
 
 
 def test_selection_is_deterministic_and_respects_history():
@@ -114,6 +115,7 @@ def test_selection_is_deterministic_and_respects_history():
     # when EVERY pack is recent, selection still succeeds
     all_used = list(style_packs.PACKS)
     assert style_packs.select(title, history=all_used) in style_packs.PACKS
+    assert style_packs.select("Kuldhara mystery", history=["dune"]) == "dune"
 
 
 def test_unmatched_topic_still_spreads_across_catalog():

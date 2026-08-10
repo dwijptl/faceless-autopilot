@@ -157,8 +157,32 @@ def test_no_rescue_without_budget(tmp_path, monkeypatch):
     monkeypatch.setattr(assets, "_stock_videos", lambda *a, **kw: ([], 0.0))
     monkeypatch.setattr(assets, "_stock_photo", lambda *a, **kw: None)
     monkeypatch.setattr(assets, "_nasa_relevant", lambda terms: False)
+    monkeypatch.setattr(assets, "_commons_asset", lambda *a, **kw: None)
     monkeypatch.setattr(assets.ai_images, "generate",
                         lambda *a, **kw: (_ for _ in ()).throw(AssertionError))
     out = assets.fetch_scene_assets(scene, 4.0, str(tmp_path), cfg, "pk", "gk",
                                     set(), set(), [0], rescue_budget=[0])
     assert out and out[0]["path"].endswith("_card.jpg")  # gradient fallback
+
+
+def test_primary_source_beat_never_uses_ai_rescue(tmp_path, monkeypatch):
+    cfg = {"video": {"width": 640, "height": 360, "max_shot_seconds": 5},
+           "ai_images": {"enabled": True},
+           "visual_director": {"enabled": True}}
+    scene = {"n": 3, "visual_mode": "evidence", "search_terms": ["record"],
+             "visual_beats": [{"cue": "असली रिकॉर्ड", "purpose": "show proof",
+                               "duration": 4, "search_terms": ["record"],
+                               "family": "document_focus",
+                               "source_policy": "primary"}]}
+    monkeypatch.setattr(assets, "_stock_videos", lambda *a, **kw: ([], 0.0))
+    monkeypatch.setattr(assets, "_stock_photo", lambda *a, **kw: None)
+    monkeypatch.setattr(assets, "_nasa_relevant", lambda terms: False)
+    monkeypatch.setattr(assets, "_commons_asset", lambda *a, **kw: None)
+    monkeypatch.setattr(assets.ai_images, "generate",
+                        lambda *a, **kw: (_ for _ in ()).throw(AssertionError))
+    out = assets.fetch_scene_assets(
+        scene, 4.0, str(tmp_path), cfg, "pk", "gk", set(), set(), [0],
+        rescue_budget=[4], director_budget=[4])
+    assert out[0]["path"].endswith("_card.jpg")
+    assert not out[0].get("ai")
+    assert out[0]["source_policy"] == "primary"

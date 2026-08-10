@@ -47,6 +47,23 @@ def _audit_director(manifest: dict, cfg: dict,
                     media["stock_video"] += 1
                 else:
                     media["stock_image"] += 1
+            policy = str(beat.get("sourcePolicy", ""))
+            beat_assets = beat.get("assets") or []
+            if policy == "custom" and not any(
+                    a.get("ai") or a.get("kind") == "graphic"
+                    for a in beat_assets):
+                errors.append(
+                    f"scene {scene.get('n')}: custom reconstruction beat "
+                    "fell back to generic stock/card")
+            if policy == "primary":
+                if any(a.get("ai") for a in beat_assets):
+                    errors.append(
+                        f"scene {scene.get('n')}: primary-source beat uses AI")
+                if any(str(a.get("path", "")).endswith("_card.jpg")
+                       for a in beat_assets):
+                    errors.append(
+                        f"scene {scene.get('n')}: primary-source beat has no "
+                        "authentic asset")
     total_assets = max(sum(media.values()), 1)
     custom_ratio = (media["ai"] + media["graphic"]) / total_assets
     coverage = tagged / max(beat_total, 1)
@@ -57,10 +74,11 @@ def _audit_director(manifest: dict, cfg: dict,
                             f"narrative-intent family (want {min_cov:.0%})")
         min_custom = float(vd.get("min_custom_ratio", 0.45))
         if custom_ratio < min_custom:
-            warnings.append(
-                f"custom visuals (AI + programmatic) are only "
-                f"{custom_ratio:.0%} of beat assets (want {min_custom:.0%}) — "
-                f"episode leans stock-first")
+            message = (f"custom visuals (AI + programmatic) are only "
+                       f"{custom_ratio:.0%} of beat assets "
+                       f"(want {min_custom:.0%}) — episode leans stock-first")
+            (errors if vd.get("strict_custom_ratio", False)
+             else warnings).append(message)
     return {"family_coverage": round(coverage, 3),
             "custom_visual_ratio": round(custom_ratio, 3),
             "media_mix": media}

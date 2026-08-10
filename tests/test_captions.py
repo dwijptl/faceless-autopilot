@@ -31,3 +31,12 @@ def test_hook_caption_keeps_the_opening_premise_together():
     events, _ = captions.build_captions([scene], 14)
     assert len(events) < len(scene["narration"].split())
     assert len(events[0][2].split()) >= 4
+
+
+def test_caption_strips_markdown_authoring_syntax():
+    scene = {"narration": "हमारे पास **2 अहम क्लू** हैं और `रिकॉर्ड` मौजूद है।",
+             "audio_duration": 4.0, "start": 0.0}
+    events, srt = captions.build_captions([scene], 30)
+    rendered = " ".join(text for _, _, text in events)
+    assert rendered == "हमारे पास 2 अहम क्लू हैं और रिकॉर्ड मौजूद है।"
+    assert "*" not in srt and "`" not in srt

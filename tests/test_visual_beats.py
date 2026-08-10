@@ -17,6 +17,27 @@ def test_target_count_is_faster_for_hook():
         visual_beats.target_beat_count(scene, _cfg(), 1)
 
 
+def test_source_policy_is_preserved_and_premium_hook_is_custom():
+    cfg = _cfg()
+    cfg["visual_director"] = {"enabled": True}
+    cfg["ai_images"] = {"premium_hook": {"enabled": True}}
+    script = {"scenes": [{"n": 1, "delivery": "hook",
+                           "narration": "word " * 30,
+                           "search_terms": ["Kuldhara"]}]}
+    raw = {"scenes": [{"n": 1, "visual_beats": [
+        {"cue": "word word", "search_terms": ["Kuldhara"],
+         "purpose": "real village", "family": "establish_place",
+         "source_policy": "primary"},
+        {"cue": "word word", "search_terms": ["desert"],
+         "purpose": "environment", "family": "isolation",
+         "source_policy": "stock"},
+    ]}]}
+    result = visual_beats.normalize_plan(script, raw, cfg)
+    beats = result["scenes"][0]["visual_beats"]
+    assert beats[0]["source_policy"] == "custom"
+    assert beats[1]["source_policy"] == "stock"
+
+
 def test_normalize_plan_falls_back_when_model_returns_too_few_beats():
     script = {"scenes": [{"n": 1, "title": "गुरुत्व", "narration":
                            "अगर गुरुत्वाकर्षण अचानक दोगुना हो जाए तो हर कदम भारी होगा",
@@ -42,4 +63,3 @@ def test_cues_map_to_contiguous_full_scene_timing():
     assert beats[0]["start"] + beats[0]["duration"] == beats[1]["start"]
     assert abs(beats[-1]["start"] + beats[-1]["duration"] - 9.0) < 0.01
     assert beats[1]["start"] > beats[0]["start"]
-

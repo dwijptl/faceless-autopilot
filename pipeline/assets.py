@@ -19,9 +19,11 @@ A persistent usage log (assets_used.json, committed back to the repo) makes
 sure no Pexels clip/photo or AI prompt ever repeats across videos.
 """
 import hashlib
+import html
 import json
 import math
 import os
+import re
 import time
 
 import requests
@@ -201,7 +203,9 @@ def _dhash(img, size: int = 8) -> str:
     """Perceptual difference hash — catches near-identical shots this episode."""
     try:
         g = img.convert("L").resize((size + 1, size))
-        px = list(g.getdata())
+        pixels = (g.get_flattened_data() if hasattr(g, "get_flattened_data")
+                  else g.getdata())
+        px = list(pixels)
         bits = "".join(
             "1" if px[r * (size + 1) + c] > px[r * (size + 1) + c + 1] else "0"
             for r in range(size) for c in range(size))
@@ -246,6 +250,157 @@ def _rm(path: str) -> None:
         os.remove(path)
     except OSError:
         pass
+
+
+# Three deliberately different compositions. Generating the same prompt
+# three times mostly buys lottery tickets; distinct visual hypotheses give
+# the opening-frame judge something meaningful to compare.
+_HOOK_COMPOSITIONS = (
+    "A wide, instantly legible establishing composition: one dominant subject "
+    "isolated against its real environment, a clear path for the eye",
+    "An evidence-first medium or close composition: one concrete physical "
+    "detail that makes the mystery undeniable, environment still identifiable",
+    "A threshold composition with foreground depth: the viewer feels one step "
+    "away from entering the place or event, unresolved tension inside the frame",
+)
+
+
+def _hook_candidate_ok(path: str, cfg: dict, seen_hashes: set[str]) -> bool:
+    """Cheap local screen before a paid/limited vision comparison."""
+    try:
+        from PIL import ImageStat
+        with Image.open(path) as raw:
+            img = raw.convert("RGB")
+        target_w = float(cfg["video"]["width"])
+        target_h = float(cfg["video"]["height"])
+        max_upscale = float(cfg.get("qc", {}).get("max_upscale", 1.25))
+        if max(target_w / img.width, target_h / img.height) > max_upscale:
+            return False
+        gray = img.convert("L")
+        stat = ImageStat.Stat(gray)
+        hook_cfg = cfg.get("ai_images", {}).get("premium_hook", {})
+        if stat.mean[0] < float(hook_cfg.get("min_luma", 30)):
+            return False
+        if stat.stddev[0] < float(hook_cfg.get("min_contrast", 18)):
+            return False
+        h = _dhash(img)
+        if h and h in seen_hashes:
+            return False
+        if h:
+            seen_hashes.add(h)
+        return True
+    except Exception:
+        return False
+
+
+def _premium_hook_asset(scene: dict, beat: dict, outdir: str, cfg: dict,
+                        gemini_key: str, used_prompts: set) -> dict | None:
+    """Generate and rank hook-only premium still candidates.
+
+    This is a separate, hard-capped quality lane. It does not consume the
+    normal scene/director credits, and any failure returns control to the
+    existing AI -> stock -> card fallback chain.
+    """
+    hook_cfg = cfg.get("ai_images", {}).get("premium_hook", {})
+    if not hook_cfg.get("enabled", False):
+        return None
+    if int(scene.get("n", 0)) != 1 or scene.get("delivery") != "hook":
+        return None
+    if hook_cfg.get("longform_only", True) and _orientation(cfg) == "portrait":
+        return None
+
+    wanted = max(1, min(int(hook_cfg.get("candidates", 3)),
+                        len(_HOOK_COMPOSITIONS)))
+    if os.environ.get("FAL_KEY", "").strip():
+        estimated = max(float(hook_cfg.get("estimated_usd_per_candidate", 0.12)),
+                        0.001)
+        ceiling = max(float(hook_cfg.get("max_usd_per_video", 0.40)), 0.0)
+        wanted = min(wanted, int(ceiling // estimated))
+    if wanted <= 0:
+        print("[hook-still] cost gate allows no premium candidates")
+        return None
+
+    cue = str(beat.get("cue", "")).strip()
+    purpose = str(beat.get("purpose", "")).strip()
+    search = ", ".join(str(t) for t in (beat.get("search_terms") or [])[:2])
+    subject = (str(scene.get("hero_prompt", "")).strip()
+               or str(scene.get("ai_prompt", "")).strip()
+               or purpose or cue or str(scene.get("narration", ""))[:220])
+    base = (
+        f"Documentary opening image for: {scene.get('episode_title', '')}. "
+        f"Exact subject and situation: {subject}. Opening spoken idea: {cue}. "
+        f"Concrete visual anchors: {search}. "
+        "Show only what can be defended as a factual reconstruction; do not "
+        "invent evidence or present folklore/supernatural claims as fact. "
+        "ONE clear subject, immediate visual question, readable at phone size, "
+        "strong silhouette and tonal separation, layered cinematic depth, "
+        "lower 25 percent calm and uncluttered for Hindi captions, no collage, "
+        "no split screen, no typography, no symbols, no recognizable faces"
+    )
+    candidates = []
+    local_hashes: set[str] = set()
+    aspect = "16:9 wide"
+    for index in range(wanted):
+        prompt = f"{base}. COMPOSITION OPTION: {_HOOK_COMPOSITIONS[index]}."
+        ph = hashlib.sha1(prompt.lower().encode()).hexdigest()[:16]
+        # A rerender of the same topic must not lose its premium hook merely
+        # because the previous attempt reached the persistent usage log.
+        alternate = 2
+        while ph in used_prompts and alternate <= 20:
+            prompt = (f"{base}. COMPOSITION OPTION: {_HOOK_COMPOSITIONS[index]}. "
+                      f"Fresh alternate photographic take {alternate}.")
+            ph = hashlib.sha1(prompt.lower().encode()).hexdigest()[:16]
+            alternate += 1
+        if ph in used_prompts:
+            continue
+        path = os.path.join(outdir, f"s01_hook_c{index + 1:02d}.jpg")
+        if not ai_images.generate(prompt, path, gemini_key, cfg, aspect,
+                                  provider="premium"):
+            _rm(path)
+            continue
+        used_prompts.add(ph)
+        _downscale_image(path)
+        if not _hook_candidate_ok(path, cfg, local_hashes):
+            print(f"[hook-still] candidate {index + 1} failed local quality")
+            _rm(path)
+            continue
+        candidates.append({"path": path, "prompt": prompt})
+
+    if not candidates:
+        print("[hook-still] no usable premium candidate — normal fallback")
+        return None
+    winner = vision_qc.pick_hook_still(
+        [(item["path"], "image") for item in candidates],
+        str(scene.get("narration", "")), str(scene.get("episode_title", "")),
+        search or purpose or cue, gemini_key, cfg,
+        forbidden=scene.get("forbidden_visuals") or [])
+    if winner < 0:
+        for item in candidates:
+            _rm(item["path"])
+        print("[hook-still] vision judge rejected every candidate")
+        return None
+
+    # If the chosen image duplicates another episode asset, try the runner-up
+    # before abandoning the premium lane.
+    order = [winner] + [i for i in range(len(candidates)) if i != winner]
+    chosen = None
+    for i in order:
+        item = candidates[i]
+        if _visual_ok(item["path"], "image", "premium hook still", cfg):
+            chosen = item
+            winner = i
+            break
+    if chosen is None:
+        for item in candidates:
+            _rm(item["path"])
+        return None
+    for i, item in enumerate(candidates):
+        if i != winner:
+            _rm(item["path"])
+    print(f"[hook-still] selected candidate {winner + 1}/{len(candidates)}")
+    return {"path": chosen["path"], "kind": "image", "ai": True,
+            "premium_hook": True, "hook_candidates": len(candidates),
+            "family": beat.get("family", "cold_open_hook")}
 
 
 # ── G13: NASA image/video library — primary-source, public-domain space
@@ -340,9 +495,114 @@ def _nasa_asset(scene: dict, outdir: str, used: set, cfg: dict,
     return None
 
 
+# Wikimedia Commons is the primary-source lane for named places, buildings,
+# inscriptions, documents and artifacts outside NASA's domain. Commons files
+# carry machine-readable attribution metadata, which travels into the render
+# manifest and a release-side credits file.
+COMMONS_API = "https://commons.wikimedia.org/w/api.php"
+COMMONS_HEADERS = {
+    "User-Agent": "RahasyaLokFacelessAutopilot/1.0 (documentary asset search)"
+}
+COMMONS_MIMES = {"image/jpeg", "image/png", "image/webp"}
+
+
+def _commons_meta(extmetadata: dict, key: str) -> str:
+    raw = str((extmetadata.get(key) or {}).get("value") or "")
+    return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", raw))).strip()
+
+
+def _commons_asset(scene: dict, outdir: str, used: set, cfg: dict,
+                   gemini_key: str = "") -> dict | None:
+    """Fetch one authenticated Commons image with reusable license credits.
+
+    A vision match is mandatory. If Commons cannot provide an exact visual,
+    the caller continues to another authentic source or a transparent card;
+    it never converts the beat into an AI reconstruction silently.
+    """
+    queries = [str(t).strip() for t in scene.get("search_terms", [])
+               if str(t).strip()][:3]
+    for term in queries:
+        try:
+            response = requests.get(
+                COMMONS_API,
+                params={
+                    "action": "query",
+                    "generator": "search",
+                    "gsrsearch": term,
+                    "gsrnamespace": 6,
+                    "gsrlimit": 10,
+                    "prop": "imageinfo",
+                    "iiprop": "url|mime|extmetadata",
+                    "iiurlwidth": MAX_IMAGE_SIDE,
+                    "format": "json",
+                    "formatversion": 2,
+                    "origin": "*",
+                },
+                headers=COMMONS_HEADERS, timeout=45)
+            response.raise_for_status()
+            pages = response.json().get("query", {}).get("pages", [])
+        except Exception as exc:
+            print(f"[assets] Commons search failed for '{term}': {exc}")
+            continue
+        for page in pages:
+            page_id = str(page.get("pageid") or "")
+            info = (page.get("imageinfo") or [{}])[0]
+            mime = str(info.get("mime") or "").lower()
+            url = str(info.get("thumburl") or info.get("url") or "")
+            if (not page_id or f"w{page_id}" in used or not url
+                    or mime not in COMMONS_MIMES):
+                continue
+            metadata = info.get("extmetadata") or {}
+            license_name = (_commons_meta(metadata, "LicenseShortName")
+                            or _commons_meta(metadata, "UsageTerms"))
+            # Do not distribute a file when its reusable license is not
+            # machine-readable enough to credit correctly.
+            if not license_name:
+                continue
+            ext = {"image/png": "png", "image/webp": "webp"}.get(mime, "jpg")
+            path = os.path.join(
+                outdir, f"s{scene['n']:02d}_commons_{page_id}.{ext}")
+            try:
+                _download(url, path)
+                _downscale_image(path)
+            except Exception:
+                _rm(path)
+                continue
+            key = f"w{page_id}"
+            if not _visual_ok(path, "image",
+                              f"scene {scene['n']} Commons {page_id}", cfg):
+                used.add(key)
+                _rm(path)
+                continue
+            if not vision_qc.frame_ok(
+                    path, "image", _qc_desc(scene), term, gemini_key, cfg,
+                    forbidden=scene.get("forbidden_visuals") or [],
+                    source="stock"):
+                used.add(key)
+                _rm(path)
+                continue
+            used.add(key)
+            attribution = {
+                "title": str(page.get("title") or "").removeprefix("File:"),
+                "artist": (_commons_meta(metadata, "Artist")
+                           or _commons_meta(metadata, "Credit")
+                           or "Wikimedia Commons contributor"),
+                "license": license_name,
+                "licenseUrl": _commons_meta(metadata, "LicenseUrl"),
+                "sourceUrl": str(info.get("descriptionurl") or ""),
+            }
+            print(f"[assets] scene {scene['n']}: Wikimedia Commons "
+                  f"{page_id} ({term})")
+            return {"path": path, "kind": "image", "source": "wikimedia",
+                    "attribution": attribution}
+    return None
+
+
 def _qc_desc(scene: dict) -> str:
     """Narration plus the scene's must-show contract for the vision check."""
-    desc = str(scene.get("narration", ""))
+    desc = (f"EPISODE: {scene.get('episode_title', '')} | "
+            f"SCENE: {scene.get('title', '')} | "
+            f"{scene.get('narration', '')}")
     must = [str(m) for m in (scene.get("must_show") or []) if str(m).strip()]
     if must:
         desc += " | MUST SHOW (reject footage missing these): " + ", ".join(must[:3])
@@ -502,35 +762,69 @@ def _director_beat_asset(scene: dict, beat: dict, index: int, outdir: str,
     family = beat.get("family")
     if not (families_mod.enabled(cfg) and family):
         return None
-    for medium in families_mod.media_order(family):
+    policy = families_mod.source_policy(beat, scene)
+    if policy == "primary":
+        return None  # authentic/archival only; AI would invent evidence
+
+    order = families_mod.media_order(family)
+    if order and order[0] == "pg" and beat.get("graphic"):
+        print(f"[director] scene {scene['n']} beat {index + 1}: "
+              f"programmatic {beat['graphic'].get('kind')} ({family})")
+        return {"path": f"s{scene['n']:02d}_b{index:02d}_graphic",
+                "kind": "graphic", "graphic": beat["graphic"],
+                "family": family, "source_policy": policy}
+
+    def generate_ai() -> dict | None:
+        if not beat.get("ai_grant") or not director_budget \
+                or director_budget[0] <= 0:
+            return None
+        subject_parts = [str(beat.get("purpose") or beat.get("cue") or "").strip()]
+        subject_parts += [str(t) for t in (beat.get("search_terms") or [])[:2]]
+        must = [str(m) for m in (scene.get("must_show") or [])[:2]]
+        if must:
+            subject_parts.append("MUST SHOW: " + ", ".join(must))
+        if scene.get("episode_title"):
+            subject_parts.append("EPISODE CONTEXT: " + str(scene["episode_title"]))
+        subject = ". ".join(p for p in subject_parts if p)
+        if not subject:
+            return None
+        prompt = families_mod.compose_prompt(
+            subject, family, scene.get("domain_pack"))
+        if policy == "custom":
+            prompt += (". Clearly staged documentary reconstruction, "
+                       "regionally and historically accurate material culture, "
+                       "no modern objects, no unrelated religion or architecture")
+        ph = hashlib.sha1(prompt.lower().encode()).hexdigest()[:16]
+        if ph in used_prompts:
+            return None
+        path = os.path.join(outdir,
+                            f"s{scene['n']:02d}_b{index:02d}_fam.png")
+        aspect = ("9:16 tall vertical" if _orientation(cfg) == "portrait"
+                  else "16:9 wide")
+        if not ai_images.generate(prompt, path, gemini_key, cfg, aspect):
+            return None
+        used_prompts.add(ph)
+        director_budget[0] -= 1
+        print(f"[director] scene {scene['n']} beat {index + 1}: "
+              f"AI still ({family}/{policy}, {director_budget[0]} credits left)")
+        return {"path": path, "kind": "image", "ai": True,
+                "family": family, "source_policy": policy}
+
+    # A custom reconstruction must be generated before considering the
+    # family's ordinary stock preference.
+    if policy == "custom":
+        return generate_ai()
+    for medium in order:
         if medium == "pg" and beat.get("graphic"):
             print(f"[director] scene {scene['n']} beat {index + 1}: "
                   f"programmatic {beat['graphic'].get('kind')} ({family})")
             return {"path": f"s{scene['n']:02d}_b{index:02d}_graphic",
                     "kind": "graphic", "graphic": beat["graphic"],
                     "family": family}
-        if medium == "ai" and beat.get("ai_grant") and director_budget \
-                and director_budget[0] > 0:
-            subject = (str(beat.get("purpose") or "").strip()
-                       or str(beat.get("cue", "")).strip())
-            if not subject:
-                continue
-            prompt = families_mod.compose_prompt(
-                subject, family, scene.get("domain_pack"))
-            ph = hashlib.sha1(prompt.lower().encode()).hexdigest()[:16]
-            if ph in used_prompts:
-                continue
-            path = os.path.join(outdir,
-                                f"s{scene['n']:02d}_b{index:02d}_fam.png")
-            aspect = ("9:16 tall vertical" if _orientation(cfg) == "portrait"
-                      else "16:9 wide")
-            if ai_images.generate(prompt, path, gemini_key, cfg, aspect):
-                used_prompts.add(ph)
-                director_budget[0] -= 1
-                print(f"[director] scene {scene['n']} beat {index + 1}: "
-                      f"AI still ({family}, {director_budget[0]} credits left)")
-                return {"path": path, "kind": "image", "ai": True,
-                        "family": family}
+        if medium == "ai":
+            generated = generate_ai()
+            if generated:
+                return generated
         if medium == "stock":
             return None  # legacy exact-subject stock chain owns this beat
     return None
@@ -546,17 +840,29 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
     os.makedirs(outdir, exist_ok=True)
     mode = scene.get("visual_mode", "broll")
     assets: list[dict] = []
+    beats = scene.get("visual_beats") or []
 
     # map scenes render their own background (MapZoom) — no assets needed
     if mode == "map" and scene.get("map_render"):
         return []
+
+    # Frame zero has its own premium lane: three different visual hypotheses,
+    # one opening-specific vision decision. The winner preempts every generic
+    # scene/stock asset for beat 0 and remains the fallback for hero animation.
+    if beats:
+        hook = _premium_hook_asset(scene, beats[0], outdir, cfg, gemini_key,
+                                   used_prompts)
+        if hook:
+            hook["beat_index"] = 0
+            assets.append(hook)
 
     # AI-generated hero image (for ai_image scenes, or as bg for kinetic/stat)
     wants_ai = mode == "ai_image" or (
         mode in ("kinetic", "stat", "card", "glass", "scale", "causal")
         and not scene.get("search_terms"))
     prompt = (scene.get("ai_prompt") or "").strip()
-    if wants_ai and prompt and ai_budget[0] > 0:
+    if (wants_ai and prompt and ai_budget[0] > 0
+            and not any(a.get("beat_index") == 0 for a in assets)):
         ph = hashlib.sha1(prompt.lower().encode()).hexdigest()[:16]
         if ph not in used_prompts:
             path = os.path.join(outdir, f"s{scene['n']:02d}_ai.png")
@@ -571,10 +877,11 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
     # Long-form semantic plan: source one concrete visual for each spoken idea.
     # This keeps roughly the same number of downloaded clips as the old
     # duration-based rotation, but now every clip has a narration binding.
-    beats = scene.get("visual_beats") or []
     if beats:
         max_shot = max(float(cfg["video"].get("max_shot_seconds", 5)), 0.5)
         for index, beat in enumerate(beats):
+            policy = families_mod.source_policy(beat, scene)
+            beat["source_policy"] = policy
             beat_assets = [a for a in assets if a.get("beat_index") == index]
             if not beat_assets:
                 directed = _director_beat_asset(scene, beat, index, outdir, cfg,
@@ -589,16 +896,22 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
                     "narration": f"{beat.get('cue', '')}. {beat.get('purpose', '')}".strip(),
                 }
                 need = min(max(float(beat.get("duration", max_shot)), 1.0), max_shot)
-                if _nasa_relevant(beat_scene["search_terms"]):
+                if policy != "custom" and _nasa_relevant(beat_scene["search_terms"]):
                     nasa = _nasa_asset(beat_scene, outdir, used, cfg, gemini_key)
                     if nasa:
                         beat_assets.append(nasa)
-                if not beat_assets:
+                if not beat_assets and policy == "primary":
+                    commons = _commons_asset(beat_scene, outdir, used, cfg,
+                                             gemini_key)
+                    if commons:
+                        beat_assets.append(commons)
+                if not beat_assets and policy != "custom":
                     stock, _ = _stock_videos(
                         beat_scene, need, outdir, cfg, pexels_key, used,
                         max_clips=1, gemini_key=gemini_key)
                     beat_assets.extend(stock)
-                if not beat_assets and rescue_budget and rescue_budget[0] > 0:
+                if (not beat_assets and policy != "primary"
+                        and rescue_budget and rescue_budget[0] > 0):
                     # FLUX rescue still — stock failed exactly where the
                     # narration binding matters most (docs/HERO_SHOTS_SPEC.md)
                     rp = " ".join(x for x in (beat.get("cue", ""),
@@ -616,10 +929,11 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
                         if ai_images.generate(rp, path, gemini_key, cfg, aspect):
                             rescue_budget[0] -= 1
                             beat_assets.append({"path": path, "kind": "image",
-                                                "ai": True})
+                                                "ai": True,
+                                                "source_policy": policy})
                             print(f"[assets] scene {scene['n']} beat "
                                   f"{index + 1}: AI rescue still")
-                if not beat_assets:
+                if not beat_assets and policy != "custom":
                     photo = _stock_photo(beat_scene, outdir, pexels_key, used,
                                          _orientation(cfg), cfg, gemini_key)
                     if photo:
@@ -633,6 +947,7 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
                 print(f"[assets] scene {scene['n']} beat {index + 1}: gradient fallback")
             for asset in beat_assets:
                 asset["beat_index"] = index
+                asset.setdefault("source_policy", policy)
                 if asset not in assets:
                     assets.append(asset)
         return assets

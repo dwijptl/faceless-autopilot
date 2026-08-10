@@ -124,6 +124,9 @@ def normalize_plan(script: dict, raw_plan: dict | None, cfg: dict) -> dict:
                 graphic = _normalize_graphic(item.get("graphic"))
                 if graphic:
                     beat["graphic"] = graphic
+                policy = str(item.get("source_policy", "")).strip().lower()
+                if policy in families.SOURCE_POLICIES:
+                    beat["source_policy"] = policy
             clean.append(beat)
 
         # A short model response is worse than a deterministic complete plan.
@@ -145,6 +148,12 @@ def normalize_plan(script: dict, raw_plan: dict | None, cfg: dict) -> dict:
                     if found:
                         beat["family"] = found
                 beat.setdefault("intensity", 1)
+                beat["source_policy"] = families.source_policy(beat, scene)
+                if (index == 0 and bi == 0
+                        and cfg.get("ai_images", {}).get("premium_hook", {})
+                        .get("enabled", False)):
+                    # Frame zero deliberately uses a labelled reconstruction.
+                    beat["source_policy"] = "custom"
     return script
 
 
