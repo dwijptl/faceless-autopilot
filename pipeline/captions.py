@@ -3,6 +3,23 @@
 Sarvam STT word timings are preferred. The character-rate estimate remains a
 safe fallback when alignment is unavailable or does not match the script.
 """
+import re
+
+
+def _display_text(text: str) -> str:
+    """Remove authoring markup that must never be burned into the video.
+
+    Script models occasionally emphasize evidence as ``**2 clues**``. TTS
+    ignores those characters, but the caption renderer previously printed
+    them literally. Keep the words and punctuation; discard presentation
+    syntax before chunking/SRT generation.
+    """
+    value = str(text or "")
+    value = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", value)
+    value = re.sub(r"(?m)^\s{0,3}#{1,6}\s+", "", value)
+    value = value.replace("**", "").replace("__", "").replace("`", "")
+    value = value.replace("*", "")
+    return " ".join(value.split())
 
 
 def _chunks(text: str, max_chars: int) -> list[str]:
@@ -66,7 +83,7 @@ def build_captions(scenes: list[dict], max_chars: int) -> tuple[list[tuple], str
         # Let the opening premise land as a readable phrase rather than a
         # sequence of isolated words. Later captions stay short and kinetic.
         scene_max = min(max_chars * 3, 44) if sc.get("delivery") == "hook" else max_chars
-        chunks = _chunks(sc["narration"], scene_max)
+        chunks = _chunks(_display_text(sc["narration"]), scene_max)
         if not chunks:
             continue
         aligned = _aligned_events(sc, chunks)

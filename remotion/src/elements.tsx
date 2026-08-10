@@ -31,11 +31,12 @@ export const bodyFamily = (style?: StylePack): string =>
 
 type Asset = {
   path: string; kind: string; duration?: number; ai?: boolean;
-  graphic?: GraphicData; family?: string;
+  graphic?: GraphicData; family?: string; sourcePolicy?: string;
 };
 type VisualBeat = {
   start: number; duration: number; assets: Asset[];
   family?: string; camera?: string; intensity?: number; graphic?: GraphicData;
+  sourcePolicy?: string;
 };
 
 // ── Ken Burns still ────────────────────────────────────────────────────
@@ -172,9 +173,10 @@ export const SceneVisual: React.FC<{
   gradeOpacity}) => {
   const maxShot = Math.round(maxShotSeconds * fps);
   const shots: {from: number; frames: number; asset: Asset; idx: number;
-    camera?: string; intensity?: number}[] = [];
+    camera?: string; intensity?: number; sourcePolicy?: string}[] = [];
   const addShots = (from: number, frames: number, pool: Asset[],
-    seedOffset: number, camera?: string, intensity?: number) => {
+    seedOffset: number, camera?: string, intensity?: number,
+    sourcePolicy?: string) => {
     if (frames <= 0 || pool.length === 0) return;
     const count = Math.max(1, Math.ceil(frames / Math.max(maxShot, 1)));
     const base = Math.floor(frames / count);
@@ -182,7 +184,8 @@ export const SceneVisual: React.FC<{
     for (let i = 0; i < count; i++) {
       const length = base + (i < frames % count ? 1 : 0);
       shots.push({from: from + cursor, frames: length,
-        asset: pool[i % pool.length], idx: seedOffset + i, camera, intensity});
+        asset: pool[i % pool.length], idx: seedOffset + i, camera, intensity,
+        sourcePolicy});
       cursor += length;
     }
   };
@@ -192,7 +195,7 @@ export const SceneVisual: React.FC<{
       const frames = Math.min(Math.max(Math.round(beat.duration * fps), 1),
         Math.max(sceneFrames - from, 0));
       addShots(from, frames, beat.assets?.length ? beat.assets : assets,
-        index * 100, beat.camera, beat.intensity);
+        index * 100, beat.camera, beat.intensity, beat.sourcePolicy);
     });
   } else {
     addShots(0, sceneFrames, assets, 0);
@@ -223,6 +226,13 @@ export const SceneVisual: React.FC<{
                 durationInFrames={s.frames} seed={`${sceneN}-${s.idx}`}
                 energy={style.motion?.kenBurns} />
             )}
+            {s.sourcePolicy === 'custom' && s.asset.ai ? (
+              <div style={{position: 'absolute', top: 34, right: 42,
+                padding: '8px 14px', borderRadius: 4,
+                background: 'rgba(6,9,15,0.62)', color: 'rgba(255,255,255,0.78)',
+                fontFamily: bodyFamily(style), fontSize: 22, fontWeight: 600,
+                letterSpacing: 1.2}}>दृश्य पुनर्निर्माण</div>
+            ) : null}
           </Sequence>
         ))}
       </AbsoluteFill>

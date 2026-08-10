@@ -80,9 +80,11 @@ def _claim_prompt(script: dict, max_claims: int) -> str:
     scenes.append({"n": 0, "narration": "PACKAGING (title / thumbnail / "
                    "next-video tease — these are public claims too): "
                    + json.dumps(packaging, ensure_ascii=False)})
-    return f"""Extract at most {max_claims} high-risk factual claims from this
-Hindi documentary script. Include numbers, dates, rankings, geographic or
-scientific classifications, causal explanations, and risk claims. Claims may
+    return f"""Extract at most {max_claims} externally verifiable factual claims
+from this Hindi documentary script, prioritizing claims most likely to damage
+viewer trust. Include numbers, dates, population/event-size claims, named
+people and actions, physical descriptions presented as evidence, causal
+explanations, and any folklore/legend phrased as documented fact. Claims may
 also come from the PACKAGING entry (scene 0) — a wrong number in a title,
 thumbnail or tease is worse than one in narration. The `text` must be an
 exact contiguous substring of its narration, not a paraphrase.
@@ -93,14 +95,21 @@ SCRIPT: {json.dumps(scenes, ensure_ascii=False)}"""
 
 def _verify_prompt(claims: list[dict]) -> str:
     return f"""Use Google Search to fact-check the following Hindi documentary
-claims. Prefer primary scientific or government sources. For every claim return
+claims. Prefer primary scientific/government sources; for Indian historical
+cases prefer Archaeological Survey of India, state archaeology/tourism records,
+gazetteers, census records, academic publications and primary historical
+documents. Travel blogs, paranormal sites and repeated unsourced articles are
+not evidence. For every claim return
 one item in the same order with: `verdict` (`supported`, `needs_softening`, or
 `unsupported`), `replacement` (an accurate Hindi replacement; use original text
 when supported), `risk` (`high` when the claim states a specific number,
 physical mechanism, safety consequence or geographic superlative that would
-seriously mislead viewers if wrong; else `normal`), and a short `note`.
+seriously mislead viewers if wrong; else `normal`), `basis` (`documented`,
+`scholarly_inference`, `oral_tradition`, or `unsupported`), and a short `note`.
+If a story is only oral tradition, the replacement MUST explicitly begin with
+language such as "स्थानीय लोककथा के अनुसार" rather than stating it as fact.
 Do not invent sources. Return ONLY JSON:
-{{"results":[{{"verdict":"supported","replacement":"…","risk":"normal","note":"…"}}]}}.
+{{"results":[{{"verdict":"supported","replacement":"…","risk":"normal","basis":"documented","note":"…"}}]}}.
 
 CLAIMS: {json.dumps(claims, ensure_ascii=False)}"""
 
@@ -126,10 +135,19 @@ def check_script(script: dict, cfg: dict, api_key: str) -> dict:
         if not claims:
             report["status"] = "no-checkable-claims"
             return report
-        verified, sources = _grounded_json(_verify_prompt(claims), cfg, api_key)
-        results = verified.get("results") or []
-        if len(results) != len(claims):
-            raise ValueError("grounded response changed claim count")
+        batch_size = max(1, min(int(fc.get("batch_size", 8)), 12))
+        results, sources = [], []
+        for start in range(0, len(claims), batch_size):
+            batch = claims[start:start + batch_size]
+            verified, batch_sources = _grounded_json(
+                _verify_prompt(batch), cfg, api_key)
+            batch_results = verified.get("results") or []
+            if len(batch_results) != len(batch):
+                raise ValueError("grounded response changed claim count")
+            results.extend(batch_results)
+            for url in batch_sources:
+                if url not in sources:
+                    sources.append(url)
         scenes = {int(s.get("n", i + 1)): s for i, s in enumerate(script.get("scenes", []))}
         for claim, result in zip(claims, results):
             verdict = str(result.get("verdict", "unsupported")).lower()
@@ -138,6 +156,7 @@ def check_script(script: dict, cfg: dict, api_key: str) -> dict:
             risk = risk if risk in ("high", "normal") else "normal"
             item = {"scene": claim.get("scene"), "claim": claim.get("text", ""),
                     "verdict": verdict, "risk": risk,
+                    "basis": str(result.get("basis", "")),
                     "note": str(result.get("note", ""))}
             if verdict in ("needs_softening", "unsupported"):
                 # packaging claims (scene 0) are report-only — no auto-rewrite

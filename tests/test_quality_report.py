@@ -49,6 +49,23 @@ def test_delivery_probe_is_fail_open_and_writes_report(monkeypatch, tmp_path):
     assert json.loads(destination.read_text())["metrics"]["visual_beats"] == 2
 
 
+def test_source_policy_violations_fail_quality_gate():
+    manifest = {
+        "fps": 30, "width": 1920, "height": 1080, "outroSeconds": 4,
+        "scenes": [{"n": 1, "audioDuration": 4, "visualBeats": [
+            {"start": 0, "duration": 4, "cue": "c", "searchTerms": ["t"],
+             "family": "reconstruct_scene", "sourcePolicy": "custom",
+             "assets": [{"path": "wrong-stock.mp4", "kind": "video",
+                         "ai": False}]},
+        ]}],
+    }
+    cfg = {"longform_quality": {"render_qc": {"enabled": True}},
+           "visual_director": {"enabled": True, "min_custom_ratio": 0.0}}
+    report = quality_report.audit_manifest(manifest, cfg)
+    assert not report["passed"]
+    assert any("custom reconstruction" in e for e in report["errors"])
+
+
 # ---- India-targeted description + tags (run.build_description/_india_tags) ----
 
 def _meta_ns():

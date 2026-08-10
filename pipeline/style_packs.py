@@ -260,7 +260,9 @@ PACKS: dict[str, dict] = {
                     "lone-figure scale"),
         "camera": "low glide over rippled sand, heat haze bending light",
         "keywords": ["रेगिस्तान", "रेत", "सहारा", "थार", "सूखा", "desert",
-                     "गर्म"],
+                     "गर्म", "राजस्थान", "जैसलमेर", "कुलधरा", "पालीवाल",
+                     "rajasthan", "jaisalmer", "kuldhara", "paliwal",
+                     "sandstone village"],
         "frames": ("corners", "focus"),
         "lower_thirds": ("rail", "index"),
     },
@@ -414,7 +416,8 @@ HINGLISH_KEYWORDS: dict[str, list[str]] = {
                    "saanp", "dinosaur", "animal", "shikar", "wildlife"],
     "verdant":    ["paudha", "plant", "phool", "bacteria", "keede",
                    "makkhi", "chinti", "fungi", "mushroom"],
-    "dune":       ["registan", "desert", "sahara", "thar ", "sookha"],
+    "dune":       ["registan", "desert", "sahara", "thar ", "sookha",
+                   "rajasthan", "jaisalmer", "kuldhara", "paliwal"],
     "ember":      ["volcano", "lava ", "earthquake", "bhukamp",
                    "jwalamukhi", "tabahi", "disaster", "visfot", "blast",
                    "zameen ke andar", "earth ke andar", "andar se",
@@ -559,6 +562,15 @@ def select(title: str, extra: str = "", history: list[str] | None = None) -> str
     among the top scorers, excluding the last RECENT_WINDOW packs used
     (unless that would empty the pool)."""
     text = f" {title} {extra} ".lower()
+    # Geographic/cultural identity beats a generic mood word. Without this,
+    # every case containing "रहस्य" drifts toward noir even when the subject
+    # has a more truthful visual world (Kuldhara is golden Thar sandstone).
+    pinned = {
+        "dune": ("कुलधरा", "जैसलमेर", "kuldhara", "jaisalmer"),
+    }
+    for pack, cues in pinned.items():
+        if any(cue in text for cue in cues):
+            return pack
     recent = set(history or [])
     scores = {name: _score(pack, text) for name, pack in PACKS.items()}
     pool = {n: s for n, s in scores.items() if n not in recent} or scores

@@ -1057,12 +1057,25 @@ CONTINUITY CONTRACT (breaking it ruins the episode):
         director_fields = """,
   "family":"ONE narrative-intent family key from the menu below — what this beat DOES in the story",
   "intensity":1,
+  "source_policy":"custom|primary|stock",
   "graphic":{"kind":"timeline|scale|branch|chart|cutaway","title":"short ENGLISH title","unit":"km","items":[{"label":"short label","value":0}]}"""
         director_rules = f"""
 NARRATIVE-INTENT FAMILIES (pick by story function, never by subject):
 {families_mod.prompt_hint_lines()}
 - "family" is REQUIRED per beat; "intensity" is 1 (calm) to 3 (peak moment),
   at most one 3 per scene.
+- "source_policy" is REQUIRED and is a truth contract:
+  * custom = a clearly illustrative reconstruction is safer than generic
+    stock: historical people/events, period interiors, culturally specific
+    activity, or an abstract event no camera recorded.
+  * primary = viewers expect the REAL thing: named place/building, document,
+    photograph, religious object, inscription, archaeological artifact or
+    physical evidence. AI generation is forbidden for these beats.
+  * stock = generic geography, weather, materials or natural processes where
+    professional stock cannot change the meaning.
+- Wrong-country and wrong-culture substitutes are NEVER acceptable. A church,
+  Western office/businessman, unrelated deity, modern cars/AC/satellite dishes,
+  or English chore/signage footage cannot stand in for historical Rajasthan.
 - "graphic" ONLY for beats whose family is diagram-like (timeline_advance,
   scale_comparison, hypothesis_branch, data_story, cause_chain, measurement,
   mechanism_cutaway, penetrate_layers, countdown): give 2-6 items with short
