@@ -1,0 +1,346 @@
+{
+  "stamp": "2026-08-10_0608",
+  "title": "1 जहाज मिला, सब कुछ था, बस लोग नहीं थे",
+  "style": "bazaar",
+  "retention_plan": {
+    "core_question": "मैरी सेलेस्टे का क्रू कहाँ गायब हो गया, जब सब कुछ जहाज पर सुरक्षित था?",
+    "viewer_assumption": "जहाज पर कुछ भयानक हुआ होगा, शायद एक हमला या कोई समुद्री दुर्घटना।",
+    "first_reversal": "जहाज पर न कोई लड़ाई के निशान थे, न कोई डकैती हुई थी, और न ही कोई दुर्घटना का सबूत था।",
+    "main_reveal": "सबसे मजबूत थ्योरी बताती है कि क्रू ने इथेनॉल गैस के खतरे की गलतफहमी में जहाज छोड़ा, रस्सी से बंधी लाइफबोट में बैठे, पर तूफ़ान में रस्सी टूट गई।",
+    "main_reveal_scene": 8,
+    "open_loops": [
+      {
+        "question": "क्रू ने जहाज क्यों छोड़ा?",
+        "opens_scene": 5,
+        "partial_scene": 7,
+        "closes_scene": 8
+      },
+      {
+        "question": "बचाव नाव का क्या हुआ?",
+        "opens_scene": 6,
+        "partial_scene": 7,
+        "closes_scene": 8
+      }
+    ]
+  },
+  "beats": [
+    {
+      "n": 1,
+      "title": "अटलांटिक में खाली जहाज",
+      "start": 0.0,
+      "end": 35.95,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "hook",
+      "rewardType": "fact",
+      "rewardStrength": 0.9,
+      "questionOut": "इंसान इतनी जल्दी और ऐसे चुपचाप कैसे गायब हो सकते हैं?",
+      "delivery": "hook",
+      "assets": [
+        "video:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:stock",
+        "image:stock",
+        "graphic:stock",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 2,
+      "title": "डीईआई ग्रेशिया का सामना",
+      "start": 35.6,
+      "end": 65.67,
+      "visualMode": "broll",
+      "visualRole": "",
+      "narrativeRole": "context",
+      "rewardType": "fact",
+      "rewardStrength": 0.7,
+      "questionOut": "डीईआई ग्रेशिया को उस जहाज पर क्या मिला?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "graphic:stock",
+        "image:stock",
+        "image:ai",
+        "image:ai",
+        "graphic:stock",
+        "image:ai",
+        "image:stock",
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 3,
+      "title": "पहला इम्तिहान: सब कुछ ठीक, फिर भी खाली!",
+      "start": 65.31,
+      "end": 90.36,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "discovery",
+      "rewardType": "fact",
+      "rewardStrength": 0.8,
+      "questionOut": "जहाज के अंदर आखिर था क्या?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 4,
+      "title": "अंदर का अजीब सन्नाटा",
+      "start": 90.0,
+      "end": 115.58,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "discovery",
+      "rewardType": "visual_reveal",
+      "rewardStrength": 0.9,
+      "questionOut": "इतना सब कुछ छोड़ कर कोई कैसे और क्यों जाएगा?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "graphic:stock",
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 5,
+      "title": "कोई संघर्ष नहीं, कोई डकैती नहीं",
+      "start": 115.23,
+      "end": 143.79,
+      "visualMode": "evidence",
+      "visualRole": "explanation",
+      "narrativeRole": "reversal",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.9,
+      "questionOut": "अगर डकैती नहीं, तो फिर क्रू क्यों गायब हुआ?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock",
+        "graphic:stock",
+        "image:stock",
+        "image:stock",
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 6,
+      "title": "लाइफबोट का सुराग: जानबूझकर छोड़ा गया!",
+      "start": 143.43,
+      "end": 167.76,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "evidence",
+      "rewardType": "evidence",
+      "rewardStrength": 0.9,
+      "questionOut": "लेकिन किस खतरे के कारण भागे?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:ai",
+        "image:ai",
+        "graphic:stock",
+        "image:ai",
+        "image:ai",
+        "image:stock",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 7,
+      "title": "होल्ड में पानी: खतरा या गलतफहमी?",
+      "start": 167.4,
+      "end": 191.37,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "",
+      "rewardType": "fact",
+      "rewardStrength": 0.8,
+      "questionOut": "पानी आखिर आया कहाँ से?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock",
+        "image:ai",
+        "graphic:stock",
+        "image:ai",
+        "image:stock",
+        "graphic:stock"
+      ]
+    },
+    {
+      "n": 8,
+      "title": "सबसे मजबूत थ्योरी: गलत निर्णय का नतीजा",
+      "start": 191.01,
+      "end": 222.72,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "main_reveal",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.9,
+      "questionOut": "क्या इस थ्योरी में भी कोई कमी है?",
+      "delivery": "reveal",
+      "assets": [
+        "video:ai",
+        "image:ai",
+        "graphic:stock",
+        "image:stock",
+        "graphic:stock",
+        "image:ai",
+        "image:stock",
+        "image:stock",
+        "graphic:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 9,
+      "title": "मुटनी या हमला: थ्योरी खारिज!",
+      "start": 222.37,
+      "end": 242.73,
+      "visualMode": "card",
+      "visualRole": "explanation",
+      "narrativeRole": "reversal",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.9,
+      "questionOut": "अगर कोई हमला नहीं, कोई विद्रोह नहीं, तो क्या हुआ?",
+      "delivery": "calm",
+      "assets": [
+        "graphic:stock",
+        "image:stock",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 10,
+      "title": "आग का डर या शराब का धोखा?",
+      "start": 242.37,
+      "end": 261.77,
+      "visualMode": "causal",
+      "visualRole": "explanation",
+      "narrativeRole": "evidence",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.8,
+      "questionOut": "अगर सिर्फ डर था, तो वे वापस क्यों नहीं आए?",
+      "delivery": "calm",
+      "assets": [
+        "graphic:stock",
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 11,
+      "title": "अंतिम सामान्य सुबह",
+      "start": 261.41,
+      "end": 280.51,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "",
+      "rewardType": "consequence",
+      "rewardStrength": 0.7,
+      "questionOut": "तो फिर वे वापस क्यों नहीं आ पाए?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 12,
+      "title": "सीक्वेक का रहस्य: समुद्र के नीचे भूकंप?",
+      "start": 280.15,
+      "end": 297.28,
+      "visualMode": "ai_image",
+      "visualRole": "explanation",
+      "narrativeRole": "discovery",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.7,
+      "questionOut": "क्या ऐसा सच में हो सकता था?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:stock",
+        "image:stock",
+        "graphic:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 13,
+      "title": "गलत निर्णय का नतीजा",
+      "start": 296.92,
+      "end": 317.08,
+      "visualMode": "causal",
+      "visualRole": "explanation",
+      "narrativeRole": "",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.9,
+      "questionOut": "क्या इस थ्योरी में भी कोई कमी है?",
+      "delivery": "reveal",
+      "assets": [
+        "graphic:stock",
+        "graphic:stock",
+        "image:stock",
+        "image:ai",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 14,
+      "title": "एक अनसुलझी पहेली",
+      "start": 316.73,
+      "end": 333.5,
+      "visualMode": "ai_image",
+      "visualRole": "",
+      "narrativeRole": "conclusion",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.7,
+      "questionOut": "",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai",
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:ai"
+      ]
+    }
+  ]
+}
