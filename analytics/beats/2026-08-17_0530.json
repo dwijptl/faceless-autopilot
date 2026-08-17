@@ -1,0 +1,290 @@
+{
+  "stamp": "2026-08-17_0530",
+  "title": "कोलकाता का पत्थरबाज: कौन था वो साया?",
+  "style": "metro",
+  "retention_plan": {
+    "core_question": "कोलकाता का पत्थरबाज कौन था, और क्यों उसने इतनी बेरहमी से हत्याएं कीं?",
+    "viewer_assumption": "कोई एक सीरियल किलर था जो पत्थर से मारता था।",
+    "first_reversal": "पुलिस को एक नहीं, कई कातिलों के होने का शक होने लगा।",
+    "main_reveal": "कोलकाता का 'पत्थरबाज' कोई एक व्यक्ति नहीं था, बल्कि एक भयानक नाम था जो अनसुलझी हत्याओं की एक पूरी श्रंखला के लिए इस्तेमाल किया गया था, कुछ शायद नकलची, कुछ बिल्कुल ही असंबद्ध।",
+    "main_reveal_scene": 9,
+    "open_loops": [
+      {
+        "question": "क्या एक ही कातिल था?",
+        "opens_scene": 2,
+        "partial_scene": 6,
+        "closes_scene": 9
+      },
+      {
+        "question": "असली मकसद क्या था?",
+        "opens_scene": 4,
+        "partial_scene": 8,
+        "closes_scene": 12
+      }
+    ]
+  },
+  "beats": [
+    {
+      "n": 1,
+      "title": "अंधेरी रात, एक खामोश हथियार",
+      "start": 0.0,
+      "end": 22.88,
+      "visualMode": "kinetic",
+      "visualRole": "experience",
+      "narrativeRole": "hook",
+      "rewardType": "fact",
+      "rewardStrength": 0.7,
+      "questionOut": "आखिर ये खौफनाक जुर्म कैसे और कहाँ से शुरू हुआ?",
+      "delivery": "hook",
+      "assets": [
+        "video:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 2,
+      "title": "कलकत्ता में पहली आहट",
+      "start": 22.46,
+      "end": 46.69,
+      "visualMode": "broll",
+      "visualRole": "",
+      "narrativeRole": "discovery",
+      "rewardType": "fact",
+      "rewardStrength": 0.8,
+      "questionOut": "पीड़ितों की पहचान क्या थी और कातिल का मकसद क्या हो सकता था?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "graphic:stock",
+        "image:ai",
+        "image:stock",
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 3,
+      "title": "पीड़ित और पैटर्न",
+      "start": 46.26,
+      "end": 66.28,
+      "visualMode": "ai_image",
+      "visualRole": "explanation",
+      "narrativeRole": "",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.8,
+      "questionOut": "पुलिस ने इस रहस्यमय कातिल को पकड़ने के लिए क्या किया?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 4,
+      "title": "दबाव और जन आक्रोश",
+      "start": 65.85,
+      "end": 85.33,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "escalation",
+      "rewardType": "consequence",
+      "rewardStrength": 0.9,
+      "questionOut": "जांच में और क्या अजीब बातें सामने आईं?",
+      "delivery": "calm",
+      "assets": [
+        "graphic:stock",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 5,
+      "title": "फॉरेंसिक दुविधा",
+      "start": 84.9,
+      "end": 105.35,
+      "visualMode": "evidence",
+      "visualRole": "explanation",
+      "narrativeRole": "evidence",
+      "rewardType": "evidence",
+      "rewardStrength": 0.9,
+      "questionOut": "तो क्या सिर्फ एक ही कातिल था?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:stock",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 6,
+      "title": "एक नहीं, अनेक कातिल?",
+      "start": 104.92,
+      "end": 124.37,
+      "visualMode": "glass",
+      "visualRole": "explanation",
+      "narrativeRole": "reversal",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.9,
+      "questionOut": "अगर कई कातिल थे, तो क्या वो सब जुड़े हुए थे?",
+      "delivery": "reveal",
+      "assets": [
+        "video:ai",
+        "image:ai",
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 7,
+      "title": "बढ़ती दहशत",
+      "start": 123.94,
+      "end": 143.06,
+      "visualMode": "kinetic",
+      "visualRole": "experience",
+      "narrativeRole": "escalation",
+      "rewardType": "consequence",
+      "rewardStrength": 0.8,
+      "questionOut": "जांच अधिकारियों ने इस नए एंगल पर कैसे काम किया?",
+      "delivery": "calm",
+      "assets": [
+        "graphic:stock",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 8,
+      "title": "जांच की उलझन",
+      "start": 142.63,
+      "end": 161.11,
+      "visualMode": "card",
+      "visualRole": "explanation",
+      "narrativeRole": "",
+      "rewardType": "comparison",
+      "rewardStrength": 0.7,
+      "questionOut": "तो फिर असली 'पत्थरबाज' कौन था, या क्या था?",
+      "delivery": "calm",
+      "assets": [
+        "graphic:stock",
+        "image:ai",
+        "image:stock",
+        "image:ai",
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 9,
+      "title": "अधूरा सच: एक नहीं, कई साये",
+      "start": 160.69,
+      "end": 187.82,
+      "visualMode": "ai_image",
+      "visualRole": "explanation",
+      "narrativeRole": "main_reveal",
+      "rewardType": "contradiction",
+      "rewardStrength": 1.0,
+      "questionOut": "अगर एक कातिल नहीं था, तो इसका मतलब क्या है?",
+      "delivery": "reveal",
+      "assets": [
+        "image:ai",
+        "image:ai",
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 10,
+      "title": "एक नाम, कई कहानियां",
+      "start": 187.39,
+      "end": 207.32,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "implication",
+      "rewardType": "consequence",
+      "rewardStrength": 0.8,
+      "questionOut": "इस तरह के रहस्य क्यों आज भी अनसुलझे हैं?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 11,
+      "title": "मुंबई का साया",
+      "start": 206.9,
+      "end": 228.17,
+      "visualMode": "broll",
+      "visualRole": "",
+      "narrativeRole": "next_curiosity",
+      "rewardType": "comparison",
+      "rewardStrength": 0.7,
+      "questionOut": "तो क्या पत्थरबाज का असली मकसद और पहचान कभी पता नहीं चलेगा?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 12,
+      "title": "एक अनसुलझा सवाल",
+      "start": 227.74,
+      "end": 249.46,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "conclusion",
+      "rewardType": "consequence",
+      "rewardStrength": 0.9,
+      "questionOut": "",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai",
+        "image:stock",
+        "image:ai",
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:ai"
+      ]
+    }
+  ]
+}
