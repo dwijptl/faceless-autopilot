@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 import quality_report
 
 
@@ -32,6 +34,57 @@ def test_manifest_audit_catches_timing_gap():
     report = quality_report.audit_manifest(manifest, {})
     assert report["passed"] is False
     assert any("coverage gap" in error for error in report["errors"])
+
+
+def test_manifest_audit_catches_frame_level_gap():
+    manifest = _manifest()
+    manifest["scenes"][0]["visualBeats"][0].update(
+        {"fromFrame": 0, "durationFrames": 119})
+    manifest["scenes"][0]["visualBeats"][1].update(
+        {"fromFrame": 120, "durationFrames": 180})
+    report = quality_report.audit_manifest(manifest, {})
+    assert report["passed"] is False
+    assert any("frame-level beat coverage gap" in error
+               for error in report["errors"])
+
+
+def test_manifest_audit_rejects_gradient_fallback_asset():
+    manifest = _manifest()
+    manifest["scenes"][0]["visualBeats"][0]["assets"] = [{
+        "path": "s01_b00_card.jpg", "kind": "image", "fallback": "gradient",
+    }]
+
+    report = quality_report.audit_manifest(manifest, {})
+
+    assert report["passed"] is False
+    assert any("blank gradient fallback" in error for error in report["errors"])
+
+
+def test_manifest_audit_flags_programmatic_fallback_for_review():
+    manifest = _manifest()
+    manifest["scenes"][0]["visualBeats"][0]["assets"] = [{
+        "path": "s01_b00_fallback_graphic", "kind": "graphic",
+        "fallback": "programmatic",
+    }]
+
+    report = quality_report.audit_manifest(manifest, {})
+
+    assert report["passed"] is False
+    assert any("animated evidence fallback requires review" in error
+               for error in report["errors"])
+
+
+def test_manifest_audit_flags_borrowed_visual_for_review():
+    manifest = _manifest()
+    manifest["scenes"][0]["visualBeats"][0]["assets"] = [{
+        "path": "neighbor.jpg", "kind": "image", "borrowedFallback": True,
+    }]
+
+    report = quality_report.audit_manifest(manifest, {})
+
+    assert report["passed"] is False
+    assert any("borrowed visual requires review" in error
+               for error in report["errors"])
 
 
 def test_delivery_probe_is_fail_open_and_writes_report(monkeypatch, tmp_path):
@@ -120,3 +173,73 @@ def test_tag_budget_never_exceeded_with_many_long_tags():
     ns = _meta_ns()
     tags = ns["_india_tags"]([f"बहुत लंबा टैग नंबर {i}" for i in range(40)])
     assert sum(len(t) + 2 for t in tags) <= 500
+
+
+# ── delivered-pixel blank-frame detector ──────────────────────────────────
+
+def _stats(spans, sample_fps=6):
+    """Fake ffmpeg signalstats output: one sample per luma span."""
+    step = 1.0 / sample_fps
+    out = []
+    for index, span in enumerate(spans):
+        out.append(f"frame:{index} pts:{index} pts_time:{index * step:.4f}")
+        out.append("lavfi.signalstats.YMIN=10.0")
+        out.append(f"lavfi.signalstats.YMAX={10.0 + span:.1f}")
+        out.append("lavfi.signalstats.YAVG=40.0")
+    return "\n".join(out) + "\n"
+
+
+def test_blank_scan_flags_a_sustained_solid_run():
+    # 12 flat samples at 6 fps = 2.0s of solid frames between real footage
+    spans = [180.0] * 6 + [8.0] * 12 + [200.0] * 6
+    runs = quality_report._flat_runs_from_stats(_stats(spans), 6, 32, 0.6)
+    assert len(runs) == 1
+    start, end = runs[0]
+    assert round(start, 2) == 1.0
+    assert round(end - start, 2) == 2.0
+
+
+def test_blank_scan_ignores_a_short_dip():
+    # two flat samples (0.33s) — a crossfade, not a missing visual
+    spans = [180.0] * 6 + [8.0] * 2 + [180.0] * 6
+    assert quality_report._flat_runs_from_stats(_stats(spans), 6, 32, 0.6) == []
+
+
+def test_blank_scan_reports_a_trailing_run():
+    spans = [180.0] * 4 + [5.0] * 8
+    runs = quality_report._flat_runs_from_stats(_stats(spans), 6, 32, 0.6)
+    assert len(runs) == 1
+    assert round(runs[0][1] - runs[0][0], 2) == pytest.approx(1.33, abs=0.01)
+
+
+def test_blank_scan_finds_every_separate_run():
+    spans = ([150.0] * 6 + [6.0] * 9) * 2
+    runs = quality_report._flat_runs_from_stats(_stats(spans), 6, 32, 0.6)
+    assert len(runs) == 2
+
+
+def test_blank_scan_disabled_by_config(monkeypatch):
+    def explode(*args, **kwargs):  # pragma: no cover - must never run
+        raise AssertionError("ffmpeg invoked while the scan is disabled")
+    monkeypatch.setattr(quality_report.subprocess, "run", explode)
+    cfg = {"longform_quality": {"render_qc": {"blank_frames": {"enabled": False}}}}
+    assert quality_report._flat_frame_runs("final.mp4", cfg) == ([], "")
+
+
+def test_blank_scan_fails_open_when_ffmpeg_is_missing(monkeypatch):
+    def explode(*args, **kwargs):
+        raise FileNotFoundError("ffmpeg")
+    monkeypatch.setattr(quality_report.subprocess, "run", explode)
+    runs, note = quality_report._flat_frame_runs("final.mp4", {})
+    assert runs == []
+    assert "blank-frame scan skipped" in note
+
+
+def test_delivery_audit_drafts_release_on_blank_frames(monkeypatch, tmp_path):
+    monkeypatch.setattr(quality_report, "_flat_frame_runs",
+                        lambda path, cfg: ([(149.9, 152.77)], ""))
+    report = quality_report.audit_delivery(
+        "missing.mp4", _manifest(), {}, str(tmp_path / "report.json"))
+    assert report["passed"] is False
+    assert any("blank/solid frame 149.90s-152.77s" in e for e in report["errors"])
+    assert report["delivery"]["blank_frame_spans"] == [[149.9, 152.77]]

@@ -32,7 +32,14 @@ import topic_shape                  # noqa: E402
 import tts as tts_mod               # noqa: E402
 import vision_qc                    # noqa: E402
 import visual_beats as visual_beats_mod  # noqa: E402
-from run import _impact_start, _visual_beat_manifest, _validate_scene_assets  # noqa: E402
+from run import (  # noqa: E402
+    _assert_render_visual_coverage,
+    _asset_manifest,
+    _impact_start,
+    _render_fallbacks_require_review,
+    _validate_scene_assets,
+    _visual_beat_manifest,
+)
 import style_packs                  # noqa: E402
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -259,6 +266,7 @@ def main() -> None:
     usage_log["prompts"] = sorted(used_prompts)
     assets_mod.save_usage_log(log_path, usage_log)
     _validate_scene_assets(scenes)  # drop vanished/corrupt files before render
+    visual_fallback_requires_review = _render_fallbacks_require_review(scenes)
 
     # 4) captions (small chunks = word-group pops) -----------------------------
     events, srt = captions_mod.build_captions(scenes, cfg["captions"]["max_chars"])
@@ -343,13 +351,11 @@ def main() -> None:
             "motion": sc.get("motion") or {},
             "audioPath": os.path.basename(sc["audio_path"]),
             "audioDuration": round(sc["audio_duration"], 3),
-            "assets": [{
-                "path": os.path.basename(a["path"]), "kind": a["kind"],
-                "duration": round(a["duration"], 2) if a.get("duration") else None,
-            } for a in sc["assets"]],
-            "visualBeats": _visual_beat_manifest(sc),
+            "assets": [_asset_manifest(a) for a in sc["assets"]],
+            "visualBeats": _visual_beat_manifest(sc, fps),
         } for sc in scenes],
     }}
+    _assert_render_visual_coverage(manifest["manifest"])
     manifest_path = os.path.join(workdir, "props.json")
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2, ensure_ascii=False)
@@ -384,7 +390,8 @@ def main() -> None:
     else:
         fact_requires_review = False
     draft_release = (voice_fallback or fact_requires_review
-                     or visual_requires_review)
+                     or visual_requires_review
+                     or visual_fallback_requires_review)
     status_voice = "⚠️ FALLBACK — DO NOT PUBLISH" if voice_fallback else "OK (cloned)"
     status_fact = (f"⚠️ REVIEW CLAIMS ({fact_report.get('unsupported', 0)} unsupported)"
                    if fact_requires_review else fact_report.get("status", "unknown"))
@@ -394,9 +401,14 @@ def main() -> None:
     voice_banner = ("> ⚠️ **VOICE FALLBACK — DO NOT PUBLISH.** This run used Kokoro, "
                     "not your cloned Sarvam voice. Re-run when Sarvam is available.\n\n"
                     if voice_fallback else "")
+    fallback_banner = (
+        "> ⚠️ **VISUAL FALLBACK — REVIEW BEFORE PUBLISHING.** A media lookup "
+        "failed, so a nearby visual or animated evidence board was used. "
+        "No blank frame was emitted.\n\n"
+        if visual_fallback_requires_review else "")
     meta = f"""## {script['title']}
 
-{voice_banner}**Reliability:** Voice: {status_voice} | Captions: {caption_status} | Fact-check: {status_fact} | Visuals: {status_visual}
+{voice_banner}{fallback_banner}**Reliability:** Voice: {status_voice} | Captions: {caption_status} | Fact-check: {status_fact} | Visuals: {status_visual}
 
 **SHORT** · {duration:.0f}s · {len(scenes)} scenes · style: {style} ·
 voice: {voice_line} · run {stamp}
@@ -429,6 +441,7 @@ voice: {voice_line} · run {stamp}
 
     with open(os.path.join(outdir, "run_summary.json"), "w", encoding="utf-8") as f:
         json.dump({"draft_release": draft_release, "voice_fallback": voice_fallback,
+                   "visual_fallback_review": visual_fallback_requires_review,
                    "voice": voice_line, "captions": caption_status,
                    "factcheck": fact_report,
                    "visual_audit": visual_report,

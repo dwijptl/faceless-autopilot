@@ -127,6 +127,11 @@ longform_quality:
     gate: true             # failed semantic/source-policy checks draft release
     min_semantic_coverage: 0.90
     max_asset_uses: 2
+    blank_frames:          # last-resort scan of the DELIVERED pixels: a run of
+      enabled: true        # flat/solid frames drafts the release
+      sample_fps: 6
+      max_luma_span: 32    # 8-bit Y range inside the HUD-free crop
+      min_seconds: 0.6     # longer than the scene crossfade
   overlay_seconds: 5.0     # impact window for kinetic/stat/card/glass graphics
 
 tts:

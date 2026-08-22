@@ -208,18 +208,24 @@ def _validate_scene_assets(scenes: list) -> None:
     """RENDER GUARD — a manifest asset whose file is missing/corrupt kills
     the Remotion render at the exact frame that needs it (observed: 404 on
     s06_*.mp4 at frame 1236). Validate ON DISK right before the manifest is
-    written: drop vanished/zero-byte files; a non-graphic scene left empty
-    borrows its neighbor's footage so no scene ever renders from nothing."""
-    last_good: list | None = None
+    written: drop vanished/zero-byte files, replace legacy gradient cards, and
+    guarantee a non-blank visual pool for every timed narration beat."""
+    def ok(asset: dict) -> bool:
+        if asset.get("kind") == "graphic":
+            return bool(asset.get("graphic"))
+        path = asset.get("path") or ""
+        try:
+            return bool(path) and os.path.getsize(path) > 1024
+        except OSError:
+            return False
+
+    def gradient_fallback(asset: dict) -> bool:
+        if asset.get("fallback") == "gradient":
+            return True
+        name = os.path.basename(str(asset.get("path", "")))
+        return bool(re.fullmatch(r"s\d+(?:_b\d+)?_card\.jpe?g", name))
+
     for sc in scenes:
-        def ok(a: dict) -> bool:
-            if a.get("kind") == "graphic":
-                return bool(a.get("graphic"))
-            p = a.get("path") or ""
-            try:
-                return bool(p) and os.path.getsize(p) > 1024
-            except OSError:
-                return False
         kept = [a for a in sc.get("assets", []) if ok(a)]
         dropped = len(sc.get("assets", [])) - len(kept)
         if dropped:
@@ -228,12 +234,121 @@ def _validate_scene_assets(scenes: list) -> None:
         for beat in sc.get("visual_beats") or []:
             beat["assets"] = [a for a in beat.get("assets", []) if ok(a)]
         sc["assets"] = kept
-        if kept:
-            last_good = kept
-        elif str(sc.get("visual_mode", "broll")) != "map" and last_good:
-            sc["assets"] = list(last_good)
-            print(f"[render-guard] scene {sc.get('n')}: empty after guard — "
-                  f"borrowing previous scene's footage")
+
+    # A generated gradient card is technically a valid file, but it looks like
+    # a blank frame when it fills a narration beat. Replace it with the nearest
+    # real visual (same scene first, then neighboring scenes). If the entire
+    # episode has no usable media, use a full animated evidence graphic. This
+    # also repairs an empty first scene, which the old previous-scene-only
+    # guard could not recover.
+    concrete = [
+        (scene_index, int(asset.get("beat_index", 0)), asset)
+        for scene_index, scene in enumerate(scenes)
+        for asset in scene.get("assets", [])
+        if asset.get("kind") in ("image", "video")
+        and not gradient_fallback(asset)
+    ]
+    graphics = [
+        (scene_index, int(asset.get("beat_index", 0)), asset)
+        for scene_index, scene in enumerate(scenes)
+        for asset in scene.get("assets", [])
+        if asset.get("kind") == "graphic" and not gradient_fallback(asset)
+    ]
+
+    def pick(scene_index: int, beat_index: int,
+             local: list[dict] | None = None) -> dict | None:
+        local = local or []
+        local_real = [a for a in local
+                      if a.get("kind") in ("image", "video")
+                      and not gradient_fallback(a)]
+        pool = ([(scene_index, int(a.get("beat_index", 0)), a)
+                 for a in local_real] or concrete or graphics)
+        if not pool:
+            return None
+        return min(pool, key=lambda item: (
+            abs(item[0] - scene_index), abs(item[1] - beat_index),
+        ))[2]
+
+    def borrowed(source: dict, beat_index: int,
+                 source_policy: str = "") -> dict:
+        result = dict(source)
+        result["beat_index"] = beat_index
+        result["borrowed_fallback"] = True
+        if source_policy:
+            result["source_policy"] = source_policy
+        return result
+
+    for scene_index, scene in enumerate(scenes):
+        repaired = []
+        scene_beats = scene.get("visual_beats") or []
+        for asset in scene.get("assets", []):
+            if not gradient_fallback(asset):
+                repaired.append(asset)
+                continue
+            beat_index = int(asset.get("beat_index", 0))
+            source = pick(scene_index, beat_index, scene.get("assets"))
+            beat = (scene_beats[beat_index]
+                    if beat_index < len(scene_beats) else {})
+            replacement = (borrowed(source, beat_index,
+                                    str(asset.get("source_policy", "")))
+                           if source else
+                           assets_mod.fallback_graphic_asset(
+                               scene, beat, beat_index))
+            replacement.setdefault("source_policy",
+                                   asset.get("source_policy", ""))
+            repaired.append(replacement)
+            print(f"[render-guard] scene {scene.get('n')} beat "
+                  f"{beat_index + 1}: replacing blank gradient with nearest "
+                  "non-blank visual")
+        scene["assets"] = repaired
+
+    # Rebuild candidate lists after removing legacy gradients, then guarantee
+    # that every non-map scene and every timed beat owns a visual pool.
+    concrete = [
+        (scene_index, int(asset.get("beat_index", 0)), asset)
+        for scene_index, scene in enumerate(scenes)
+        for asset in scene.get("assets", [])
+        if asset.get("kind") in ("image", "video")
+        and not gradient_fallback(asset)
+    ]
+    graphics = [
+        (scene_index, int(asset.get("beat_index", 0)), asset)
+        for scene_index, scene in enumerate(scenes)
+        for asset in scene.get("assets", [])
+        if asset.get("kind") == "graphic" and not gradient_fallback(asset)
+    ]
+    for scene_index, scene in enumerate(scenes):
+        if str(scene.get("visual_mode", "broll")) == "map":
+            continue
+        beats = scene.get("visual_beats") or []
+        if not scene.get("assets"):
+            if beats:
+                for beat_index, beat in enumerate(beats):
+                    source = pick(scene_index, beat_index)
+                    scene.setdefault("assets", []).append(
+                        borrowed(source, beat_index,
+                                 str(beat.get("source_policy", "")))
+                        if source else assets_mod.fallback_graphic_asset(
+                            scene, beat, beat_index))
+            else:
+                source = pick(scene_index, 0)
+                scene["assets"] = ([borrowed(source, 0)] if source else [
+                    assets_mod.fallback_graphic_asset(scene)])
+            print(f"[render-guard] scene {scene.get('n')}: empty after guard — "
+                  "supplying non-blank fallback visual(s)")
+
+        for beat_index, beat in enumerate(beats):
+            if any(int(a.get("beat_index", -1)) == beat_index
+                   for a in scene.get("assets", [])):
+                continue
+            source = pick(scene_index, beat_index, scene.get("assets"))
+            scene["assets"].append(
+                borrowed(source, beat_index,
+                         str(beat.get("source_policy", "")))
+                if source else assets_mod.fallback_graphic_asset(
+                    scene, beat, beat_index))
+            print(f"[render-guard] scene {scene.get('n')} beat "
+                  f"{beat_index + 1}: filling missing visual assignment")
 
 
 def _asset_manifest(asset: dict) -> dict:
@@ -252,11 +367,70 @@ def _asset_manifest(asset: dict) -> dict:
         entry["hookCandidates"] = int(asset.get("hook_candidates", 1))
     if asset.get("source_policy"):
         entry["sourcePolicy"] = str(asset["source_policy"])
+    if asset.get("fallback"):
+        entry["fallback"] = str(asset["fallback"])
+    if asset.get("borrowed_fallback"):
+        entry["borrowedFallback"] = True
     if asset.get("source"):
         entry["source"] = str(asset["source"])
     if asset.get("attribution"):
         entry["attribution"] = asset["attribution"]
     return entry
+
+
+def _render_fallbacks_require_review(scenes: list[dict]) -> bool:
+    """True when the render stayed alive by substituting a visual."""
+    return any(
+        asset.get("fallback") == "programmatic"
+        or bool(asset.get("borrowed_fallback"))
+        for scene in scenes
+        for asset in scene.get("assets", [])
+    )
+
+
+def _assert_render_visual_coverage(manifest: dict) -> None:
+    """Abort before Remotion if any frame can expose the scene background."""
+    issues = []
+    fps = max(int(manifest.get("fps", 30)), 1)
+    for scene in manifest.get("scenes", []):
+        scene_assets = scene.get("assets") or []
+        beats = scene.get("visualBeats") or []
+        mode = str(scene.get("visualMode", "broll"))
+        if mode != "map" and not scene_assets:
+            issues.append(f"scene {scene.get('n')} has no visual assets")
+        cursor = 0
+        for beat_index, beat in enumerate(beats):
+            pool = beat.get("assets") or scene_assets
+            # MapZoom is itself the frame-filling visual; map scenes do not
+            # need a file-backed beat asset pool.
+            if mode != "map" and not pool:
+                issues.append(
+                    f"scene {scene.get('n')} beat {beat_index + 1} has no visual")
+            for asset in pool:
+                name = os.path.basename(str(asset.get("path", "")))
+                if (asset.get("fallback") == "gradient"
+                        or name.endswith("_card.jpg")):
+                    issues.append(
+                        f"scene {scene.get('n')} beat {beat_index + 1} uses "
+                        "a blank gradient")
+            if "fromFrame" in beat or "durationFrames" in beat:
+                start = int(beat.get("fromFrame", -1))
+                frames = int(beat.get("durationFrames", 0))
+                if start != cursor or frames < 1:
+                    issues.append(
+                        f"scene {scene.get('n')} beat {beat_index + 1} leaves "
+                        "a frame coverage gap")
+                cursor = start + frames
+        if beats and any("fromFrame" in beat or "durationFrames" in beat
+                         for beat in beats):
+            scene_frames = max(int(
+                float(scene.get("audioDuration", 0)) * fps + 0.5), 1)
+            if cursor != scene_frames:
+                issues.append(
+                    f"scene {scene.get('n')} frame coverage ends at {cursor}, "
+                    f"expected {scene_frames}")
+    if issues:
+        raise RuntimeError("render visual coverage failed: " + "; ".join(issues))
 
 
 def _write_asset_credits(scenes: list[dict], outdir: str) -> str:
@@ -494,12 +668,38 @@ def _impact_start(sc: dict, overlay_seconds: float) -> float:
     return 0.0
 
 
-def _visual_beat_manifest(scene: dict) -> list[dict]:
+def _visual_beat_manifest(scene: dict, fps: int) -> list[dict]:
+    """Serialize beats with contiguous, scene-bounded frame windows.
+
+    Beat timing is authored in seconds, but Remotion renders integer frames.
+    Rounding every start and duration independently can leave a one-frame hole
+    between otherwise contiguous beats.  Quantize the shared boundaries once
+    so every rendered frame belongs to exactly one beat.
+    """
+    beats = list(scene.get("visual_beats") or [])
+    # Remotion/JavaScript Math.round() rounds non-negative half values upward;
+    # mirror it instead of Python's ties-to-even round().
+    # Use the same millisecond-rounded duration written to props.json so this
+    # exactly matches Root.tsx's composition length calculation.
+    render_duration = round(float(scene.get("audio_duration", 0)), 3)
+    scene_frames = max(int(render_duration * fps + 0.5), 1)
+    starts = [min(max(int(float(beat.get("start", 0)) * fps + 0.5), 0),
+                  scene_frames)
+              for beat in beats]
+    if starts:
+        starts[0] = 0
+        for index in range(1, len(starts)):
+            starts[index] = max(starts[index], starts[index - 1])
+
     result = []
-    for index, beat in enumerate(scene.get("visual_beats") or []):
+    for index, beat in enumerate(beats):
+        from_frame = starts[index]
+        end_frame = starts[index + 1] if index + 1 < len(starts) else scene_frames
         entry = {
             "start": round(float(beat.get("start", 0)), 3),
             "duration": round(float(beat.get("duration", 0)), 3),
+            "fromFrame": from_frame,
+            "durationFrames": max(end_frame - from_frame, 1),
             "cue": str(beat.get("cue", "")),
             "purpose": str(beat.get("purpose", "")),
             "searchTerms": list(beat.get("search_terms") or []),
@@ -877,9 +1077,10 @@ def main() -> None:
             "audioPath": os.path.basename(sc["audio_path"]),
             "audioDuration": round(sc["audio_duration"], 3),
             "assets": [_asset_manifest(a) for a in sc["assets"]],
-            "visualBeats": _visual_beat_manifest(sc),
+            "visualBeats": _visual_beat_manifest(sc, fps),
         } for sc in scenes],
     }}
+    _assert_render_visual_coverage(manifest["manifest"])
     manifest_path = os.path.join(workdir, "props.json")
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2, ensure_ascii=False)
@@ -987,9 +1188,11 @@ def main() -> None:
     retention_requires_review = (
         r_gate not in ("off", "false", "0", "")
         and (story_failed or not runtime_ok))
+    visual_fallback_requires_review = _render_fallbacks_require_review(scenes)
     draft_release = (voice_fallback or fact_requires_review
                      or quality_requires_review or audit_requires_review
-                     or retention_requires_review)
+                     or retention_requires_review
+                     or visual_fallback_requires_review)
     status_voice = "⚠️ FALLBACK — DO NOT PUBLISH" if voice_fallback else "OK (cloned)"
     fact_indeterminate = (str(fact_report.get("status", "unknown"))
                           not in ("ok", "no-checkable-claims"))
@@ -1018,6 +1221,11 @@ def main() -> None:
                                 render_audit.get("issues", [])
                                 if str(i.get("severity", "")).lower() == "serious")[:200]
                     + "\n\n" if audit_requires_review else "")
+    fallback_banner = (
+        "> ⚠️ **VISUAL FALLBACK — REVIEW BEFORE PUBLISHING.** One or more "
+        "media lookups failed, so the renderer substituted a nearby visual "
+        "or animated evidence board. No blank frame was emitted.\n\n"
+        if visual_fallback_requires_review else "")
     status_audit = ("⚠️ REVIEW" if audit_requires_review
                     else render_audit.get("status", "skipped"))
     status_retention = (
@@ -1039,7 +1247,7 @@ def main() -> None:
         + "\n\n" if retention_requires_review else "")
     meta = f"""## {script['title']}
 
-{voice_banner}{fact_banner}{audit_banner}{retention_banner}**Reliability:** Voice: {status_voice} | Captions: {caption_status} | Fact-check: {status_fact} | Quality: {status_quality} | Render audit: {status_audit} | Story: {status_retention}
+{voice_banner}{fact_banner}{audit_banner}{fallback_banner}{retention_banner}**Reliability:** Voice: {status_voice} | Captions: {caption_status} | Fact-check: {status_fact} | Quality: {status_quality} | Render audit: {status_audit} | Story: {status_retention}
 
 **Duration:** {duration / 60:.1f} min · **Scenes:** {len(scenes)} · **Style:** {style} ·
 **AI visuals:** {n_ai} · **Run:** {stamp} · **Renderer:** {used_engine} ·
@@ -1088,6 +1296,7 @@ Remotion. Brand: Terra Incognita.*
 
     with open(os.path.join(outdir, "run_summary.json"), "w", encoding="utf-8") as f:
         json.dump({"draft_release": draft_release, "voice_fallback": voice_fallback,
+                   "visual_fallback_review": visual_fallback_requires_review,
                    "voice": voice_line, "captions": caption_status,
                    "factcheck": fact_report,
                    "quality": quality_report,

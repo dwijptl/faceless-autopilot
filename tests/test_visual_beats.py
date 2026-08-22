@@ -1,4 +1,5 @@
 import visual_beats
+import run
 
 
 def _cfg():
@@ -63,3 +64,23 @@ def test_cues_map_to_contiguous_full_scene_timing():
     assert beats[0]["start"] + beats[0]["duration"] == beats[1]["start"]
     assert abs(beats[-1]["start"] + beats[-1]["duration"] - 9.0) < 0.01
     assert beats[1]["start"] > beats[0]["start"]
+
+
+def test_manifest_quantizes_shared_boundaries_without_blank_frames():
+    scene = {
+        "audio_duration": 5.0,
+        "assets": [],
+        "visual_beats": [
+            {"start": 0.0, "duration": 1.01},
+            {"start": 1.01, "duration": 2.01},
+            {"start": 3.02, "duration": 1.98},
+        ],
+    }
+    beats = run._visual_beat_manifest(scene, 30)
+
+    assert beats[0]["fromFrame"] == 0
+    assert all(
+        left["fromFrame"] + left["durationFrames"] == right["fromFrame"]
+        for left, right in zip(beats, beats[1:])
+    )
+    assert beats[-1]["fromFrame"] + beats[-1]["durationFrames"] == 150

@@ -35,6 +35,7 @@ type Asset = {
 };
 type VisualBeat = {
   start: number; duration: number; assets: Asset[];
+  fromFrame?: number; durationFrames?: number;
   family?: string; camera?: string; intensity?: number; graphic?: GraphicData;
   sourcePolicy?: string;
 };
@@ -190,10 +191,19 @@ export const SceneVisual: React.FC<{
     }
   };
   if (visualBeats.length > 0) {
+    // Quantize shared boundaries, not each beat's start and duration
+    // independently.  Independent rounding can leave a one-frame hole that
+    // exposes the solid scene background between otherwise contiguous shots.
+    const starts = visualBeats.map((beat) => Math.min(Math.max(
+      beat.fromFrame ?? Math.round(beat.start * fps), 0), sceneFrames));
+    starts[0] = 0;
+    for (let index = 1; index < starts.length; index++) {
+      starts[index] = Math.max(starts[index], starts[index - 1]);
+    }
     visualBeats.forEach((beat, index) => {
-      const from = Math.max(0, Math.round(beat.start * fps));
-      const frames = Math.min(Math.max(Math.round(beat.duration * fps), 1),
-        Math.max(sceneFrames - from, 0));
+      const from = starts[index];
+      const end = index + 1 < starts.length ? starts[index + 1] : sceneFrames;
+      const frames = Math.max(end - from, 1);
       addShots(from, frames, beat.assets?.length ? beat.assets : assets,
         index * 100, beat.camera, beat.intensity, beat.sourcePolicy);
     });

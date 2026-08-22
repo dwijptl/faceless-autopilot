@@ -162,7 +162,8 @@ def test_no_rescue_without_budget(tmp_path, monkeypatch):
                         lambda *a, **kw: (_ for _ in ()).throw(AssertionError))
     out = assets.fetch_scene_assets(scene, 4.0, str(tmp_path), cfg, "pk", "gk",
                                     set(), set(), [0], rescue_budget=[0])
-    assert out and out[0]["path"].endswith("_card.jpg")  # gradient fallback
+    assert out and out[0]["kind"] == "graphic"
+    assert out[0]["fallback"] == "programmatic"
 
 
 def test_primary_source_beat_never_uses_ai_rescue(tmp_path, monkeypatch):
@@ -183,6 +184,7 @@ def test_primary_source_beat_never_uses_ai_rescue(tmp_path, monkeypatch):
     out = assets.fetch_scene_assets(
         scene, 4.0, str(tmp_path), cfg, "pk", "gk", set(), set(), [0],
         rescue_budget=[4], director_budget=[4])
-    assert out[0]["path"].endswith("_card.jpg")
+    assert out[0]["kind"] == "graphic"
+    assert out[0]["fallback"] == "programmatic"
     assert not out[0].get("ai")
     assert out[0]["source_policy"] == "primary"

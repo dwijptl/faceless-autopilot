@@ -34,6 +34,14 @@ def test_fallback_gradient_frame_shape_and_dtype():
     assert frame.dtype.name == "uint8"
 
 
+def test_emergency_evidence_frame_is_not_a_solid_gradient():
+    frame = render._evidence_frame(320, 180, seed=7)
+    assert frame.shape == (180, 320, 3)
+    # Grid, panels, connector, and focus ring create real spatial detail.
+    assert len(set(map(tuple, frame.reshape(-1, 3)))) > 100
+    assert frame.std() > render._gradient_frame(320, 180, seed=7).std()
+
+
 def test_non_empty_assets_still_uses_assets(tmp_path, monkeypatch):
     # A populated scene must NOT take the fallback path.
     calls = {"fallback": 0, "ken_burns": 0}

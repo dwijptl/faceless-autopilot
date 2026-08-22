@@ -3,7 +3,7 @@
 Priority per scene (by visual_mode from the script):
   ai_image  -> FLUX (fal.ai) or Gemini image gen -> stock fallback
   kinetic / stat / card / glass -> one background asset (stock or AI) — overlays drawn in Remotion
-  broll     -> Pexels video -> Pexels photo -> gradient card
+  broll     -> Pexels video -> Pexels photo -> animated evidence graphic
 
 CINEMATIC QUERY SHAPING: raw search terms pull generic vacation-stock. Every
 term is first searched with a rotating cinematic modifier ("aerial", "macro",
@@ -154,6 +154,11 @@ def _best_video_file(video: dict, want_w: int, want_h: int | None = None,
 
 
 def _gradient_card(path: str, w: int, h: int, seed: int) -> str:
+    """Legacy on-disk fallback kept for old hero-shot callers.
+
+    Scene and beat resolution must use :func:`fallback_graphic_asset` instead;
+    a full-frame gradient is indistinguishable from missing footage.
+    """
     palettes = [((10, 20, 40), (18, 35, 63)), ((16, 12, 34), (70, 44, 108)),
                 ((8, 26, 26), (22, 78, 74)), ((28, 18, 8), (104, 64, 26))]
     top, bottom = palettes[seed % len(palettes)]
@@ -164,6 +169,51 @@ def _gradient_card(path: str, w: int, h: int, seed: int) -> str:
         d.line([(0, y), (w, y)], fill=tuple(int(a + (b - a) * t) for a, b in zip(top, bottom)))
     img.save(path, quality=90)
     return path
+
+
+def fallback_graphic_asset(scene: dict, beat: dict | None = None,
+                           index: int = 0) -> dict:
+    """Return a zero-network, non-blank visual for a failed media lookup.
+
+    Remotion renders this as an animated evidence board.  It deliberately has
+    no filesystem dependency, so it also survives an episode-wide stock/AI
+    outage.  The ``fallback`` marker keeps the quality gate honest: the draft
+    remains review-only even though viewers never see a solid colour card.
+    """
+    beat = beat or {}
+    raw_title = (beat.get("purpose") or beat.get("cue")
+                 or scene.get("title") or scene.get("narration")
+                 or "Visual evidence")
+    title = " ".join(str(raw_title).split())[:60]
+    terms = (beat.get("search_terms") or scene.get("search_terms") or [])
+    labels = []
+    for term in terms:
+        label = " ".join(str(term).split())[:28]
+        if label and label.casefold() not in {x.casefold() for x in labels}:
+            labels.append(label)
+        if len(labels) == 3:
+            break
+    if not labels:
+        words = title.split()
+        width = max(int(math.ceil(len(words) / 3)), 1)
+        labels = [" ".join(words[pos:pos + width])[:28]
+                  for pos in range(0, len(words), width)][:3]
+    labels = labels or ["EVIDENCE"]
+    try:
+        scene_n = int(scene.get("n", 0))
+    except (TypeError, ValueError):
+        scene_n = 0
+    return {
+        "path": f"s{scene_n:02d}_b{index:02d}_fallback_graphic",
+        "kind": "graphic",
+        "beat_index": index,
+        "graphic": {
+            "kind": "fallback",
+            "title": title,
+            "items": [{"label": label} for label in labels],
+        },
+        "fallback": "programmatic",
+    }
 
 
 def _orientation(cfg) -> str:
@@ -939,12 +989,9 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
                     if photo:
                         beat_assets.append(photo)
             if not beat_assets:
-                path = os.path.join(outdir,
-                                    f"s{scene['n']:02d}_b{index:02d}_card.jpg")
-                _gradient_card(path, cfg["video"]["width"], cfg["video"]["height"],
-                               scene["n"] * 31 + index)
-                beat_assets.append({"path": path, "kind": "image"})
-                print(f"[assets] scene {scene['n']} beat {index + 1}: gradient fallback")
+                beat_assets.append(fallback_graphic_asset(scene, beat, index))
+                print(f"[assets] scene {scene['n']} beat {index + 1}: "
+                      "animated evidence fallback")
             for asset in beat_assets:
                 asset["beat_index"] = index
                 asset.setdefault("source_policy", policy)
@@ -1000,9 +1047,7 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
                 rescue_budget[0] -= 1
                 assets.append({"path": path, "kind": "image", "ai": True})
                 print(f"[assets] scene {scene['n']}: AI rescue still")
-    if not assets:  # absolute fallback — never fail
-        path = os.path.join(outdir, f"s{scene['n']:02d}_card.jpg")
-        _gradient_card(path, cfg["video"]["width"], cfg["video"]["height"], scene["n"])
-        assets.append({"path": path, "kind": "image"})
-        print(f"[assets] scene {scene['n']}: gradient card fallback")
+    if not assets:  # absolute fallback — never show a solid colour card
+        assets.append(fallback_graphic_asset(scene))
+        print(f"[assets] scene {scene['n']}: animated evidence fallback")
     return assets

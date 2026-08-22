@@ -182,6 +182,68 @@ const fmt = (v?: number, unit?: string) => {
 const stagger = (t: number, i: number, n: number) =>
   ease(Math.min(Math.max((t * (n + 1.6) - i) / 1.6, 0), 1));
 
+// Network-independent last resort. This is intentionally visually dense: a
+// failed stock/AI lookup must never read as a blank solid-colour frame.
+const FallbackGraphic: React.FC<{
+  data: GraphicData; style: StylePack; t: number;
+}> = ({data, style, t}) => {
+  const labels = (data.items ?? [])
+    .map((item) => String(item.label ?? '').trim())
+    .filter(Boolean)
+    .slice(0, 3);
+  const items = labels.length > 0 ? labels : ['EVIDENCE', 'CONTEXT', 'UNKNOWN'];
+  const positions = [
+    {left: 13, top: 43},
+    {left: 42, top: 66},
+    {left: 71, top: 43},
+  ];
+  const sweep = interpolate(t, [0, 1], [-12, 112]);
+  return (
+    <Canvas style={style} title={data.title}>
+      <svg viewBox="0 0 1000 560" style={{position: 'absolute', inset: '17% 8% 8%',
+        width: '84%', height: '72%', overflow: 'visible'}}>
+        <path d="M180 245 L500 370 L820 245" fill="none"
+          stroke="rgba(180,198,230,0.34)" strokeWidth="3"
+          strokeDasharray="10 12" strokeDashoffset={(1 - t) * 120} />
+        <circle cx="500" cy="225" r={88 + 18 * t} fill="none"
+          stroke={style.accent} strokeWidth="4" opacity={0.32 + t * 0.5} />
+        <circle cx="500" cy="225" r={45 + 10 * t} fill="rgba(0,0,0,0.28)"
+          stroke="rgba(232,236,244,0.7)" strokeWidth="2" />
+        <path d="M500 115 V335 M390 225 H610" stroke="rgba(232,236,244,0.22)"
+          strokeWidth="2" />
+      </svg>
+      <div style={{position: 'absolute', left: '50%', top: '45%',
+        transform: `translate(-50%, -50%) scale(${0.82 + 0.18 * ease(t)})`,
+        width: 132, height: 132, borderRadius: 999, display: 'grid',
+        placeItems: 'center', color: style.accent, fontSize: 72, fontWeight: 900,
+        border: `3px solid ${style.accent}`,
+        background: 'rgba(5,9,16,0.76)',
+        boxShadow: `0 0 55px ${style.accent}55`}}>?</div>
+      {items.map((label, index) => {
+        const position = positions[index];
+        const p = stagger(t, index, items.length);
+        return (
+          <div key={`${label}-${index}`} style={{position: 'absolute',
+            left: `${position.left}%`, top: `${position.top}%`, width: '16%',
+            minHeight: 92, padding: '22px 24px', display: 'grid',
+            placeItems: 'center', textAlign: 'center', fontSize: 25,
+            fontWeight: 750, letterSpacing: 0.6, lineHeight: 1.25,
+            opacity: p, transform: `translateY(${(1 - p) * 30}px)`,
+            border: '1px solid rgba(180,198,230,0.35)', borderRadius: 10,
+            background: 'linear-gradient(145deg, rgba(24,33,52,0.94), rgba(8,13,23,0.92))',
+            boxShadow: '0 18px 45px rgba(0,0,0,0.38)'}}>{label}</div>
+        );
+      })}
+      <div style={{position: 'absolute', left: 0, right: 0, top: `${sweep}%`,
+        height: 3, background: `linear-gradient(90deg, transparent, ${style.accent}, transparent)`,
+        opacity: 0.58, boxShadow: `0 0 24px ${style.accent}`}} />
+      <div style={{position: 'absolute', left: '7%', bottom: '7%',
+        color: 'rgba(205,216,236,0.62)', fontSize: 18, fontWeight: 700,
+        letterSpacing: 5}}>TERRA INCOGNITA · EVIDENCE MAP</div>
+    </Canvas>
+  );
+};
+
 // ── timeline: chronology with nodes lighting in order ──────────────────
 const TimelineGraphic: React.FC<{
   data: GraphicData; style: StylePack; t: number;
@@ -428,6 +490,8 @@ export const FamilyGraphic: React.FC<{
   // reserve the last 15% as a hold so the finished graphic can be read
   const t = Math.min(frame / Math.max(durationInFrames * 0.85, 1), 1);
   switch (graphic.kind) {
+    case 'fallback':
+      return <FallbackGraphic data={graphic} style={style} t={t} />;
     case 'timeline':
       return <TimelineGraphic data={graphic} style={style} t={t} />;
     case 'scale':

@@ -77,6 +77,7 @@ const FALLBACK = {
       assets: [] as {path: string; kind: string; duration?: number}[],
       visualBeats: [] as {
         start: number; duration: number; cue?: string; purpose?: string;
+        fromFrame?: number; durationFrames?: number;
         searchTerms?: string[];
         assets: {path: string; kind: string; duration?: number}[];
       }[],

@@ -13,8 +13,7 @@ from moviepy import (AudioFileClip, CompositeAudioClip, CompositeVideoClip,
                      ImageClip, TextClip, VideoFileClip, afx,
                      concatenate_videoclips, vfx)
 
-# Same palette family as assets._gradient_card so the fallback background
-# reads as part of the house style.
+# Same palette family as the Remotion evidence fallback.
 _FALLBACK_PALETTES = [
     ((10, 20, 40), (18, 35, 63)),
     ((16, 12, 34), (70, 44, 108)),
@@ -62,17 +61,67 @@ def _gradient_frame(w: int, h: int, seed: int):
     return np.repeat(col[:, None, :], w, axis=1).astype("uint8")      # (h, w, 3)
 
 
+def _evidence_frame(w: int, h: int, seed: int):
+    """Dense technical evidence board for the emergency MoviePy path."""
+    frame = _gradient_frame(w, h, seed).astype(np.float32)
+    accent = np.array((240, 160, 32), dtype=np.float32)
+    grid = np.array((92, 116, 150), dtype=np.float32)
+
+    def line_y(y: int, thickness: int = 2, color=grid, alpha: float = 0.28):
+        y0, y1 = max(y, 0), min(y + thickness, h)
+        frame[y0:y1, :] = frame[y0:y1, :] * (1 - alpha) + color * alpha
+
+    def line_x(x: int, thickness: int = 2, color=grid, alpha: float = 0.28):
+        x0, x1 = max(x, 0), min(x + thickness, w)
+        frame[:, x0:x1] = frame[:, x0:x1] * (1 - alpha) + color * alpha
+
+    for x in range(max(w // 12, 1), w, max(w // 12, 1)):
+        line_x(x, 1)
+    for y in range(max(h // 8, 1), h, max(h // 8, 1)):
+        line_y(y, 1)
+
+    # Three evidence panels, connected by an accent trace.
+    panel_w, panel_h = max(w // 5, 24), max(h // 5, 20)
+    panels = [(w // 12, h // 2), (w // 2 - panel_w // 2, 2 * h // 3),
+              (w - w // 12 - panel_w, h // 2)]
+    centers = []
+    for x, y in panels:
+        x1, y1 = min(x + panel_w, w), min(y + panel_h, h)
+        frame[y:y1, x:x1] = frame[y:y1, x:x1] * 0.55 + grid * 0.18
+        thickness = max(min(w, h) // 240, 2)
+        frame[y:y + thickness, x:x1] = accent
+        frame[y1 - thickness:y1, x:x1] = accent * 0.55
+        frame[y:y1, x:x + thickness] = accent * 0.55
+        frame[y:y1, x1 - thickness:x1] = accent * 0.55
+        centers.append((x + panel_w // 2, y + panel_h // 2))
+
+    for (x0, y0), (x1, y1) in zip(centers, centers[1:]):
+        steps = max(abs(x1 - x0), abs(y1 - y0), 1)
+        xs = np.linspace(x0, x1, steps).astype(int)
+        ys = np.linspace(y0, y1, steps).astype(int)
+        frame[np.clip(ys, 0, h - 1), np.clip(xs, 0, w - 1)] = accent
+
+    yy, xx = np.ogrid[:h, :w]
+    radius = max(min(w, h) // 9, 8)
+    distance = np.sqrt((xx - w // 2) ** 2 + (yy - h // 2) ** 2)
+    ring = np.abs(distance - radius) <= max(radius // 20, 2)
+    core = distance <= max(radius // 5, 3)
+    frame[ring] = accent
+    frame[core] = frame[core] * 0.3 + accent * 0.7
+    line_y(max(h // 10, 2), max(h // 180, 2), accent, 0.9)
+    return np.clip(frame, 0, 255).astype("uint8")
+
+
 def _fallback_visual(duration: float, w: int, h: int, seed: int, zoom_in: bool):
-    """Gentle Ken Burns over a house-palette gradient.
+    """Gentle Ken Burns over a technical evidence board.
 
     Map scenes (and any scene whose sourcing produced nothing) reach this
     MoviePy fallback renderer with an empty asset list: Remotion draws their
     background itself via MapZoom, but this renderer has no such component.
-    Rather than divide by zero, put a living gradient behind the voiceover —
-    the same "never fail" gradient-card fallback assets.fetch_scene_assets
-    uses for every other empty-asset path.
+    Rather than divide by zero or expose a solid frame, render a visibly active
+    evidence board that matches the Remotion emergency fallback.
     """
-    base = ImageClip(_gradient_frame(w, h, seed)).with_duration(duration)
+    base = ImageClip(_evidence_frame(w, h, seed)).with_duration(duration)
     base = base.resized(1.12)  # headroom so the move never exposes an edge
     z0, z1 = (1.0, 1.08) if zoom_in else (1.08, 1.0)
     moving = base.resized(lambda t: z0 + (z1 - z0) * (t / max(duration, 0.01)))
@@ -96,6 +145,10 @@ def _scene_visual(assets: list[dict], duration: float, cfg: dict, rng: random.Ra
             seg = min(seg, usable)
             start = rng.uniform(0, max(usable - seg, 0)) if i >= len(assets) else 0
             parts.append(_fit(src.subclipped(start, start + seg), w, h))
+        elif a["kind"] == "graphic":
+            parts.append(_fallback_visual(
+                seg, w, h, int(rng.random() * 1000), zoom_in))
+            zoom_in = not zoom_in
         else:
             parts.append(_ken_burns(a["path"], seg, w, h, zoom_in))
             zoom_in = not zoom_in
