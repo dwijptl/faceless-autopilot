@@ -1,4 +1,4 @@
-# GROWTH_PLAN — Terra Incognita → 1M subscribers
+# GROWTH_PLAN — SURAAGNAMA → 1M subscribers
 
 > Strategy document, researched **2026-07-13**. Companion to `PROJECT_LOG.md`
 > (system state) and `FAILURES.md` (quality registry). Every recommendation

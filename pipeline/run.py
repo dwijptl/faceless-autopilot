@@ -108,7 +108,9 @@ def thumbnail_remotion(manifest_path: str, workdir: str, thumb_path: str) -> Non
 # strongest text signal we control; the tag mix decides which Hindi cluster
 # we land in. (Per-video "Video language: Hindi" in Studio still matters most.)
 
-INDIA_DESC_HEADER = ("🇮🇳 असली केस, असली सबूत — अनसुलझे रहस्य हिंदी में | सुरागनामा\n\n")
+INDIA_DESC_HEADER = (
+    "सुरागनामा में असली केस, अनसुलझे रहस्य और रहस्यमयी घटनाओं की जाँच — आसान हिंदी में।\n\n"
+)
 
 # Evergreen Hindi discovery tags — what an Indian viewer actually types.
 # Post-CASE_FILE_PIVOT these name the case-file cluster, NOT space/science:
@@ -119,17 +121,19 @@ BASE_HINDI_TAGS = ["असली केस",
                    "रहस्यमयी घटना",
                    "अनसुलझे रहस्य",
                    "सच्ची कहानी",
+                   "क्राइम डॉक्यूमेंट्री हिंदी",
                    "हिंदी",
                    "भारत",
                    "hindi mystery", "unsolved mystery hindi",
-                   "real case hindi", "hindi documentary"]
+                   "real case hindi", "hindi documentary",
+                   "mystery documentary hindi", "सुरागनामा", "suraagnama"]
 
 # Hinglish search terms — how young Indian viewers actually type on mobile.
 HINGLISH_TAGS = ["asli case hindi", "ansuljha rahasya", "rahasyamayi ghatna"]
 
 SUBSCRIBE_CTA = ("\U0001F514 ऐसी ही फ़ाइलों के लिए सब्सक्राइब करें — "
-                 "सुरागनामा")   # 🔔 ऐसी ही फ़ाइलों के लिए सब्सक्राइब करें
-BASE_HASHTAGS = ["#हिंदी", "#रहस्य", "#असलीकेस"]
+                 "सुरागनामा (@suraagnama)")
+BASE_HASHTAGS = ["#सुरागनामा", "#असलीकेस", "#अनसुलझारहस्य"]
 
 
 def _india_tags(tags: list, is_short: bool = False) -> list:
@@ -140,7 +144,7 @@ def _india_tags(tags: list, is_short: bool = False) -> list:
     base = list(BASE_HINDI_TAGS) + list(HINGLISH_TAGS)
     if is_short:
         base = base + ["shorts", "hindi shorts",
-                       "\u0935\u093f\u091c\u094d\u091e\u093e\u0928 \u0936\u0949\u0930\u094d\u091f\u094d\u0938"]  # विज्ञान शॉर्ट्स
+                       "रहस्य शॉर्ट्स", "असली केस शॉर्ट्स"]
     seen, out = set(), []
     for t in base + list(tags or []):
         k = " ".join(str(t).split())[:30].strip()
@@ -1033,6 +1037,7 @@ def main() -> None:
         "progressBar": bool(rcfg.get("progress_bar", True)),
         "brandName": brand_cfg.get("name", ""),
         "brandTagline": brand_cfg.get("tagline", ""),
+        "brandClosingLine": brand_cfg.get("closing_line", "फ़ाइल अभी बंद नहीं हुई।"),
         "watermarkPath": stage_brand(workdir),
         "watermarkOpacity": min(max(
             float(brand_cfg.get("watermark_opacity", 0.08))
@@ -1291,7 +1296,7 @@ def main() -> None:
 
 *Assets: Pexels + licensed AI images{(' + Wikimedia Commons' if commons_credits else '')}. Voice: {voice_line}
 (your cloned Sarvam voice; Kokoro Apache-2.0 fallback). Motion design:
-Remotion. Brand: Suraagnama.*
+Remotion. Brand: SURAAGNAMA · सुरागनामा.*
 """
     with open(os.path.join(outdir, "metadata.md"), "w", encoding="utf-8") as f:
         f.write(meta)

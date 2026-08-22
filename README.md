@@ -144,10 +144,10 @@ Each release `video-YYYY-MM-DD_HHMM` contains:
   final duration. It reports problems without blocking production by default.
 - **Reviewer status** — every release includes `run_summary.json` and a prominent
   metadata line showing voice, caption, fact-check and draft status.
-- **Terra Incognita brand kit** — `brand/` has the banner, avatar, and
+- **Suraagnama brand kit** — `brand/` has the banner, avatar, and
   YouTube watermark to upload once in YouTube Studio → Customization; every
   video automatically carries the corner watermark, branded captions/lower
-  thirds, and outro card. See `brand/BRAND.md`.
+  thirds, and a SURAAGNAMA end signature. See `brand/BRAND.md`.
 
 ## Customizing
 

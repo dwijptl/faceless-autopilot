@@ -1,11 +1,11 @@
-# PROJECT LOG — Terra Incognita / faceless-autopilot
+# PROJECT LOG — SURAAGNAMA / faceless-autopilot
 
 > Session tracker for humans and AI assistants (Claude, Codex). Read this
 > before changing anything. Last updated: **2026-07-12** (Claude session).
 
 ## What this is
 
-Fully automated faceless YouTube channel **Terra Incognita** (Hindi / हिन्दी):
+Fully automated faceless YouTube channel **SURAAGNAMA · सुरागनामा** (Hindi / हिन्दी):
 science + geography "what if / hidden worlds" documentaries. GitHub Actions
 renders everything in the cloud; the owner reviews each release and uploads
 manually (auto-publish deliberately excluded for YouTube policy safety).
@@ -62,7 +62,7 @@ caption chunk size bent per pack via apply_pacing). 116 tests green.
 **Jul 9 — Foundation (Claude).** Repo created via browser; base pipeline
 (Gemini script, Kokoro TTS, Pexels, MoviePy→Remotion, Releases delivery);
 first video same day. Remotion motion-design layer; visual originality
-(visual_modes, style packs, asset log); learnings loop; Terra Incognita brand
+(visual_modes, style packs, asset log); learnings loop; Suraagnama brand
 kit (`brand/`, generator script); Shorts pipeline.
 
 **Jul 10–12 — Hindi edition + reliability (owner + Codex).** Sarvam bulbul:v3

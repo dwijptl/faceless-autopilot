@@ -343,7 +343,7 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
     <TransitionSeries.Sequence key="outro" durationInFrames={outroFrames}>
       <Outro
         brandName={m.brandName || 'SURAAGNAMA'}
-        tagline={m.brandTagline || 'असली केस। असली सबूत। बिना जवाब के सवाल।'}
+        closingLine={m.brandClosingLine || 'फ़ाइल अभी बंद नहीं हुई।'}
         style={style}
         watermarkPath={m.watermarkPath}
       />

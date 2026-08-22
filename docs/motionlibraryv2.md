@@ -6,7 +6,7 @@
 
 ## Context
 
-The channel (Terra Incognita, Hindi faceless-autopilot) already ships a real,
+The channel (SURAAGNAMA, Hindi faceless-autopilot) already ships a real,
 wired-up motion library — this is **not** a greenfield. Today:
 
 - **`remotion/src/motion-library.tsx`** — 6 families / **33 variants**:

@@ -1,7 +1,8 @@
 # सुरागनामा · Suraagnama — Brand Kit
 
-**Identity:** a compass star inside a deliberately broken ring — the gap is
-the clue the file is still missing. Deep navy archive, amber evidence.
+**Identity:** an open case-file folder cut by an `S`-shaped trail, with an
+amber evidence line entering the file. Deep navy archive, white paper, amber
+clue. The mark reads as investigation—not paranormal horror—even at 40 px.
 
 **The name:** सुराग (*clue*) + -नामा, the Indo-Persian suffix for a written
 record — रोज़नामा, बयाननामा, इक़रारनामा. "The record of clues": a case file in
@@ -16,9 +17,9 @@ distinct, and it's what the channel owns.
 
 ## Promise
 
-**असली केस। असली सबूत। बिना जवाब के सवाल।**
-Banner line: **हर फ़ाइल में एक सवाल बाकी है।**
-Closing line: **फ़ाइल बंद हो गई — सुराग अब भी बाकी है।**
+**असली केस · असली सबूत · अनसुलझे सवाल**
+Banner line: **असली केस · असली सबूत · अनसुलझे सवाल**
+Closing line: **फ़ाइल अभी बंद नहीं हुई।**
 
 The channel name never opens an episode. The cold-open contract
 (docs/CASE_FILE_PIVOT.md) puts the impossible human moment first; names,
@@ -42,21 +43,31 @@ titles/kinetic 900 uppercase tight-tracked; lower thirds 700 uppercase
 wide-tracked; captions 600–800 by style pack. Static assets use DejaVu Sans
 Bold (metrically close, available in CI).
 
+## Channel metadata
+
+Paste `channel_description.txt` into YouTube Studio → Customization → Profile.
+Every generated video description begins with the same real-case cluster and
+ends with the `@suraagnama` subscribe CTA; production metadata must never fall
+back to the abandoned space/science tag set.
+
 ## Files (regenerate anytime: `python brand/generate_brand.py`)
 
 | File | Size | Upload to |
 |---|---|---|
 | `banner.png` | 2560×1440 | YouTube → Customization → Branding → Banner image |
 | `avatar.png` | 800×800 | Branding → Picture |
-| `yt_watermark.png` | 300×300 | Branding → Video watermark |
+| `yt_watermark.png` | 150×150 | Branding → Video watermark |
 | `logo.png` / `logo_mark.png` | wordmark / 1024 icon | anywhere you need the logo |
-| `watermark.png` | 600, white alpha | used automatically in-video (corner, ~8% opacity) |
+| `watermark.png` | 600×600, transparent corners | used automatically in-video (corner) |
+| `source-avatar.png` / `source-banner.png` | approved masters | inputs for deterministic regeneration |
 
 ## In-video branding (automatic, every render)
 
 Corner watermark · amber progress bar · branded lower thirds & captions ·
-4-second outro end card ("नई फ़ाइल — सोम · गुरु") · branded
-thumbnail template. Visual style packs rotate per video (documentary →
+long-form outro with **SURAAGNAMA** and the closing line · a compact
+**SURAAGNAMA** signature on the last beat of every Short · branded thumbnail
+template. The MoviePy emergency renderer carries the same corner mark and
+outro. Visual style packs rotate per video (documentary →
 kinetic → editorial → noir) but all draw from this palette, so the channel
 stays recognizable. Tokens live in `remotion/src/styles.ts` — keep hex values
 in sync with this file.

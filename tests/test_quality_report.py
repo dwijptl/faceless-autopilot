@@ -131,19 +131,19 @@ def _meta_ns():
     return ns
 
 
-SCRIPT = {"description": "मंगल पर पहला कदम — फिर क्या होता है?",
-          "tags": ["मंगल ग्रह", "mars surface", "अंतरिक्ष विज्ञान"]}
+SCRIPT = {"description": "कोलकाता की रातों में पत्थर से हुए कत्लों के पीछे कौन था?",
+          "tags": ["कोलकाता स्टोनमैन", "Kolkata Stoneman", "cold case India"]}
 
 
 def test_description_leads_with_devanagari_and_ends_with_hashtags():
     ns = _meta_ns()
     out = ns["build_description"](SCRIPT, is_short=False, chapters="0:00 शुरुआत")
-    assert out.startswith("\U0001F1EE\U0001F1F3")          # 🇮🇳 first
+    assert out.startswith("सुरागनामा")
     assert "सुरागनामा" in out.split("\n")[0]
-    assert "मंगल पर पहला कदम" in out                        # body preserved
+    assert "कोलकाता की रातों" in out                         # body preserved
     assert "0:00 शुरुआत" in out                             # chapters inline
     assert "सब्सक्राइब" in out                               # Hindi CTA
-    assert out.rstrip().split("\n")[-1].startswith("#हिंदी")  # hashtags last
+    assert out.rstrip().split("\n")[-1].startswith("#सुरागनामा")  # brand hashtag first
 
 
 def test_short_description_has_shorts_hashtag_and_no_chapters():
@@ -157,7 +157,7 @@ def test_tags_are_hindi_first_and_within_youtube_limit():
     ns = _meta_ns()
     tags = ns["_india_tags"](SCRIPT["tags"])
     assert tags[0] == "असली केस"                 # the case-file cluster leads
-    assert "मंगल ग्रह" in tags                    # topic tags preserved
+    assert "कोलकाता स्टोनमैन" in tags             # topic tags preserved
     assert "hindi mystery" in tags
     assert sum(len(t) + 2 for t in tags) <= 500   # YouTube hard limit
     assert len(tags) == len(set(t.lower() for t in tags))  # deduped
@@ -167,6 +167,8 @@ def test_short_tags_add_shorts_cluster():
     ns = _meta_ns()
     tags = ns["get_short_tags"](SCRIPT["tags"])
     assert "shorts" in tags and "hindi shorts" in tags
+    assert "रहस्य शॉर्ट्स" in tags
+    assert "विज्ञान शॉर्ट्स" not in tags
 
 
 def test_tag_budget_never_exceeded_with_many_long_tags():

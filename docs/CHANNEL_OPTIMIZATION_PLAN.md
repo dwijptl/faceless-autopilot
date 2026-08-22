@@ -129,4 +129,4 @@ After 5 more uploads, re-pull: CTR trend, referrer retention split, and
 whether descent-family dominance survives contact with more impressions.
 Whatever this document got wrong, `learnings.md` overwrites it — that is the
 design. The one permanent line: **packaging is tested in suggested slots
-next to Hindi science content; win there or don't get watched.**
+next to Hindi real-case and mystery-documentary content; win there or don't get watched.**

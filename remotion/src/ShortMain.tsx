@@ -24,6 +24,7 @@ import {
   SfxLayer,
   TextureOverlay,
   Watermark,
+  headingFamily,
 } from './elements';
 import {variationFor} from './variation';
 import {AnimatedStatCard, CtaLayer, EditorialCard, KineticTitle, SceneFrame} from './motion-library';
@@ -93,6 +94,37 @@ const LoopBridge: React.FC<{asset?: {path: string; kind: string}; fps: number}> 
         style={{width: '100%', height: '100%', objectFit: 'cover', transform: 'scale(1.05)'}} />
     )}
   </AbsoluteFill>;
+};
+
+// Keep the replay bridge, but make channel recall explicit: every Short ends
+// with the brand name visible for the final beat instead of adding a dead
+// outro card that would break the loop.
+const ShortEndBrand: React.FC<{
+  brandName: string;
+  watermarkPath: string | null;
+  style: StylePack;
+}> = ({brandName, watermarkPath, style}) => {
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
+  const opacity = interpolate(frame, [0, Math.max(Math.round(0.18 * fps), 1)],
+    [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  return (
+    <AbsoluteFill style={{justifyContent: 'flex-end', alignItems: 'center',
+      paddingBottom: 300, opacity, pointerEvents: 'none'}}>
+      <div style={{display: 'flex', alignItems: 'center', gap: 18,
+        padding: '14px 26px', borderRadius: 999,
+        background: 'rgba(10,20,40,0.92)',
+        border: `2px solid ${style.accent}`,
+        boxShadow: '0 14px 40px rgba(0,0,0,0.48)',
+        fontFamily: headingFamily(style)}}>
+        {watermarkPath ? (
+          <Img src={staticFile(watermarkPath)} style={{width: 58, height: 58}} />
+        ) : null}
+        <span style={{fontSize: 42, fontWeight: 900, letterSpacing: 4,
+          color: '#F4F7FB'}}>{brandName}</span>
+      </div>
+    </AbsoluteFill>
+  );
 };
 
 export const ShortMain: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
@@ -188,6 +220,8 @@ export const ShortMain: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
       <Sequence from={Math.max(0, durationInFrames - bridgeFrames)}
         durationInFrames={bridgeFrames}>
         <LoopBridge asset={m.scenes[0]?.assets?.[0]} fps={fps} />
+        <ShortEndBrand brandName={m.brandName || 'SURAAGNAMA'}
+          watermarkPath={m.watermarkPath} style={style} />
       </Sequence>
       <CaptionsLayer
         captions={m.captions}

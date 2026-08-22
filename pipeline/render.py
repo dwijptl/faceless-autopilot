@@ -13,6 +13,8 @@ from moviepy import (AudioFileClip, CompositeAudioClip, CompositeVideoClip,
                      ImageClip, TextClip, VideoFileClip, afx,
                      concatenate_videoclips, vfx)
 
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 # Same palette family as the Remotion evidence fallback.
 _FALLBACK_PALETTES = [
     ((10, 20, 40), (18, 35, 63)),
@@ -198,6 +200,58 @@ def _music(total: float, cfg: dict):
     ])
 
 
+def _brand_watermark(duration: float, cfg: dict, w: int, h: int):
+    """Corner mark for the emergency renderer, matching the Remotion path."""
+    path = os.path.join(REPO_ROOT, "brand", "watermark.png")
+    if not os.path.exists(path):
+        return None
+    opacity = min(max(float(cfg.get("brand", {}).get(
+        "watermark_opacity", 0.10)), 0.05), 0.18)
+    size = max(round(min(w, h) * 0.085), 48)
+    margin = max(round(min(w, h) * 0.035), 20)
+    return (ImageClip(path).with_duration(duration).resized(width=size)
+            .with_opacity(opacity)
+            .with_position((w - size - margin, h - size - margin)))
+
+
+def _brand_outro(cfg: dict, w: int, h: int):
+    """Branded end card used whenever Remotion falls back to MoviePy."""
+    duration = max(float(cfg.get("video", {}).get("outro_seconds", 4)), 1.0)
+    brand = cfg.get("brand", {})
+    name = str(brand.get("name") or "SURAAGNAMA")
+    closing = str(brand.get("closing_line") or "फ़ाइल अभी बंद नहीं हुई।")
+    layers = [ImageClip(_gradient_frame(w, h, seed=0)).with_duration(duration)]
+
+    mark_path = os.path.join(REPO_ROOT, "brand", "watermark.png")
+    mark_size = max(round(min(w, h) * 0.18), 72)
+    if os.path.exists(mark_path):
+        layers.append(
+            ImageClip(mark_path).with_duration(duration).resized(width=mark_size)
+            .with_position(("center", round(h * 0.20)))
+        )
+
+    name_size = max(round(h * 0.085), 30)
+    name_clip = TextClip(
+        font=_font(), text=name, font_size=name_size, color="white",
+        method="caption", size=(round(w * 0.84), None), text_align="center",
+    ).with_duration(duration).with_position(("center", round(h * 0.47)))
+    layers.append(name_clip)
+
+    line_w, line_h = max(round(w * 0.12), 80), max(round(h * 0.004), 3)
+    line = np.full((line_h, line_w, 3), (255, 176, 32), dtype="uint8")
+    layers.append(ImageClip(line).with_duration(duration)
+                  .with_position(("center", round(h * 0.61))))
+
+    closing_size = max(round(h * 0.034), 18)
+    closing_clip = TextClip(
+        font=_font(), text=closing, font_size=closing_size, color="white",
+        method="caption", size=(round(w * 0.78), None), text_align="center",
+    ).with_duration(duration).with_opacity(0.88).with_position(
+        ("center", round(h * 0.66)))
+    layers.append(closing_clip)
+    return CompositeVideoClip(layers, size=(w, h)).with_duration(duration)
+
+
 def render(scenes: list[dict], events: list[tuple], out_path: str, cfg: dict) -> float:
     """scenes: [{assets, audio_path, audio_duration}] in order. Returns duration."""
     w, h = cfg["video"]["width"], cfg["video"]["height"]
@@ -220,10 +274,17 @@ def render(scenes: list[dict], events: list[tuple], out_path: str, cfg: dict) ->
     layers = [video]
     if cfg["captions"].get("enabled", True) and events:
         layers += _caption_layer(events, cfg, video.duration)
-    final = CompositeVideoClip(layers, size=(w, h)).with_duration(video.duration)
+    watermark = _brand_watermark(video.duration, cfg, w, h)
+    if watermark is not None:
+        layers.append(watermark)
+    story = CompositeVideoClip(layers, size=(w, h)).with_duration(video.duration)
 
-    music = _music(video.duration, cfg)
-    audio = CompositeAudioClip([video.audio, music]) if music else video.audio
+    # A failed primary renderer must not silently drop the channel identity.
+    final = concatenate_videoclips(
+        [story, _brand_outro(cfg, w, h)], method="compose")
+
+    music = _music(final.duration, cfg)
+    audio = CompositeAudioClip([final.audio, music]) if music else final.audio
     final = final.with_audio(audio)
 
     final.write_videofile(

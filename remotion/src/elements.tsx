@@ -657,10 +657,10 @@ export const Watermark: React.FC<{
 
 export const Outro: React.FC<{
   brandName: string;
-  tagline: string; // accepted for manifest compatibility, intentionally not shown
+  closingLine: string;
   style: StylePack;
   watermarkPath: string | null;
-}> = ({brandName, style, watermarkPath}) => {
+}> = ({brandName, closingLine, style, watermarkPath}) => {
   const frame = useCurrentFrame();
   const {fps, width, height} = useVideoConfig();
   const s = Math.max(width, height) / 1920;
@@ -681,6 +681,8 @@ export const Outro: React.FC<{
         <div style={{fontSize: 96 * s, fontWeight: 900, letterSpacing: 10,
           color: BRAND.text, textTransform: 'uppercase'}}>{brandName}</div>
         <div style={{height: 4 * s, width: 220 * s, background: style.accent}} />
+        <div style={{fontSize: 34 * s, fontWeight: 700, letterSpacing: 0.2,
+          color: BRAND.text, opacity: 0.88}}>{closingLine}</div>
       </div>
     </AbsoluteFill>
   );

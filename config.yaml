@@ -174,8 +174,11 @@ llm:
 
 brand:
   name: "SURAAGNAMA"
-  tagline: "असली केस। असली सबूत। बिना जवाब के सवाल।"   # metadata only — not shown on outro
-  watermark_opacity: 0.08  # corner logo watermark on every frame
+  hindi_name: "सुरागनामा"
+  handle: "@suraagnama"
+  tagline: "असली केस · असली सबूत · अनसुलझे सवाल"
+  closing_line: "फ़ाइल अभी बंद नहीं हुई।"
+  watermark_opacity: 0.10  # corner logo watermark on every frame
 
 render:
   engine: "remotion"       # "remotion" (motion design) or "moviepy" (simple);

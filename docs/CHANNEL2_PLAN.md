@@ -60,7 +60,7 @@ everything above and below:**
   tide that thinks". Planet name NOT in the title (title sells the premise;
   the episode builds the IP).
 - **Infrastructure: NEW separate GitHub repo** (own schedules, secrets,
-  canon.json, style pack, English voice). Terra Incognita untouched.
+  canon.json, style pack, English voice). SURAAGNAMA untouched.
 
 The sections below record the analysis history.
 
@@ -213,7 +213,7 @@ with existing All Tomorrows meme space (derivative perception). CONDITIONAL.
 **#5 Alternate-history newsreels** — demand proven (AlternateHistoryHub) but
 saturated commentary space; real-figure/real-event sensitivities. MARGINAL.
 
-## 5. Comparison with Terra Incognita (channel 1)
+## 5. Comparison with SURAAGNAMA (channel 1)
 
 Different language (English vs Hindi), different promise (fictional world vs
 real science), different grammar (serene Attenborough awe vs urgent
@@ -346,7 +346,7 @@ readout. **90 days:** if green — episodes 4–13, atlas page in channel
 banner/community tab, poll-driven episode selection live, first species
 named after a commenter, evaluate Wan budget increase for 1 extra motion
 shot/episode; decision point on print field-guide teaser as community
-reward. Keep Terra Incognita's cadence untouched throughout — channel 2
+reward. Keep SURAAGNAMA's cadence untouched throughout — channel 2
 must never starve channel 1.
 
 ## 11. Go/no-go

@@ -1309,7 +1309,7 @@ Write a scene-segmented script and return ONLY valid JSON with this exact shape:
     "open_loops": [{{"question": "a Hindi question the viewer is left holding", "opens_scene": 1, "partial_scene": 4, "closes_scene": 7}}]
   }},
   "description": "2-3 sentences in HINDI (Devanagari) — line 1 restates the hook as a question a viewer would ask, line 2-3 tease the payoff WITHOUT spoiling it. Name the episode's REAL anchor entity (place/machine/mission, e.g. 'कोला सुपरडीप बोरहोल') once — recommendations key on entities. No hashtags here (the pipeline appends them).",
-  "tags": ["8-12 tags a HINDI-SPEAKING viewer in India would actually type. At least 6 in Devanagari (e.g. 'मंगल ग्रह', 'ब्रह्मांड के रहस्य'), 2-3 Hinglish in Latin script (e.g. 'mangal grah', 'space hindi'), rest English topic terms. Include 2-3 tags naming the episode's REAL anchor entity in BOTH scripts (e.g. 'Kola Superdeep Borehole', 'कोला सुपरडीप'). No generic single words like 'science'."],
+  "tags": ["8-12 tags a HINDI-SPEAKING viewer in India would actually type. At least 6 in Devanagari (e.g. 'अनसुलझा रहस्य', 'असली केस'), 2-3 Hinglish in Latin script (e.g. 'ansuljha rahasya', 'real case hindi'), rest English topic terms. Include 2-3 tags naming the episode's REAL anchor person/place/case in BOTH scripts (e.g. 'Kolkata Stoneman', 'कोलकाता स्टोनमैन'). No generic single words like 'mystery' or 'crime'."],
   "scenes": [
     {{
       "n": 1,

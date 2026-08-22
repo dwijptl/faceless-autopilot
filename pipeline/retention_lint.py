@@ -358,7 +358,7 @@ def repair_prompt(script: dict, report: dict, cfg: dict,
         + (f" (scene {v['scene']})" if v.get("scene") else "")
         + f" {v['detail']}"
         for v in report.get("violations", []))
-    return f"""You are the story editor of a Hindi science documentary channel.
+    return f"""You are the story editor of a Hindi real-case investigation channel.
 The draft below FAILED the channel's deterministic retention audit.
 Fix EVERY listed violation while keeping the same JSON schema, scene count,
 visual_mode, search_terms and all visual payloads (stat/card/glass/map)

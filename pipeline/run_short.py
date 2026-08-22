@@ -1,8 +1,8 @@
 """Faceless Autopilot — SHORTS orchestrator (vertical 1080x1920, 40-55s, Hindi).
 
 Same machinery as run.py, tuned for Shorts/Reels: portrait assets, micro-scene
-pacing, big centered captions, loop-friendly ending, no outro card. Shares the
-brand kit, music, learnings and the never-repeat asset log with long-form.
+pacing, big centered captions, and a loop-friendly branded end signature.
+Shares the brand kit, music, learnings and never-repeat asset log with long-form.
 """
 import copy
 import glob
@@ -320,6 +320,7 @@ def main() -> None:
         "progressBar": bool(cfg["render"].get("progress_bar", False)),
         "brandName": brand_cfg.get("name", ""),
         "brandTagline": brand_cfg.get("tagline", ""),
+        "brandClosingLine": brand_cfg.get("closing_line", "फ़ाइल अभी बंद नहीं हुई।"),
         "watermarkPath": wm,
         "watermarkOpacity": min(max(
             float(brand_cfg.get("watermark_opacity", 0.08))
@@ -434,7 +435,7 @@ voice: {voice_line} · run {stamp}
 - [ ] Instagram: same MP4 works as a Reel
 - [ ] Confirm the loop: does the ending feed the opening?
 
-*Vertical b-roll: Pexels. Voice: {voice_line}. Motion: Remotion.*
+*Vertical b-roll: Pexels. Voice: {voice_line}. Motion: Remotion. Brand: SURAAGNAMA · सुरागनामा.*
 """
     with open(os.path.join(outdir, "metadata.md"), "w", encoding="utf-8") as f:
         f.write(meta)

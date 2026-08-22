@@ -1,4 +1,4 @@
-/** Terra Incognita brand tokens + the topic-driven visual identity system.
+/** Suraagnama brand tokens + the topic-driven visual identity system.
  *
  * v2 — 30 distinct style packs. Brand stays constant (watermark, outro,
  * channel name); everything else — palette, font pairing, caption

@@ -51,7 +51,7 @@ metadata make every video look hand-made.
 ## 2. The one brand decision
 
 The existing brand (`remotion/src/styles.ts`) is **amber (#FFB020) on navy
-(#0A1428)**, "Terra Incognita," with 4 rotating style packs. The external plan
+(#0A1428)**, "SURAAGNAMA," with 4 rotating style packs. The external plan
 proposes **cyan/teal/violet "Liquid Atlas"** with per-topic accent switching.
 These conflict. Three options:
 
@@ -70,8 +70,8 @@ These conflict. Three options:
 and keeps the channel identity while unlocking the mood arc. Everything below
 assumes A (amber-anchored, per-topic accent tint).
 
-Also decide the **channel name/label**: "Terra Incognita" (current) vs "Liquid
-Atlas" (external). You can keep Terra Incognita as the name and use "LIQUID
+The **channel name/label** is now fixed as "SURAAGNAMA"; "Liquid Atlas" was an
+external proposal. Keep SURAAGNAMA as the name and use "LIQUID
 ATLAS · FILE 001"-style episode tags as a motif — no conflict.
 
 ---
@@ -350,8 +350,8 @@ retention, keep only what earns its place.
 
 1. **Palette (§2):** A (amber anchor + per-topic accent, recommended) / B (full
    Liquid Atlas cyan) / C (amber only)?
-2. **Channel label:** keep "Terra Incognita" name with "LIQUID ATLAS · FILE" episode
-   tags, or rebrand?
+2. **Channel label:** fixed as **SURAAGNAMA**; do not create a competing
+   episode sub-brand or alternate label.
 3. **Glass aggressiveness:** conservative (fact cards + location + conclusion only)
    or full (add LiquidLens + refraction heroes early)?
 4. **Where to start:** I'd build Phase 1 first — it's the biggest visible jump and
