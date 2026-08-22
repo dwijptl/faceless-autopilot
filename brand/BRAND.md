@@ -1,7 +1,28 @@
-# Terra Incognita — Brand Kit
+# सुरागनामा · Suraagnama — Brand Kit
 
 **Identity:** a compass star inside a deliberately broken ring — the gap is
-the *unknown* the channel explores. Deep navy space, amber discovery.
+the clue the file is still missing. Deep navy archive, amber evidence.
+
+**The name:** सुराग (*clue*) + -नामा, the Indo-Persian suffix for a written
+record — रोज़नामा, बयाननामा, इक़रारनामा. "The record of clues": a case file in
+one Indian word, in a documentary register rather than a horror one. Handle
+`@suraagnama` (verified free 2026-08-22 — availability was checked by fetching
+the handle directly; web search does NOT surface small channels and returns
+clean for names that are already taken).
+
+**Never brand on the bare word सुराग.** It belongs to SAB Network's *Suraag
+Special* and Doordarshan's *Suraag – The Clue*. The full token is what's
+distinct, and it's what the channel owns.
+
+## Promise
+
+**असली केस। असली सबूत। बिना जवाब के सवाल।**
+Banner line: **हर फ़ाइल में एक सवाल बाकी है।**
+Closing line: **फ़ाइल बंद हो गई — सुराग अब भी बाकी है।**
+
+The channel name never opens an episode. The cold-open contract
+(docs/CASE_FILE_PIVOT.md) puts the impossible human moment first; names,
+places and dates only after the viewer cares. Branding lives on the outro.
 
 ## Palette
 
@@ -34,7 +55,7 @@ Bold (metrically close, available in CI).
 ## In-video branding (automatic, every render)
 
 Corner watermark · amber progress bar · branded lower thirds & captions ·
-4-second outro end card ("New expeditions Mon · Wed · Fri") · branded
+4-second outro end card ("नई फ़ाइल — सोम · गुरु") · branded
 thumbnail template. Visual style packs rotate per video (documentary →
 kinetic → editorial → noir) but all draw from this palette, so the channel
 stays recognizable. Tokens live in `remotion/src/styles.ts` — keep hex values

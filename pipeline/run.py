@@ -1,4 +1,4 @@
-"""Faceless Autopilot — orchestrator (Terra Incognita edition, Hindi).
+"""Faceless Autopilot — orchestrator (Suraagnama edition, Hindi).
 
 topic -> script (Hindi) -> voiceover (Sarvam cloned voice, Kokoro fallback)
 -> assets (AI + stock, never-repeat log) -> captions -> Remotion render
@@ -108,26 +108,28 @@ def thumbnail_remotion(manifest_path: str, workdir: str, thumb_path: str) -> Non
 # strongest text signal we control; the tag mix decides which Hindi cluster
 # we land in. (Per-video "Video language: Hindi" in Studio still matters most.)
 
-INDIA_DESC_HEADER = ("\U0001F1EE\U0001F1F3 \u0939\u093f\u0902\u0926\u0940 \u092e\u0947\u0902 space \u0914\u0930 science \u0915\u0940 \u0916\u094b\u091c \u2014 TERRA INCOGNITA\n\n")
+INDIA_DESC_HEADER = ("🇮🇳 असली केस, असली सबूत — अनसुलझे रहस्य हिंदी में | सुरागनामा\n\n")
 
 # Evergreen Hindi discovery tags — what an Indian viewer actually types.
-BASE_HINDI_TAGS = ["\u0939\u093f\u0902\u0926\u0940 \u092e\u0947\u0902 \u0935\u093f\u091c\u094d\u091e\u093e\u0928",       # हिंदी में विज्ञान
-                   "\u0935\u093f\u091c\u094d\u091e\u093e\u0928 \u0915\u0947 \u0930\u0939\u0938\u094d\u092f",              # विज्ञान के रहस्य
-                   "\u092c\u094d\u0930\u0939\u094d\u092e\u093e\u0902\u0921 \u0915\u0947 \u0930\u0939\u0938\u094d\u092f",  # ब्रह्मांड के रहस्य
-                   "\u0905\u0902\u0924\u0930\u093f\u0915\u094d\u0937 \u0939\u093f\u0902\u0926\u0940",                        # अंतरिक्ष हिंदी
-                   "\u0939\u093f\u0902\u0926\u0940",                                                                                  # हिंदी
-                   "\u092d\u093e\u0930\u0924",                                                                                        # भारत
-                   "hindi science", "space hindi", "science in hindi",
-                   "hindi documentary"]
+# Post-CASE_FILE_PIVOT these name the case-file cluster, NOT space/science:
+# the first two description lines and this tag mix decide which Hindi cluster
+# YouTube files the channel under.
+BASE_HINDI_TAGS = ["असली केस",
+                   "अनसुलझा रहस्य",
+                   "रहस्यमयी घटना",
+                   "अनसुलझे रहस्य",
+                   "सच्ची कहानी",
+                   "हिंदी",
+                   "भारत",
+                   "hindi mystery", "unsolved mystery hindi",
+                   "real case hindi", "hindi documentary"]
 
 # Hinglish search terms — how young Indian viewers actually type on mobile.
-HINGLISH_TAGS = ["vigyan hindi", "brahmand rahasya", "antariksh hindi"]
+HINGLISH_TAGS = ["asli case hindi", "ansuljha rahasya", "rahasyamayi ghatna"]
 
-SUBSCRIBE_CTA = ("\U0001F514 \u0910\u0938\u0940 \u0939\u0940 \u0916\u094b\u091c\u094b\u0902 \u0915\u0947 \u0932\u093f\u090f "
-                 "\u0938\u092c\u094d\u0938\u0915\u094d\u0930\u093e\u0907\u092c \u0915\u0930\u0947\u0902 \u2014 "
-                 "TERRA INCOGNITA")   # 🔔 ऐसी ही खोजों के लिए सब्सक्राइब करें
-BASE_HASHTAGS = ["#\u0939\u093f\u0902\u0926\u0940", "#\u0935\u093f\u091c\u094d\u091e\u093e\u0928",
-                 "#\u092d\u093e\u0930\u0924"]   # #हिंदी #विज्ञान #भारत
+SUBSCRIBE_CTA = ("\U0001F514 ऐसी ही फ़ाइलों के लिए सब्सक्राइब करें — "
+                 "सुरागनामा")   # 🔔 ऐसी ही फ़ाइलों के लिए सब्सक्राइब करें
+BASE_HASHTAGS = ["#हिंदी", "#रहस्य", "#असलीकेस"]
 
 
 def _india_tags(tags: list, is_short: bool = False) -> list:
@@ -1289,7 +1291,7 @@ def main() -> None:
 
 *Assets: Pexels + licensed AI images{(' + Wikimedia Commons' if commons_credits else '')}. Voice: {voice_line}
 (your cloned Sarvam voice; Kokoro Apache-2.0 fallback). Motion design:
-Remotion. Brand: Terra Incognita.*
+Remotion. Brand: Suraagnama.*
 """
     with open(os.path.join(outdir, "metadata.md"), "w", encoding="utf-8") as f:
         f.write(meta)

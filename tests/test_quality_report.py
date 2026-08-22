@@ -139,7 +139,7 @@ def test_description_leads_with_devanagari_and_ends_with_hashtags():
     ns = _meta_ns()
     out = ns["build_description"](SCRIPT, is_short=False, chapters="0:00 शुरुआत")
     assert out.startswith("\U0001F1EE\U0001F1F3")          # 🇮🇳 first
-    assert "TERRA INCOGNITA" in out.split("\n")[0]
+    assert "सुरागनामा" in out.split("\n")[0]
     assert "मंगल पर पहला कदम" in out                        # body preserved
     assert "0:00 शुरुआत" in out                             # chapters inline
     assert "सब्सक्राइब" in out                               # Hindi CTA
@@ -156,9 +156,9 @@ def test_short_description_has_shorts_hashtag_and_no_chapters():
 def test_tags_are_hindi_first_and_within_youtube_limit():
     ns = _meta_ns()
     tags = ns["_india_tags"](SCRIPT["tags"])
-    assert tags[0] == "हिंदी में विज्ञान"        # evergreen Hindi leads
+    assert tags[0] == "असली केस"                 # the case-file cluster leads
     assert "मंगल ग्रह" in tags                    # topic tags preserved
-    assert "hindi science" in tags
+    assert "hindi mystery" in tags
     assert sum(len(t) + 2 for t in tags) <= 500   # YouTube hard limit
     assert len(tags) == len(set(t.lower() for t in tags))  # deduped
 

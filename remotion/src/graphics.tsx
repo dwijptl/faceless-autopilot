@@ -239,7 +239,7 @@ const FallbackGraphic: React.FC<{
         opacity: 0.58, boxShadow: `0 0 24px ${style.accent}`}} />
       <div style={{position: 'absolute', left: '7%', bottom: '7%',
         color: 'rgba(205,216,236,0.62)', fontSize: 18, fontWeight: 700,
-        letterSpacing: 5}}>TERRA INCOGNITA · EVIDENCE MAP</div>
+        letterSpacing: 5}}>SURAAGNAMA · EVIDENCE MAP</div>
     </Canvas>
   );
 };

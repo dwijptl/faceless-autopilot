@@ -81,7 +81,7 @@ export const Thumb: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
           <Img src={staticFile(m.watermarkPath)} style={{width: 26, height: 26}} />
         ) : null}
         <span style={{color: BRAND.text, fontSize: 21, fontWeight: 800,
-          letterSpacing: 4}}>TERRA INCOGNITA</span>
+          letterSpacing: 4}}>SURAAGNAMA</span>
       </div>
 
       {/* dramatic Devanagari headline, top-right */}

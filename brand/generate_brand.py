@@ -1,4 +1,4 @@
-"""Terra Incognita brand kit generator (deep navy + amber).
+"""Suraagnama brand kit generator (deep navy + amber).
 
 Regenerates every static brand asset deterministically with PIL:
   logo.png (2000x500 transparent)  logo_mark.png (1024)  banner.png (2560x1440)
@@ -84,7 +84,7 @@ def wordmark(d: ImageDraw.ImageDraw, xy, size: int, spacing: int = None):
     x, y = xy
     f1 = font(size)
     spacing = spacing if spacing is not None else int(size * 0.28)
-    for ch in "TERRA INCOGNITA":
+    for ch in "SURAAGNAMA":
         d.text((x, y), ch, font=f1, fill=TEXT)
         x += d.textlength(ch, font=f1) + spacing
     return x
@@ -98,7 +98,7 @@ def make_logo():
     end_x = wordmark(d, (520, 150), 130)
     d.rectangle([520, 330, end_x - 36, 342], fill=AMBER)
     f2 = font(44)
-    d.text((524, 368), "MAPPING THE WORLD'S HIDDEN PLACES", font=f2,
+    d.text((524, 368), "REAL CASES · REAL EVIDENCE · NO ANSWERS", font=f2,
            fill=AMBER_SOFT)
     img.save(os.path.join(OUT, "logo.png"))
 
@@ -131,7 +131,7 @@ def make_banner():
     mark = draw_mark(240)
     img.paste(mark, (cx - 120, cy - 205), mark)
     f1 = font(92)
-    text = "TERRA INCOGNITA"
+    text = "SURAAGNAMA"
     spacing = 26
     total = sum(d.textlength(ch, font=f1) + spacing for ch in text) - spacing
     x = cx - total / 2
@@ -140,7 +140,7 @@ def make_banner():
         x += d.textlength(ch, font=f1) + spacing
     d.rectangle([cx - 160, cy + 180, cx + 160, cy + 188], fill=AMBER)
     f2 = font(38)
-    sub = "THE WORLD'S HIDDEN PLACES · MON | WED | FRI"
+    sub = "REAL CASES · REAL EVIDENCE · MON | THU"
     d.text((cx - d.textlength(sub, font=f2) / 2, cy + 210), sub, font=f2,
            fill=(255, 200, 92, 255))
     img.convert("RGB").save(os.path.join(OUT, "banner.png"))

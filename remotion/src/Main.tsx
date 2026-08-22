@@ -342,8 +342,8 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
   items.push(
     <TransitionSeries.Sequence key="outro" durationInFrames={outroFrames}>
       <Outro
-        brandName={m.brandName || 'TERRA INCOGNITA'}
-        tagline={m.brandTagline || "Mapping the world's hidden places"}
+        brandName={m.brandName || 'SURAAGNAMA'}
+        tagline={m.brandTagline || 'असली केस। असली सबूत। बिना जवाब के सवाल।'}
         style={style}
         watermarkPath={m.watermarkPath}
       />

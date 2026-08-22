@@ -6,7 +6,8 @@ channel:
   # ── 2026-08 PIVOT (docs/CASE_FILE_PIVOT.md): from mixed science/what-if
   # explainers to ONE identity — real-case investigation mysteries. ──
   niche: >
-    TERRA INCOGNITA is a Hindi real-mystery INVESTIGATION channel. Every
+    SURAAGNAMA (सुरागनामा — "the record of clues") is a Hindi
+    real-mystery INVESTIGATION channel. Every
     long-form episode opens ONE real, documented, unexplained case and
     walks the viewer through the evidence like a detective working the
     file. The channel promise never changes: "एक असली केस, असली सबूत, और एक
@@ -172,7 +173,7 @@ llm:
   temperature: 0.9
 
 brand:
-  name: "TERRA INCOGNITA"
+  name: "SURAAGNAMA"
   tagline: "असली केस। असली सबूत। बिना जवाब के सवाल।"   # metadata only — not shown on outro
   watermark_opacity: 0.08  # corner logo watermark on every frame
 
