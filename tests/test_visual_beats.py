@@ -47,6 +47,20 @@ def test_normalize_plan_falls_back_when_model_returns_too_few_beats():
     result = visual_beats.normalize_plan(script, raw, _cfg())
     assert len(result["scenes"][0]["visual_beats"]) >= 2
     assert result["scenes"][0]["visual_beats"][0]["search_terms"]
+    assert all(b.get("family") for b in result["scenes"][0]["visual_beats"])
+    assert all("fallback" not in b["purpose"].lower()
+               for b in result["scenes"][0]["visual_beats"])
+
+
+def test_map_fallback_plan_uses_map_only_for_orientation():
+    script = {"scenes": [{
+        "n": 1, "title": "समुद्र", "visual_mode": "map",
+        "narration": " ".join(f"शब्द{i}" for i in range(40)),
+        "search_terms": ["south atlantic ocean", "research vessel"],
+    }]}
+    scene = visual_beats.normalize_plan(script, None, _cfg())["scenes"][0]
+    assert scene["visual_beats"][0]["family"] == "map_locate"
+    assert any(b["family"] != "map_locate" for b in scene["visual_beats"][1:])
 
 
 def test_cues_map_to_contiguous_full_scene_timing():

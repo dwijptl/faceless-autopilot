@@ -15,6 +15,7 @@ const FALLBACK = {
   height: 1080,
   xfadeFrames: 12,
   maxShotSeconds: 5,
+  mapShotSeconds: 5.5,
   style: 'documentary',
   accent: '#FFB020',
   progressBar: true,

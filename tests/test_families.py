@@ -102,6 +102,21 @@ def test_compose_prompt_layers_family_pack_identity():
         assert banned not in p.lower()
 
 
+def test_episode_signature_is_stable_but_changes_between_topics():
+    first = families.episode_signature("Antarctic signal", "ocean")
+    assert first == families.episode_signature("Antarctic signal", "ocean")
+    assert first != families.episode_signature("Kola borehole", "deep_earth")
+    assert "photograph" in first or "optics" in first
+
+
+def test_compose_prompt_includes_episode_signature():
+    signature = families.episode_signature("Antarctic signal", "ocean")
+    prompt = families.compose_prompt("a hydrophone array", "measurement",
+                                     "ocean", signature=signature)
+    assert "Episode-specific photographic direction" in prompt
+    assert signature in prompt
+
+
 def test_domain_pack_auto_selection():
     assert families.pick_domain_pack(
         "Kola Superdeep Borehole drilling into the crust") == "deep_earth"

@@ -21,6 +21,7 @@ const FONT =
 export type GraphicItem = {label?: string; value?: number};
 export type GraphicData = {
   kind?: string;
+  variant?: string;
   title?: string;
   unit?: string;
   items?: GraphicItem[];
@@ -198,6 +199,90 @@ const FallbackGraphic: React.FC<{
     {left: 71, top: 43},
   ];
   const sweep = interpolate(t, [0, 1], [-12, 112]);
+  const variant = String(data.variant ?? 'evidence-orbit');
+
+  if (variant === 'signal-trace') {
+    const wave = Array.from({length: 13}, (_, i) => {
+      const x = 5 + i * 7.5;
+      const y = 52 + Math.sin(i * 1.7 + t * 7) * (8 + (i % 3) * 5);
+      return `${x},${y}`;
+    }).join(' ');
+    return (
+      <Canvas style={style} title={data.title}>
+        <div style={{position: 'absolute', left: '8%', top: '24%', bottom: '13%',
+          width: 3, background: style.accent, boxShadow: `0 0 28px ${style.accent}`}} />
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none"
+          style={{position: 'absolute', left: '10%', top: '23%', width: '82%', height: '58%'}}>
+          {[20, 40, 60, 80].map((y) => <line key={y} x1="0" x2="100" y1={y}
+            y2={y} stroke="rgba(180,198,230,0.13)" strokeWidth="0.3" />)}
+          <polyline points={wave} fill="none" stroke={style.accent} strokeWidth="1.2"
+            strokeDasharray="160" strokeDashoffset={(1 - t) * 160} />
+        </svg>
+        {items.map((label, i) => <div key={`${label}-${i}`} style={{position: 'absolute',
+          left: `${18 + i * 25}%`, bottom: `${12 + (i % 2) * 8}%`, fontSize: 24,
+          fontWeight: 750, color: i === 0 ? style.accent : '#D5DDEA',
+          opacity: stagger(t, i, items.length), letterSpacing: 1.2}}>{label}</div>)}
+        <div style={{position: 'absolute', right: `${100 - sweep}%`, top: '23%',
+          height: '58%', width: 2, background: style.accent, opacity: 0.45}} />
+        <div style={{position: 'absolute', left: '8%', bottom: '6%', fontSize: 18,
+          letterSpacing: 5, color: 'rgba(205,216,236,0.62)'}}>SIGNAL TRACE · FIELD AUDIO</div>
+      </Canvas>
+    );
+  }
+
+  if (variant === 'archive-strip') {
+    return (
+      <Canvas style={style} title={data.title}>
+        <div style={{position: 'absolute', left: '8%', right: '8%', top: '24%',
+          bottom: '13%', display: 'flex', gap: '2.5%', alignItems: 'stretch'}}>
+          {items.map((label, i) => {
+            const p = stagger(t, i, items.length);
+            return <div key={`${label}-${i}`} style={{flex: i === 1 ? 1.18 : 0.9,
+              position: 'relative', overflow: 'hidden', opacity: p,
+              transform: `translateY(${(1 - p) * (i % 2 ? -38 : 38)}px) rotate(${i - 1}deg)`,
+              background: 'linear-gradient(145deg, rgba(42,47,55,.98), rgba(12,16,24,.98))',
+              border: '1px solid rgba(220,225,235,.28)', boxShadow: '0 24px 70px rgba(0,0,0,.42)'}}>
+              <div style={{height: '63%', margin: '7%',
+                background: `linear-gradient(${120 + i * 25}deg, rgba(255,255,255,.10), rgba(0,0,0,.38)), repeating-linear-gradient(0deg, rgba(255,255,255,.04) 0 2px, transparent 2px 12px)`,
+                border: '1px solid rgba(255,255,255,.11)'}} />
+              <div style={{padding: '0 8%', fontSize: 27, fontWeight: 800,
+                color: i === 1 ? style.accent : '#E1E6EF'}}>{label}</div>
+              <div style={{position: 'absolute', right: '7%', bottom: '5%',
+                fontSize: 18, letterSpacing: 3, opacity: .45}}>0{i + 1}</div>
+            </div>;
+          })}
+        </div>
+        <div style={{position: 'absolute', left: '8%', bottom: '6%', fontSize: 18,
+          letterSpacing: 5, color: 'rgba(205,216,236,0.62)'}}>ARCHIVE PLATE · SOURCE STUDY</div>
+      </Canvas>
+    );
+  }
+
+  if (variant === 'terrain-scan') {
+    return (
+      <Canvas style={style} title={data.title}>
+        <svg viewBox="0 0 1000 560" style={{position: 'absolute', inset: '18% 6% 8%',
+          width: '88%', height: '72%'}}>
+          {[0, 1, 2, 3, 4, 5].map((i) => <ellipse key={i} cx="500" cy="275"
+            rx={110 + i * 65 + t * 12} ry={55 + i * 29 + t * 6} fill="none"
+            stroke={i === 1 ? style.accent : 'rgba(184,202,232,.24)'}
+            strokeWidth={i === 1 ? 4 : 2} strokeDasharray={`${18 + i * 3} ${8 + i}`} />)}
+          <path d="M80 420 C230 310 330 390 470 260 S720 160 920 245" fill="none"
+            stroke={style.accent} strokeWidth="4" strokeDasharray="520"
+            strokeDashoffset={(1 - t) * 520} />
+        </svg>
+        {items.map((label, i) => <div key={`${label}-${i}`} style={{position: 'absolute',
+          left: `${17 + i * 29}%`, top: `${68 - (i % 2) * 28}%`, padding: '12px 18px',
+          fontSize: 24, fontWeight: 760, opacity: stagger(t, i, items.length),
+          background: 'rgba(7,11,19,.82)', borderBottom: `3px solid ${style.accent}`}}>{label}</div>)}
+        <div style={{position: 'absolute', right: '6%', top: '25%', bottom: '13%',
+          width: 2, background: 'rgba(205,216,236,.22)'}} />
+        <div style={{position: 'absolute', left: '8%', bottom: '6%', fontSize: 18,
+          letterSpacing: 5, color: 'rgba(205,216,236,0.62)'}}>TERRAIN SCAN · DEPTH STUDY</div>
+      </Canvas>
+    );
+  }
+
   return (
     <Canvas style={style} title={data.title}>
       <svg viewBox="0 0 1000 560" style={{position: 'absolute', inset: '17% 8% 8%',

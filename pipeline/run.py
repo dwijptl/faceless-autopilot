@@ -309,7 +309,9 @@ def _validate_scene_assets(scenes: list) -> None:
         scene["assets"] = repaired
 
     # Rebuild candidate lists after removing legacy gradients, then guarantee
-    # that every non-map scene and every timed beat owns a visual pool.
+    # that every scene and every timed beat owns a visual pool. Maps are only
+    # a short orientation shot now, so their remaining narration also needs
+    # concrete coverage.
     concrete = [
         (scene_index, int(asset.get("beat_index", 0)), asset)
         for scene_index, scene in enumerate(scenes)
@@ -324,8 +326,6 @@ def _validate_scene_assets(scenes: list) -> None:
         if asset.get("kind") == "graphic" and not gradient_fallback(asset)
     ]
     for scene_index, scene in enumerate(scenes):
-        if str(scene.get("visual_mode", "broll")) == "map":
-            continue
         beats = scene.get("visual_beats") or []
         if not scene.get("assets"):
             if beats:
@@ -402,14 +402,13 @@ def _assert_render_visual_coverage(manifest: dict) -> None:
         scene_assets = scene.get("assets") or []
         beats = scene.get("visualBeats") or []
         mode = str(scene.get("visualMode", "broll"))
-        if mode != "map" and not scene_assets:
+        if not scene_assets:
             issues.append(f"scene {scene.get('n')} has no visual assets")
         cursor = 0
         for beat_index, beat in enumerate(beats):
             pool = beat.get("assets") or scene_assets
-            # MapZoom is itself the frame-filling visual; map scenes do not
-            # need a file-backed beat asset pool.
-            if mode != "map" and not pool:
+            # MapZoom fades over SceneVisual, so maps need a valid base pool too.
+            if not pool:
                 issues.append(
                     f"scene {scene.get('n')} beat {beat_index + 1} has no visual")
             for asset in pool:
@@ -939,8 +938,10 @@ def main() -> None:
     domain_pack = ""
     if families_mod.enabled(cfg):
         domain_pack = families_mod.pick_domain_pack(topic, script)
+        episode_signature = families_mod.episode_signature(topic, domain_pack)
         for sc in scenes:
             sc["domain_pack"] = domain_pack
+            sc["episode_signature"] = episode_signature
         director_budget = [families_mod.ai_still_budget(cfg)]
         granted = families_mod.allocate_ai(scenes, director_budget[0])
         tagged = sum(1 for sc in scenes
@@ -1027,6 +1028,8 @@ def main() -> None:
         "xfadeFrames": max(int(round(xfade * fps)), 1),
         "maxShotSeconds": float(cfg["video"].get("max_shot_seconds", 5))
         * jit["max_shot_mul"],
+        "mapShotSeconds": min(max(float(cfg.get("maps", {}).get(
+            "max_fullscreen_seconds", 5.5)), 2.5), 8.0),
         "overlaySeconds": overlay_seconds,
         "style": style,
         "variableLabel": str((script.get("changing_variable") or {})

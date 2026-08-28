@@ -37,7 +37,27 @@ def target_beat_count(scene: dict, cfg: dict, scene_index: int = 0) -> int:
                min(int(quality.get("max_per_scene", 12)), count))
 
 
-def _fallback_beats(scene: dict, count: int) -> list[dict]:
+_FALLBACK_FAMILY_SEQUENCE = (
+    "establish_place",
+    "approach",
+    "detail_magnify",
+    "scale_of_place",
+    "anomaly_highlight",
+    "micro_to_macro",
+    "question_pose",
+    "isolation",
+)
+
+
+def _fallback_beats(scene: dict, count: int, scene_index: int = 0,
+                    scene_count: int = 1) -> list[dict]:
+    """Build a complete emergency plan without exposing pipeline language.
+
+    These beats are shown to viewers when the visual-planning request fails,
+    so their purposes must read like editorial direction rather than an error
+    message.  A rotating set of cinematic families also makes the premium AI
+    allocator produce distinct compositions instead of cloning one HUD shot.
+    """
     words = str(scene.get("narration", "")).split()
     terms = [str(t).strip() for t in scene.get("search_terms", []) if str(t).strip()]
     if not terms:
@@ -46,10 +66,22 @@ def _fallback_beats(scene: dict, count: int) -> list[dict]:
     for i in range(count):
         at = min(int(i * len(words) / max(count, 1)), max(len(words) - 1, 0))
         cue = " ".join(words[at:at + 6]).strip()
+        term = terms[i % len(terms)]
+        family = _FALLBACK_FAMILY_SEQUENCE[
+            (scene_index * 3 + i) % len(_FALLBACK_FAMILY_SEQUENCE)]
+        if str(scene.get("visual_mode", "")) == "map" and i == 0:
+            family = "map_locate"
+        elif scene_index == 0 and i == 0:
+            family = "cold_open_hook"
+        elif scene_index == max(scene_count - 1, 0) and i == count - 1:
+            family = "lingering_question"
+        spec = families.get_spec(family)
         beats.append({
             "cue": cue,
-            "search_terms": [terms[i % len(terms)]],
-            "purpose": "fallback visual continuity",
+            "search_terms": [term],
+            "purpose": f"{spec.fn if spec else 'show the story detail'}: {term}"[:100],
+            "family": family,
+            "intensity": 2 if i in (0, count - 1) else 1,
         })
     return beats
 
@@ -131,7 +163,7 @@ def normalize_plan(script: dict, raw_plan: dict | None, cfg: dict) -> dict:
 
         # A short model response is worse than a deterministic complete plan.
         if len(clean) < max(2, target - 1):
-            clean = _fallback_beats(scene, target)
+            clean = _fallback_beats(scene, target, index, len(scenes))
         elif len(clean) > target + 1:
             clean = clean[:target + 1]
         scene["visual_beats"] = clean

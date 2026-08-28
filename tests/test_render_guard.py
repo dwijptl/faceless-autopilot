@@ -28,7 +28,8 @@ def test_zero_byte_asset_treated_as_missing(tmp_path):
     scenes = [{"n": 1, "visual_mode": "map",
                "assets": [{"path": str(empty), "kind": "video"}]}]
     run._validate_scene_assets(scenes)
-    assert scenes[0]["assets"] == []     # map scene has no neighbor to borrow
+    assert scenes[0]["assets"][0]["kind"] == "graphic"
+    assert scenes[0]["assets"][0]["fallback"] == "programmatic"
 
 
 def test_gradient_beat_fallback_borrows_nearest_real_visual(tmp_path):
@@ -127,14 +128,38 @@ def test_pre_render_guard_accepts_complete_programmatic_fallback():
     run._assert_render_visual_coverage(manifest)
 
 
-def test_pre_render_guard_accepts_map_as_frame_filling_visual():
+def test_pre_render_guard_accepts_map_with_post_map_visual():
     manifest = {"fps": 30, "scenes": [{
-        "n": 1, "audioDuration": 2, "visualMode": "map", "assets": [],
+        "n": 1, "audioDuration": 2, "visualMode": "map",
+        "assets": [{"path": "s01_b00_fallback_graphic", "kind": "graphic",
+                    "fallback": "programmatic"}],
         "visualBeats": [{"fromFrame": 0, "durationFrames": 60,
                          "assets": []}],
     }]}
 
     run._assert_render_visual_coverage(manifest)
+
+
+def test_pre_render_guard_rejects_long_map_without_followup_visuals():
+    manifest = {"fps": 30, "mapShotSeconds": 5.5, "scenes": [{
+        "n": 1, "audioDuration": 60, "visualMode": "map", "assets": [],
+        "visualBeats": [{"fromFrame": 0, "durationFrames": 1800,
+                         "assets": []}],
+    }]}
+    with pytest.raises(RuntimeError, match="no visual assets"):
+        run._assert_render_visual_coverage(manifest)
+
+
+def test_programmatic_fallbacks_rotate_layout_and_hide_internal_wording():
+    scene = {"n": 4, "title": "Case", "narration": "Narration"}
+    fallback_assets = [run.assets_mod.fallback_graphic_asset(
+        scene, {"cue": f"spoken cue {i}",
+                "purpose": "fallback visual continuity",
+                "search_terms": [f"clue {i}"]}, i) for i in range(4)]
+
+    assert len({a["graphic"]["variant"] for a in fallback_assets}) == 4
+    assert all(a["graphic"]["title"].startswith("spoken cue")
+               for a in fallback_assets)
 
 
 def test_any_render_substitution_forces_release_review():

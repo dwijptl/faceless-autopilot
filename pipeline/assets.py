@@ -181,7 +181,9 @@ def fallback_graphic_asset(scene: dict, beat: dict | None = None,
     remains review-only even though viewers never see a solid colour card.
     """
     beat = beat or {}
-    raw_title = (beat.get("purpose") or beat.get("cue")
+    # Prefer the spoken cue. Internal failure wording must never leak into a
+    # finished frame as a giant on-screen title.
+    raw_title = (beat.get("cue") or beat.get("purpose")
                  or scene.get("title") or scene.get("narration")
                  or "Visual evidence")
     title = " ".join(str(raw_title).split())[:60]
@@ -203,12 +205,16 @@ def fallback_graphic_asset(scene: dict, beat: dict | None = None,
         scene_n = int(scene.get("n", 0))
     except (TypeError, ValueError):
         scene_n = 0
+    variants = ("evidence-orbit", "signal-trace", "archive-strip",
+                "terrain-scan")
+    variant = variants[(scene_n * 3 + index) % len(variants)]
     return {
         "path": f"s{scene_n:02d}_b{index:02d}_fallback_graphic",
         "kind": "graphic",
         "beat_index": index,
         "graphic": {
             "kind": "fallback",
+            "variant": variant,
             "title": title,
             "items": [{"label": label} for label in labels],
         },
@@ -387,6 +393,9 @@ def _premium_hook_asset(scene: dict, beat: dict, outdir: str, cfg: dict,
         "lower 25 percent calm and uncluttered for Hindi captions, no collage, "
         "no split screen, no typography, no symbols, no recognizable faces"
     )
+    if scene.get("episode_signature"):
+        base += (". Episode-specific photographic direction: "
+                 + str(scene["episode_signature"]))
     candidates = []
     local_hashes: set[str] = set()
     aspect = "16:9 wide"
@@ -839,7 +848,8 @@ def _director_beat_asset(scene: dict, beat: dict, index: int, outdir: str,
         if not subject:
             return None
         prompt = families_mod.compose_prompt(
-            subject, family, scene.get("domain_pack"))
+            subject, family, scene.get("domain_pack"),
+            signature=scene.get("episode_signature"))
         if policy == "custom":
             prompt += (". Clearly staged documentary reconstruction, "
                        "regionally and historically accurate material culture, "
@@ -864,6 +874,15 @@ def _director_beat_asset(scene: dict, beat: dict, index: int, outdir: str,
     # family's ordinary stock preference.
     if policy == "custom":
         return generate_ai()
+    # Premium mode exists specifically to replace generic/template-looking
+    # coverage with authored AI shots. Previously stock-first families were
+    # granted credits but returned to the stock chain before the grant could
+    # ever be used.
+    if (str(families_mod.director_cfg(cfg).get("mode", "economy")).lower()
+            == "premium" and beat.get("ai_grant")):
+        generated = generate_ai()
+        if generated:
+            return generated
     for medium in order:
         if medium == "pg" and beat.get("graphic"):
             print(f"[director] scene {scene['n']} beat {index + 1}: "
@@ -892,9 +911,9 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
     assets: list[dict] = []
     beats = scene.get("visual_beats") or []
 
-    # map scenes render their own background (MapZoom) — no assets needed
-    if mode == "map" and scene.get("map_render"):
-        return []
+    # MapZoom is now a short orientation shot, not a scene-long wallpaper.
+    # Continue resolving beat assets so the narration can cut into AI/stock
+    # coverage after the configured map window.
 
     # Frame zero has its own premium lane: three different visual hypotheses,
     # one opening-specific vision decision. The winner preempts every generic
@@ -911,6 +930,9 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
         mode in ("kinetic", "stat", "card", "glass", "scale", "causal")
         and not scene.get("search_terms"))
     prompt = (scene.get("ai_prompt") or "").strip()
+    if prompt and scene.get("episode_signature"):
+        prompt += (". Episode-specific photographic direction: "
+                   + str(scene["episode_signature"]))
     if (wants_ai and prompt and ai_budget[0] > 0
             and not any(a.get("beat_index") == 0 for a in assets)):
         ph = hashlib.sha1(prompt.lower().encode()).hexdigest()[:16]
@@ -969,7 +991,8 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
                     if rp and families_mod.enabled(cfg) and beat.get("family"):
                         # rescue stills speak the family's visual language too
                         rp = families_mod.compose_prompt(
-                            rp, beat["family"], scene.get("domain_pack"))
+                            rp, beat["family"], scene.get("domain_pack"),
+                            signature=scene.get("episode_signature"))
                     if rp:
                         path = os.path.join(
                             outdir, f"s{scene['n']:02d}_b{index:02d}_rescue.png")
@@ -1040,6 +1063,9 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
         # a gradient card (docs/HERO_SHOTS_SPEC.md).
         rp = (scene.get("ai_prompt") or scene.get("narration") or "").strip()
         if rp:
+            if scene.get("episode_signature"):
+                rp += (". Episode-specific photographic direction: "
+                       + str(scene["episode_signature"]))
             path = os.path.join(outdir, f"s{scene['n']:02d}_rescue.png")
             aspect = ("9:16 tall vertical" if _orientation(cfg) == "portrait"
                       else "16:9 wide")

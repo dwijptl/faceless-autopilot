@@ -1,6 +1,7 @@
 from PIL import Image
 
 import assets
+import families
 
 
 def _cfg():
@@ -90,3 +91,56 @@ def test_primary_beat_uses_commons_before_generic_stock(tmp_path, monkeypatch):
 
     assert result[0]["source"] == "wikimedia"
     assert result[0]["source_policy"] == "primary"
+
+
+def test_map_scene_resolves_assets_for_post_map_coverage(tmp_path, monkeypatch):
+    cfg = _cfg()
+    scene = {
+        "n": 5,
+        "visual_mode": "map",
+        "map_render": {"world": "world.png", "region": "region.png"},
+        "search_terms": ["south atlantic research vessel"],
+        "visual_beats": [{
+            "cue": "जहाज़ वहाँ पहुँचा", "purpose": "establish the expedition",
+            "duration": 5, "search_terms": ["south atlantic research vessel"],
+            "family": "establish_place", "source_policy": "stock",
+        }],
+    }
+    visual = tmp_path / "map_followup.jpg"
+    Image.new("RGB", (640, 360), (80, 120, 160)).save(visual)
+    monkeypatch.setattr(
+        assets, "_director_beat_asset",
+        lambda *a, **kw: {"path": str(visual), "kind": "image", "ai": True})
+
+    result = assets.fetch_scene_assets(
+        scene, 40, str(tmp_path), cfg, "pk", "gk", set(), set(), [0],
+        rescue_budget=[0], director_budget=[1])
+
+    assert result and result[0]["beat_index"] == 0
+    assert result[0]["path"] == str(visual)
+
+
+def test_premium_ai_grant_preempts_stock_first_family(tmp_path, monkeypatch):
+    cfg = _cfg()
+    cfg["visual_director"]["mode"] = "premium"
+    scene = {
+        "n": 2, "episode_title": "A different case",
+        "episode_signature": families.episode_signature("A different case"),
+    }
+    beat = {
+        "cue": "दूर का द्वीप", "purpose": "show where we are",
+        "search_terms": ["remote island"], "family": "establish_place",
+        "source_policy": "stock", "ai_grant": True,
+    }
+
+    def fake_generate(prompt, path, *args, **kwargs):
+        assert "Episode-specific photographic direction" in prompt
+        Image.new("RGB", (640, 360), (30, 70, 90)).save(path)
+        return True
+
+    monkeypatch.setattr(assets.ai_images, "generate", fake_generate)
+    result = assets._director_beat_asset(
+        scene, beat, 0, str(tmp_path), cfg, "gk", set(), [1])
+
+    assert result and result["ai"] is True
+    assert result["path"].endswith("_fam.png")

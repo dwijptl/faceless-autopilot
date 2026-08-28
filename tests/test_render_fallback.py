@@ -1,9 +1,8 @@
 """Regression: the MoviePy fallback renderer must not divide by zero when a
 scene arrives with no assets.
 
-Map scenes intentionally return an empty asset list from
-assets.fetch_scene_assets (Remotion's MapZoom draws its own background). When
-Remotion fails and run.py falls back to render.render, _scene_visual used to do
+Old map manifests and episode-wide media outages can still present an empty
+asset list to the MoviePy emergency renderer. It used to do
 `assets[i % len(assets)]` on that empty list and crash with:
 
     ZeroDivisionError: integer modulo by zero

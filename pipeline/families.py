@@ -19,6 +19,7 @@ docs/VISUAL_DIRECTOR.md holds the full design.
 """
 from __future__ import annotations
 
+import hashlib
 import re
 from dataclasses import dataclass, field
 
@@ -552,8 +553,46 @@ def pick_domain_pack(topic: str, script: dict | None = None) -> str:
 
 
 # ── prompt composition ─────────────────────────────────────────────────
+_SIGNATURE_LENSES = (
+    "large-format documentary optics with restrained depth compression",
+    "close observational 35mm optics with layered foreground occlusion",
+    "precise forensic macro optics with a razor-thin focal plane",
+    "wide environmental optics with strong near-to-far depth",
+    "long-lens field photography with compressed atmospheric layers",
+    "top-down survey photography with carefully imperfect geometry",
+)
+_SIGNATURE_LIGHT = (
+    "one cold window source cutting through suspended dust",
+    "low tungsten practical light falling off into dense shadow",
+    "overcast natural light with silver highlights and soft black levels",
+    "pre-dawn blue light edged by one warm practical source",
+    "hard raking sidelight exposing surface wear and material age",
+    "thin backlight through haze with the subject mostly in silhouette",
+)
+_SIGNATURE_SURFACE = (
+    "subtle 16mm color-negative texture and gentle halation",
+    "clean large-format grain with tactile mineral detail",
+    "restrained archival color drift with imperfect emulsion response",
+    "fine monochromatic grain with sparse oxidized-color accents",
+    "natural lens bloom, faint gate weave and deep photographic blacks",
+)
+
+
+def episode_signature(topic: str, pack_key: str | None = None) -> str:
+    """Stable per-episode art direction with 180 possible combinations."""
+    digest = hashlib.sha1(
+        f"{str(topic).strip().casefold()}|{str(pack_key or '')}".encode("utf-8")
+    ).digest()
+    return ", ".join((
+        _SIGNATURE_LENSES[digest[0] % len(_SIGNATURE_LENSES)],
+        _SIGNATURE_LIGHT[digest[1] % len(_SIGNATURE_LIGHT)],
+        _SIGNATURE_SURFACE[digest[2] % len(_SIGNATURE_SURFACE)],
+    ))
+
+
 def compose_prompt(subject: str, family: str | None,
-                   pack_key: str | None = None) -> str:
+                   pack_key: str | None = None,
+                   signature: str | None = None) -> str:
     """Subject + family composition + domain flavor + global identity.
     Scrubs banned ornament vocabulary so the identity stays camera-led."""
     spec = get_spec(family)
@@ -563,6 +602,8 @@ def compose_prompt(subject: str, family: str | None,
         parts.append(spec.comp)
     if pack:
         parts.append(pack.flavor)
+    if signature:
+        parts.append(f"Episode-specific photographic direction: {signature}")
     parts.append(GLOBAL_STYLE)
     prompt = ". ".join(p for p in parts if p)
     for banned in BANNED_STYLE:

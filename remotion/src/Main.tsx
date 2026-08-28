@@ -255,25 +255,30 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
     const overlayFrames = Math.max(1, Math.min(sceneFrames - impactF,
       Math.round(overlaySeconds * fps)));
     const isMap = mode === 'map' && scene.map && scene.map.world;
+    const mapFrames = Math.max(1, Math.min(sceneFrames,
+      Math.round((m.mapShotSeconds ?? 5.5) * fps)));
     const motion: MotionSpec = scene.motion ?? {};
     items.push(
       <TransitionSeries.Sequence key={`s-${scene.n}`} durationInFrames={sceneFrames}>
         <CameraRig delivery={(scene as any).delivery} fps={fps}
           frames={sceneFrames} sceneN={scene.n}>
+          <SceneVisual
+            assets={scene.assets}
+            visualBeats={scene.visualBeats ?? []}
+            sceneFrames={sceneFrames}
+            fps={fps}
+            maxShotSeconds={maxShotSeconds}
+            sceneN={scene.n}
+            style={style}
+            gradeOpacity={vr.gradeOpacity}
+          />
           {isMap ? (
-            <MapZoom map={scene.map} sceneFrames={sceneFrames} style={style} />
-          ) : (
-            <SceneVisual
-              assets={scene.assets}
-              visualBeats={scene.visualBeats ?? []}
-              sceneFrames={sceneFrames}
-              fps={fps}
-              maxShotSeconds={maxShotSeconds}
-              sceneN={scene.n}
-              style={style}
-              gradeOpacity={vr.gradeOpacity}
-            />
-          )}
+            <Sequence durationInFrames={mapFrames}>
+              <FadeShell frames={mapFrames} fps={fps}>
+                <MapZoom map={scene.map} sceneFrames={mapFrames} style={style} />
+              </FadeShell>
+            </Sequence>
+          ) : null}
         </CameraRig>
         {overlayScene ? (
           <TimedDim frames={overlayFrames} fps={fps} from={impactF} />

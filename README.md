@@ -99,11 +99,11 @@ Each release `video-YYYY-MM-DD_HHMM` contains:
 
 ## The originality layer (anti-"generic AI channel")
 
-- **FLUX signature shots** — with `FAL_KEY` set, each video gets up to 4
-  custom AI stills (2 per short) generated to match the video's rotating
-  style pack: every prompt is wrapped in that pack's photographic grammar
-  (documentary 35mm / high-contrast kinetic / muted editorial / noir), so
-  the AI shots look like one photographer shot the whole video.
+- **AI-directed signature shots** — long-form premium mode priority-ranks up
+  to 40 story beats for custom AI stills; the hook keeps its separate
+  three-candidate quality lane. Every episode receives a stable photographic
+  fingerprint assembled from lens, lighting and film-surface choices, giving
+  the video one coherent look without repeating the same look next upload.
 - **Cinematic stock shaping** — every Pexels search runs first with a
   rotating modifier (`aerial`, `macro close up`, `drone`, `dramatic`…), so
   the pipeline pulls the moody professional b-roll buried in Pexels instead
@@ -131,6 +131,9 @@ Each release `video-YYYY-MM-DD_HHMM` contains:
   divides long-form narration into concrete visual beats. Each beat carries an
   exact Hindi cue and subject-specific English stock query, so imagery changes
   with the spoken idea instead of merely rotating through scene-level footage.
+- **Short map orientation** — location maps hold for at most 5.5 seconds, then
+  dissolve into the same scene's AI/footage beat plan instead of occupying a
+  full minute of narration.
 - **Self-learning loop** — drop YouTube Studio CSV exports into `analytics/`
   (see its README); the weekly **Update Learnings** workflow digests them into
   `learnings.md`, which steers topic choice, hooks, pacing, length and

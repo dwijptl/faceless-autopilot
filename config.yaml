@@ -307,6 +307,7 @@ qc:
 
 maps:
   enabled: true            # animated map-zoom scenes for place-based topics
+  max_fullscreen_seconds: 5.5 # orient once, then cut to scene-specific imagery
 
 motion_library:
   enabled: true            # deterministic native Remotion motion-element library
