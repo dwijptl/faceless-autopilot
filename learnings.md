@@ -1,12 +1,13 @@
 # Channel learnings (auto-updated)
-2026-07-31
+2024-05-15
 
 ## What's working
 
-*   **Human-centered real mysteries:** Videos that focus on the "what-if" scenarios for human experience or real human disappearances/deaths align perfectly with the channel's core promise and show strong engagement potential. The "मारियाना ट्रेंच: 11 किमी नीचे इंसान को क्या हो जाता है?" (4.65 min) video achieved a 13.64% CTR and a solid 45.28% Average View Duration (AVD), demonstrating that longer, human-centric content can perform well when the premise is compelling. Similarly, the list of produced videos heavily features human-centered cases (Dyatlov Pass, Yuba County Five, Flannan Isles, Hinterkaifeck, Roopkund, Kuldhara, Mary Celeste, Stoneman, Jatinga, Lead Masks Case), which are the channel's intended focus.
-*   **Concise, high-impact Shorts for discovery:** The Shorts feed is currently the highest source of views (284 views) with a relatively strong average view duration of 0:02:20. The short-form video "NASA को पृथ्वी के अंदर से एक अजीब सिग्नल मिला — साइंस हैरान है" (1.38 min) was a standout, achieving an exceptional AVD of 185.64% (indicating rewatches) and a good CTR of 11.76%. This format is highly effective for capturing initial interest and driving discovery, even if the primary goal is long-form content.
+*   **Human-centered real mysteries drive engagement:** Videos focusing on human experiences, disappearances, or strange deaths align perfectly with the channel's core promise and show strong engagement. The "मारियाना ट्रेंच: 11 किमी नीचे इंसान को क्या हो जाता है?" (4.65 min) video, framed around human impact, achieved a 13.64% CTR and a solid 45.28% Average View Duration (AVD). This confirms that human-centric narratives (Case Families 1, 2, 3) are the channel's strength.
+*   **Concise, high-impact Shorts for discovery:** The Shorts feed is currently the highest source of views (284 views) with a strong average view duration of 0:02:20. The short-form video "NASA को पृथ्वी के अंदर से एक अजीब सिग्नल मिला — साइंस हैरान है" (1.38 min) was a standout, achieving an exceptional AVD of 185.64% (indicating rewatches) and a good CTR of 11.76%. This format is highly effective for capturing initial interest and driving discovery.
 *   **Strong appeal when directly presented (Browse Features):** When YouTube's algorithm surfaces content to browsing users, the titles and thumbnails are highly compelling, resulting in an excellent Impressions Click-Through Rate (CTR) of 26.03%. This indicates strong appeal when the content is directly presented to an interested audience, though this occurred on a very low impression count (73 impressions).
 *   **Hindi language:** All performing videos are in Hindi, confirming this as the primary target language and audience.
+*   **High engagement from End Screens:** While a very small traffic source (2 views), viewers who reached the end and clicked through from End Screens had an exceptionally high Average View Duration of 0:04:08. This suggests that highly engaged viewers are willing to continue watching within the channel.
 
 ## What's failing
 
@@ -18,25 +19,26 @@
 
 ## Topic guidance
 
-*   **Prioritize human-centered real mysteries (Case Families 1, 2, 3):** The channel's core promise of "एक असली केस, असली सबूत, और एक सवाल जिसका जवाब आज तक नहीं मिला" should be the primary focus. Cases involving human disappearances, strange deaths, or historical expeditions (e.g., Dyatlov Pass, Yuba County Five, Roopkund, Hinterkaifeck, Flannan Isles, Mary Celeste, Kuldhara, Stoneman, Jatinga, Lead Masks Case) align perfectly with this and are expected to perform best, as human-centered cases generally outperform object/anomaly cases.
-*   **Integrate Indian cases regularly:** Continue to feature Indian cases (e.g., Roopkund, Kuldhara, Stoneman, Jatinga) every 2nd or 3rd episode. These are closer to the audience and are largely untouched in this format in Hindi.
-*   **Limit scientific anomalies/object-focused mysteries:** Cap these at approximately 1 in 4 episodes. While some (like the short "NASA signal" video) can perform well in concise formats, they are generally less engaging for long-form than human-centered mysteries. Avoid abstract scientific theories (e.g., black holes, Venus surface) as these have shown poor long-form retention. Focus on *investigations* of anomalies rather than purely descriptive science.
-*   **Strict adherence to niche rules:** Maintain all hard rules: real documented cases only, told evidence-first, no assertion of supernatural/conspiracy as fact, non-graphic, no cases fresher than ~15 years, no ongoing investigations or trials, no living private individuals as subjects, no recent news, no religion or mythology, no politics.
+*   **Prioritize human-centered real mysteries (Case Families 1, 2, 3):** Focus primarily on cases involving human disappearances, strange deaths, or historical expeditions (e.g., Dyatlov Pass, Yuba County Five, Roopkund, Hinterkaifeck, Flannan Isles, Mary Celeste, Kuldhara, Stoneman, Jatinga, Lead Masks Case, Oak Island). These align perfectly with the channel's core promise and the "human beings first, objects second" rule.
+*   **Integrate Indian cases regularly:** Continue to feature Indian cases (e.g., Roopkund, Kuldhara, Stoneman, Jatinga, Stoneman Killings) every 2nd or 3rd episode. These resonate strongly with the Hindi-speaking audience and offer unique, underexplored content.
+*   **Limit scientific anomalies/object-focused mysteries (Case Family 4):** Cap these at approximately 1 in 4 episodes. When covered, ensure they are framed with a strong human element or investigation angle (e.g., "The Bloop" as a search for a source, not just a sound). Strictly avoid abstract scientific theories (e.g., black holes, white holes, planetary surface conditions) in long-form content.
+*   **Reinforce core channel rules:** Adhere strictly to "real documented cases only, told evidence-first," "NEVER assert a supernatural, paranormal or conspiracy explanation as fact," "NON-GRAPHIC ALWAYS," "No cases fresher than ~15 years," and "No living private individuals as subjects."
 
 ## Hook & pacing guidance
 
-*   **Improve long-form opening hooks:** The extremely low AVD (0:00:27) for viewers coming from YouTube Search indicates a critical failure in the first 30-60 seconds of long-form videos. The opening must immediately grab attention, clearly state the mystery, and set the investigative tone, delivering on the promise of the title.
-*   **Develop distinct long-form narrative structures:** Long-form content requires a detailed narrative arc, methodical evidence presentation, and a build-up of suspense, rather than just extending a short-form premise. Focus on building a compelling "detective working the file" experience.
-*   **Maintain concise, high-impact short-form:** Continue to leverage Shorts for discovery and rewatchability, as they are performing well. These can serve as hooks or teasers for the longer, more detailed investigations.
+*   **Strengthen long-form opening hooks:** The immediate drop-off from YouTube Search (0:00:27 AVD) indicates that the opening 30-60 seconds of long-form videos are not compelling enough. The hook must immediately deliver on the title's promise, establish the mystery, and engage the viewer with a clear "detective's file" approach.
+*   **Develop distinct long-form narrative structures:** Avoid simply extending successful short-form concepts. Long-form videos require a structured investigation, detailed presentation of evidence, and honest weighing of competing theories to maintain engagement over several minutes.
+*   **Maintain investigative pacing:** The "evidence-first" approach should guide pacing. Introduce clues, build the timeline, and present theories in a logical, engaging sequence. Avoid overly academic or abstract presentations that have shown to fail.
+*   **Apply the "ONE-BREATH TEST" to every video's premise:** Ensure the core mystery can be articulated in one plain-Hindi sentence with zero unfamiliar proper nouns, designed to make a stranger ask a question back. This ensures immediate intrigue.
 
 ## Thumbnail & title guidance
 
-*   **Optimize for Suggested Videos:** This is the largest opportunity for growth. The 2.18% CTR on 1008 impressions from Suggested Videos is very low. Thumbnails and titles need to be significantly more compelling, mysterious, and clearly convey the "real mystery investigation" promise to stand out in a competitive feed. Experiment with stronger visual hooks and intriguing questions.
-*   **Leverage successful Browse Features CTR:** The high 26.03% CTR from Browse Features, despite low impressions, suggests that when the content is correctly surfaced, the existing titles/thumbnails are effective. The challenge is to replicate this appeal more broadly and ensure YouTube's algorithm understands the target audience for these compelling visuals.
-*   **Adhere to the "One-Breath Test":** Ensure every topic's premise, spoken in one plain-Hindi sentence with ZERO unfamiliar proper nouns, makes a stranger ask a question back. This principle should guide title creation for maximum intrigue.
+*   **Improve CTR for Suggested Videos:** This is the most critical area for growth. Analyze successful titles/thumbnails (e.g., those driving high Browse Features CTR) and replicate their clarity, intrigue, and visual impact. Titles should be concise, promise a specific mystery, and leverage the "ONE-BREATH TEST."
+*   **Optimize thumbnails for competitive feeds:** Thumbnails need to be visually distinct, high-contrast, and clearly convey the essence of the mystery without being graphic or misleading. Focus on evocative imagery of clues, maps, or locations rather than abstract concepts.
+*   **Continue using Hindi titles:** The success of Hindi content confirms this is the correct linguistic approach.
 
 ```yaml
 overrides:
   target_minutes: 8-12
-  scenes_max: 10-16
+  scenes_max: 16
 
