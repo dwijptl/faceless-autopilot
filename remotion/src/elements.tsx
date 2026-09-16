@@ -170,8 +170,9 @@ export const SceneVisual: React.FC<{
   style: StylePack;
   dim?: boolean; // for kinetic/stat overlay scenes
   gradeOpacity?: number; // per-video jitter (variation.ts)
+  splitLongBeats?: boolean;
 }> = ({assets, visualBeats = [], sceneFrames, fps, maxShotSeconds, sceneN, style, dim,
-  gradeOpacity}) => {
+  gradeOpacity, splitLongBeats = true}) => {
   const maxShot = Math.round(maxShotSeconds * fps);
   const shots: {from: number; frames: number; asset: Asset; idx: number;
     camera?: string; intensity?: number; sourcePolicy?: string}[] = [];
@@ -179,7 +180,9 @@ export const SceneVisual: React.FC<{
     seedOffset: number, camera?: string, intensity?: number,
     sourcePolicy?: string) => {
     if (frames <= 0 || pool.length === 0) return;
-    const count = Math.max(1, Math.ceil(frames / Math.max(maxShot, 1)));
+    const count = splitLongBeats
+      ? Math.max(1, Math.ceil(frames / Math.max(maxShot, 1)))
+      : 1;
     const base = Math.floor(frames / count);
     let cursor = 0;
     for (let i = 0; i < count; i++) {
@@ -318,8 +321,9 @@ export const CaptionsLayer: React.FC<{
   compactRanges?: {start: number; end: number}[];
   sizeBoost?: number; // long-form mobile readability multiplier
   variation?: Variation; // per-video jitter (variation.ts)
+  plain?: boolean;
 }> = ({captions, style, yFrac, compactYFrac, compactRanges = [], sizeBoost,
-  variation}) => {
+  variation, plain = false}) => {
   const {fps, height, width} = useVideoConfig();
   const s = Math.max(width, height) / 1920;
   const vr = variation ?? DEFAULT_VARIATION;
@@ -338,7 +342,8 @@ export const CaptionsLayer: React.FC<{
                 : (yFrac ?? style.layout?.captionY ?? 0.78))}
               s={s} durFrames={dur} compact={compact}
               sizeBoost={(sizeBoost ?? 1) * vr.captionScale}
-              maxW={vr.captionMaxW} tiltSeed={vr.tiltSeed} chunkIndex={i} />
+              maxW={vr.captionMaxW} tiltSeed={vr.tiltSeed} chunkIndex={i}
+              plain={plain} />
           </Sequence>
         );
       })}
@@ -357,8 +362,9 @@ const CaptionChunk: React.FC<{
   maxW: number;
   tiltSeed: string;
   chunkIndex: number;
+  plain: boolean;
 }> = ({text, style, y, s, durFrames, compact, sizeBoost, maxW, tiltSeed,
-  chunkIndex}) => {
+  chunkIndex, plain}) => {
   const frame = useCurrentFrame();
   const {fps, width} = useVideoConfig();
   const pop = spring({frame, fps, config: {damping: 14, stiffness: 240, mass: 0.6}});
@@ -418,7 +424,14 @@ const CaptionChunk: React.FC<{
   );
 
   const body =
-    v === 'boxed' ? (
+    plain ? (
+      <div style={{
+        color: 'white', fontSize: 48 * captionScale * s, fontWeight: 650,
+        textAlign: 'center', lineHeight: 1.42,
+        textShadow: '0 3px 5px rgba(0,0,0,0.95), 0 8px 24px rgba(0,0,0,0.78)',
+        padding: `${4 * s}px ${16 * s}px`,
+      }}>{text}</div>
+    ) : v === 'boxed' ? (
       <div style={{
         background: scrim, textAlign: 'center',
         padding: `${12 * s}px ${28 * s}px`, borderRadius: 12 * s,
@@ -537,7 +550,8 @@ const CaptionChunk: React.FC<{
     {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const slideFrom = align === 'right' ? 70 : -70;
   const enterStyle: React.CSSProperties =
-    entry === 'fade' ? {opacity: fadeIn}
+    plain ? {opacity: fadeIn}
+    : entry === 'fade' ? {opacity: fadeIn}
     : entry === 'rise' ? {opacity: riseSpring,
         transform: `translateY(${interpolate(riseSpring, [0, 1], [26, 0])}px)`}
     : entry === 'slide' ? {opacity: riseSpring,

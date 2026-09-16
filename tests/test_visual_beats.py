@@ -80,6 +80,42 @@ def test_cues_map_to_contiguous_full_scene_timing():
     assert beats[1]["start"] > beats[0]["start"]
 
 
+def test_visual_cues_use_real_speech_timestamps_when_aligned():
+    scene = {
+        "narration": "पहला सुराग मिला फिर लंबी चुप्पी के बाद दूसरा सुराग मिला",
+        "audio_duration": 12.0,
+        "word_times": [
+            ("पहला", 0.2, .7), ("सुराग", .7, 1.2), ("मिला", 1.2, 1.8),
+            ("फिर", 2.0, 2.4), ("लंबी", 2.4, 3.0), ("चुप्पी", 3.0, 3.6),
+            ("के", 7.0, 7.2), ("बाद", 7.2, 7.7), ("दूसरा", 7.7, 8.2),
+            ("सुराग", 8.2, 8.8), ("मिला", 8.8, 9.4),
+        ],
+        "visual_beats": [
+            {"cue": "पहला सुराग", "search_terms": ["first clue"]},
+            {"cue": "दूसरा सुराग", "search_terms": ["second clue"]},
+        ],
+    }
+    beats = visual_beats.time_scene(scene)
+    assert beats[1]["start"] == 7.7
+    assert beats[0]["duration"] == 7.7
+
+
+def test_micro_visual_beats_are_merged_for_readability():
+    scene = {
+        "narration": "एक दो तीन चार पांच छह सात आठ नौ दस",
+        "audio_duration": 10.0,
+        "visual_beats": [
+            {"cue": "एक", "search_terms": ["one"]},
+            {"cue": "दो", "search_terms": ["two"]},
+            {"cue": "पांच", "search_terms": ["five"]},
+            {"cue": "नौ", "search_terms": ["nine"]},
+        ],
+    }
+    beats = visual_beats.time_scene(scene, min_duration=3.0)
+    assert [beat["cue"] for beat in beats] == ["एक", "पांच"]
+    assert all(beat["duration"] >= 3.0 for beat in beats)
+
+
 def test_manifest_quantizes_shared_boundaries_without_blank_frames():
     scene = {
         "audio_duration": 5.0,

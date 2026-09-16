@@ -775,14 +775,20 @@ def main() -> None:
     done_file = os.path.join(REPO_ROOT, "topics_done.txt")
     topic = script_gen.pick_topic(cfg, gemini_key, done_file, learnings)
 
-    # topic-driven style: the LOOK follows the SUBJECT (mystery -> noir
-    # family, space -> cosmos, body -> medical...), no-repeat window over
-    # the last runs. Replaces the old done_count % N rotation.
-    style = style_packs.select_and_log(topic, "", REPO_ROOT, is_short=False)
+    # Keep one quiet on-screen language across the channel. Domain-specific
+    # art direction still guides the imagery; frames, captions and transitions
+    # no longer change skins from upload to upload.
+    simple_documentary = (str(cfg.get("render", {}).get("presentation", ""))
+                          == "simple_documentary")
+    style = ("documentary" if simple_documentary else
+             style_packs.select_and_log(topic, "", REPO_ROOT, is_short=False))
     cfg.setdefault("render", {})["style_pack"] = style  # steers AI-image look
-    print(f"[style] topic-driven pack: {style} "
-          f"(recent: {style_packs.recent_styles(style_packs.history_path(REPO_ROOT))})")
-    style_packs.apply_pacing(cfg, style, is_short=False)
+    if simple_documentary:
+        print("[style] simple documentary presentation")
+    else:
+        print(f"[style] topic-driven pack: {style} "
+              f"(recent: {style_packs.recent_styles(style_packs.history_path(REPO_ROOT))})")
+        style_packs.apply_pacing(cfg, style, is_short=False)
 
     # shipped topics drive title-form / skeleton / topic-family rotation
     done_titles = script_gen._done_titles(done_file)
@@ -844,7 +850,10 @@ def main() -> None:
 
     # 2) voiceover -----------------------------------------------------------
     fps = int(cfg["video"]["fps"])
-    jit = style_packs.render_jitter(script["title"])
+    jit = ({"xfade_mul": 1.0, "max_shot_mul": 1.0, "overlay_mul": 1.0,
+            "caption_y_off": 0.0, "watermark_off": 0.0}
+           if simple_documentary else
+           style_packs.render_jitter(script["title"]))
     xfade = float(cfg["video"].get("crossfade", 0.4)) * jit["xfade_mul"]
     scenes, offset = [], 0.0
     for sc in script["scenes"]:
@@ -897,8 +906,11 @@ def main() -> None:
                       (f"mixed ({aligned_scenes}/{len(scenes)} scenes aligned)"
                        if aligned_scenes else "estimated (heuristic)"))
 
+    min_visual_seconds = float(cfg.get("longform_quality", {})
+                               .get("visual_beats", {})
+                               .get("min_seconds", 0.0))
     for sc in scenes:
-        visual_beats_mod.time_scene(sc)
+        visual_beats_mod.time_scene(sc, min_visual_seconds)
 
     # 2b) map scenes — render branded world/region maps (fail -> b-roll)
     if cfg.get("maps", {}).get("enabled", True):
@@ -985,7 +997,8 @@ def main() -> None:
         scenes, motion_seed,
         frame_pool=style_packs.frames_for(style),
         lower_third_pool=style_packs.lower_thirds_for(style))
-    cta_event = motion_mod.plan_cta(scenes, cfg, motion_seed, is_short=False)
+    cta_event = (None if simple_documentary else
+                 motion_mod.plan_cta(scenes, cfg, motion_seed, is_short=False))
     sfx_events = sfx_mod.plan_events(scenes, cfg, workdir, cta_event)
     music_automation = sfx_mod.plan_music_automation(scenes, cfg)
     music_path = pick_music(workdir, cfg, motion_seed, style)
@@ -1031,6 +1044,7 @@ def main() -> None:
         "mapShotSeconds": min(max(float(cfg.get("maps", {}).get(
             "max_fullscreen_seconds", 5.5)), 2.5), 8.0),
         "overlaySeconds": overlay_seconds,
+        "simpleDocumentary": simple_documentary,
         "style": style,
         "variableLabel": str((script.get("changing_variable") or {})
                              .get("label", "")).upper()[:18],
@@ -1363,7 +1377,8 @@ Remotion. Brand: SURAAGNAMA · सुरागनामा.*
         print(f"[beats] analytics copy skipped ({exc})")
 
     script_gen.log_topic_done(topic, os.path.join(REPO_ROOT, "topics_done.txt"))
-    style_packs.record_use(style, REPO_ROOT, is_short=False)
+    if not simple_documentary:
+        style_packs.record_use(style, REPO_ROOT, is_short=False)
     # No automatic next-episode lock: the owner either adds a manual
     # "NEXT: <topic>" line to topics_done.txt or lets pick_topic choose.
 

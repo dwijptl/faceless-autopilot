@@ -198,8 +198,63 @@ def _find_subsequence(words: list[str], cue: list[str], after: int) -> int | Non
     return None
 
 
-def time_scene(scene: dict) -> list[dict]:
-    """Map ordered cue phrases to relative seconds across rendered narration."""
+def _aligned_starts(scene: dict, words: list[str],
+                    authored: list[int]) -> list[float] | None:
+    """Map authored cue positions onto real speech timestamps when available.
+
+    Sarvam can normalize punctuation, spelling, and Hindi numbers. Exact cue
+    matching is preferred; narration-position mapping is the fallback. Both
+    paths follow the actual pace and pauses of the finished voiceover.
+    """
+    raw_times = scene.get("word_times") or []
+    transcript: list[str] = []
+    transcript_starts: list[float] = []
+    for item in raw_times:
+        try:
+            token_parts = _tokens(item[0])
+            start = float(item[1])
+        except (IndexError, TypeError, ValueError):
+            return None
+        for token in token_parts:
+            transcript.append(token)
+            transcript_starts.append(start)
+    if not transcript or not words:
+        return None
+    if not 0.65 <= len(transcript) / len(words) <= 1.35:
+        return None
+
+    starts: list[float] = []
+    cursor = 0
+    beats = scene.get("visual_beats") or []
+    for index, authored_index in enumerate(authored):
+        cue = _tokens(beats[index].get("cue", ""))
+        found = _find_subsequence(transcript, cue, cursor)
+        if found is None:
+            ratio = authored_index / max(len(words) - 1, 1)
+            found = min(round(ratio * max(len(transcript) - 1, 0)),
+                        len(transcript) - 1)
+        found = max(cursor, min(found, len(transcript) - 1))
+        starts.append(transcript_starts[found])
+        cursor = min(found + 1, len(transcript) - 1)
+    return starts
+
+
+def _keep_readable_boundaries(starts: list[float], duration: float,
+                              minimum: float) -> list[int]:
+    """Drop micro-cuts while preserving each surviving cue's real timestamp."""
+    if not starts:
+        return []
+    keep = [0]
+    for index in range(1, len(starts)):
+        if starts[index] - starts[keep[-1]] >= minimum:
+            keep.append(index)
+    if len(keep) > 1 and duration - starts[keep[-1]] < minimum:
+        keep.pop()
+    return keep
+
+
+def time_scene(scene: dict, min_duration: float = 0.0) -> list[dict]:
+    """Map visual cues to the real narration and remove accidental micro-cuts."""
     beats = scene.get("visual_beats") or []
     if not beats:
         return []
@@ -217,14 +272,23 @@ def time_scene(scene: dict) -> list[dict]:
     if starts:
         starts[0] = 0
 
+    actual = _aligned_starts(scene, words, starts)
+    start_seconds = (actual if actual is not None else
+                     [duration * word / max(len(words), 1) for word in starts])
+    if start_seconds:
+        start_seconds[0] = 0.0
+        for index in range(1, len(start_seconds)):
+            start_seconds[index] = max(start_seconds[index],
+                                       start_seconds[index - 1])
+
+    kept = _keep_readable_boundaries(
+        start_seconds, duration, max(float(min_duration or 0.0), 0.0))
     timed = []
-    for index, beat in enumerate(beats):
-        start = duration * starts[index] / max(len(words), 1)
-        end_word = starts[index + 1] if index + 1 < len(starts) else len(words)
-        end = duration * end_word / max(len(words), 1)
-        if index + 1 == len(beats):
-            end = duration
-        timed.append({**beat, "start": round(start, 3),
+    for output_index, beat_index in enumerate(kept):
+        start = start_seconds[beat_index]
+        end = (start_seconds[kept[output_index + 1]]
+               if output_index + 1 < len(kept) else duration)
+        timed.append({**beats[beat_index], "start": round(start, 3),
                       "duration": round(max(end - start, 0.1), 3)})
 
     # Eliminate rounding gaps and guarantee exact scene coverage.

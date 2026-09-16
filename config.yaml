@@ -63,8 +63,8 @@ video:
   height: 1080
   fps: 30
   bitrate: "6000k"
-  crossfade: 0.4           # seconds between scenes
-  max_shot_seconds: 5      # normal long-form visual beat ceiling
+  crossfade: 0.25          # short, quiet dissolve between spoken sections
+  max_shot_seconds: 8      # let one strong visual carry a complete idea
   outro_seconds: 4         # branded end card appended to every video
 
 # Retention story engine — deterministic pre-TTS audit of the script's
@@ -112,10 +112,11 @@ visual_director:
 longform_quality:
   visual_beats:
     enabled: true
-    hook_max_seconds: 3.8  # faster semantic changes during the cold open
-    max_seconds: 5.0       # matches the renderer's normal shot ceiling
+    hook_max_seconds: 4.0  # hook stays alert without becoming a montage
+    max_seconds: 8.0       # visual changes follow ideas, not a rapid timer
+    min_seconds: 3.5       # merge tiny beats that read as accidental cuts
     min_per_scene: 2
-    max_per_scene: 14      # covers scenes up to ~70s at the 5s beat ceiling
+    max_per_scene: 10
   dynamic_music:
     enabled: true
     transition_seconds: 0.45
@@ -183,10 +184,10 @@ brand:
 render:
   engine: "remotion"       # "remotion" (motion design) or "moviepy" (simple);
                            # remotion auto-falls back to moviepy on any error
+  presentation: "simple_documentary" # full-screen evidence, plain subtitles,
+                           # no HUD/frame/card template or decorative transitions
   accent: "#FFB020"        # brand amber: captions, lower thirds, progress bar
-  progress_bar: true       # thin accent bar along the top edge
-  # visual styles rotate automatically per video: documentary -> kinetic
-  # -> editorial -> noir -> repeat (see remotion/src/styles.ts)
+  progress_bar: false
 
 # Animated hero shots — Kling 2.6 Pro image-to-video on fal animates the
 # hook's first beat and the reveal scene (docs/HERO_SHOTS_SPEC.md).

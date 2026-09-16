@@ -1099,6 +1099,10 @@ Return ONLY JSON:
 Rules:
 - Return exactly target_beats for each scene and preserve scene order.
 - Beat 1 starts at the beginning of its scene; all cues proceed in narration order.
+- Each beat should cover one complete spoken idea, usually one sentence or two
+  closely related clauses. Never create a new beat just to make the screen busy.
+- Put a cue on the first meaningful word of the new idea. Avoid cues that would
+  create a visual lasting less than about 4 seconds at a calm narration pace.
 - Each query must depict the nouns in its cue, not the scene's general mood.
 - Named landmarks, animals, machines, planets and anatomy require the exact subject.
 - Prefer real documentary footage: aerials, macro, natural habitat, physical processes.

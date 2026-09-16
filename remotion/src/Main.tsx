@@ -26,7 +26,7 @@ import {
   TextureOverlay,
   Watermark,
 } from './elements';
-import {variationFor} from './variation';
+import {DEFAULT_VARIATION, variationFor} from './variation';
 import {
   AnimatedLowerThird,
   AnimatedStatCard,
@@ -217,7 +217,9 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
   const fps = m.fps;
   const {durationInFrames} = useVideoConfig();
   const style = getStyle(m.style);
-  const vr = variationFor(m.motionSeed || m.title || 'main');
+  const simple = Boolean((m as any).simpleDocumentary);
+  const vr = simple ? DEFAULT_VARIATION
+    : variationFor(m.motionSeed || m.title || 'main');
   const chapterMarks = m.scenes.slice(1).map(
     (sc) => ((sc.start ?? 0) * fps) / Math.max(durationInFrames, 1));
   const metricLabel = String((m as any).variableLabel ?? '');
@@ -233,7 +235,7 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
   const maxShotSeconds = m.maxShotSeconds ?? 5;
   const overlaySeconds = Math.min(
     Math.max(Number((m as any).overlaySeconds ?? 5), 2.5), 12);
-  const overlayRanges = m.scenes
+  const overlayRanges = simple ? [] : m.scenes
     .filter((scene) => ['kinetic', 'stat', 'card', 'glass'].includes(scene.visualMode ?? ''))
     .map((scene) => {
       const impact = Number((scene as any).impactStart ?? 0);
@@ -246,8 +248,9 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
   m.scenes.forEach((scene, i) => {
     const sceneFrames = Math.round(scene.audioDuration * fps);
     const mode = scene.visualMode ?? 'broll';
-    const overlayScene = mode === 'kinetic' || mode === 'stat' || mode === 'card'
-      || mode === 'glass' || mode === 'scale' || mode === 'causal';
+    const overlayScene = !simple && (mode === 'kinetic' || mode === 'stat'
+      || mode === 'card' || mode === 'glass' || mode === 'scale'
+      || mode === 'causal');
     // word-synced impact: the graphic enters on the spoken keyword
     const impactF = Math.max(0, Math.min(
       Math.round(Number((scene as any).impactStart ?? 0) * fps),
@@ -260,7 +263,7 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
     const motion: MotionSpec = scene.motion ?? {};
     items.push(
       <TransitionSeries.Sequence key={`s-${scene.n}`} durationInFrames={sceneFrames}>
-        <CameraRig delivery={(scene as any).delivery} fps={fps}
+        <CameraRig delivery={simple ? 'calm' : (scene as any).delivery} fps={fps}
           frames={sceneFrames} sceneN={scene.n}>
           <SceneVisual
             assets={scene.assets}
@@ -271,6 +274,7 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
             sceneN={scene.n}
             style={style}
             gradeOpacity={vr.gradeOpacity}
+            splitLongBeats={!simple}
           />
           {isMap ? (
             <Sequence durationInFrames={mapFrames}>
@@ -284,50 +288,51 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
           <TimedDim frames={overlayFrames} fps={fps} from={impactF} />
         ) : null}
         {scene.audioPath ? <Audio src={staticFile(scene.audioPath)} /> : null}
-        {mode === 'kinetic' && scene.kineticText ? (
+        {!simple && mode === 'kinetic' && scene.kineticText ? (
           <OverlayWindow frames={overlayFrames} fps={fps} from={impactF}>
             <KineticTitle text={scene.kineticText} style={style}
               variant={motion.kineticVariant} />
           </OverlayWindow>
         ) : null}
-        {mode === 'stat' && scene.stat && scene.stat.label ? (
+        {!simple && mode === 'stat' && scene.stat && scene.stat.label ? (
           <OverlayWindow frames={overlayFrames} fps={fps} from={impactF}>
             <AnimatedStatCard stat={scene.stat} style={style}
               variant={motion.statVariant} />
           </OverlayWindow>
         ) : null}
-        {mode === 'card' && scene.card && scene.card.headline ? (
+        {!simple && mode === 'card' && scene.card && scene.card.headline ? (
           <OverlayWindow frames={overlayFrames} fps={fps} from={impactF}>
             <EditorialCard card={scene.card} style={style} variant={motion.cardVariant} />
           </OverlayWindow>
         ) : null}
-        {mode === 'glass' && scene.glass && (scene.glass.headline || scene.glass.label || scene.glass.location || scene.glass.chapter || scene.glass.value != null) ? (
+        {!simple && mode === 'glass' && scene.glass && (scene.glass.headline || scene.glass.label || scene.glass.location || scene.glass.chapter || scene.glass.value != null) ? (
           <OverlayWindow frames={overlayFrames} fps={fps} from={impactF}>
             <GlassCard data={scene.glass} style={style} variant={motion.glassVariant} />
           </OverlayWindow>
         ) : null}
-        {mode === 'scale' && (scene as any).compare && (scene as any).compare.anchorLabel ? (
+        {!simple && mode === 'scale' && (scene as any).compare && (scene as any).compare.anchorLabel ? (
           <OverlayWindow frames={overlayFrames} fps={fps} from={impactF}>
             <ScaleComparator data={(scene as any).compare} style={style} />
           </OverlayWindow>
         ) : null}
-        {mode === 'causal' && (scene as any).causal && ((scene as any).causal.steps ?? []).length >= 2 ? (
+        {!simple && mode === 'causal' && (scene as any).causal && ((scene as any).causal.steps ?? []).length >= 2 ? (
           <OverlayWindow frames={overlayFrames} fps={fps} from={impactF}>
             <CausalDiagram data={(scene as any).causal} style={style} />
           </OverlayWindow>
         ) : null}
-        {mode === 'evidence' && (scene as any).evidence && (scene as any).evidence.source ? (
+        {!simple && mode === 'evidence' && (scene as any).evidence && (scene as any).evidence.source ? (
           <OverlayWindow frames={overlayFrames} fps={fps} from={impactF}>
             <EvidenceFrame data={(scene as any).evidence} style={style} />
           </OverlayWindow>
         ) : null}
-        {!overlayScene && !isMap && mode !== 'evidence' && scene.title ? (
+        {!simple && !overlayScene && !isMap && mode !== 'evidence' && scene.title ? (
           <AnimatedLowerThird title={scene.title} style={style}
             variant={motion.lowerThirdVariant} index={scene.n}
             delay={vr.ltDelay} />
         ) : null}
-        <SceneFrame variant={motion.frameVariant} style={style} sceneN={scene.n} />
-        {i > 0 ? <LightLeak seed={`scene-${scene.n}`} /> : null}
+        {!simple ? <SceneFrame variant={motion.frameVariant} style={style}
+          sceneN={scene.n} /> : null}
+        {!simple && i > 0 ? <LightLeak seed={`scene-${scene.n}`} /> : null}
       </TransitionSeries.Sequence>
     );
     // grammar-aware cut INTO the next scene; outro keeps the style default
@@ -338,7 +343,7 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
     items.push(
       <TransitionSeries.Transition
         key={`t-${scene.n}`}
-        presentation={grammar ?? pickTransition(i, style)}
+        presentation={simple ? fade() : (grammar ?? pickTransition(i, style))}
         timing={linearTiming({durationInFrames: m.xfadeFrames})}
       />
     );
@@ -359,24 +364,25 @@ export const Main: React.FC<{manifest: Manifest}> = ({manifest: m}) => {
     <AbsoluteFill style={{backgroundColor: style.bg}}>
       <TransitionSeries>{items}</TransitionSeries>
       <CaptionsLayer captions={m.captions} style={style}
-        compactRanges={overlayRanges} compactYFrac={0.84} sizeBoost={1.15}
-        variation={vr} />
+        compactRanges={overlayRanges} compactYFrac={0.84}
+        yFrac={simple ? 0.79 : undefined} sizeBoost={simple ? 0.98 : 1.15}
+        variation={vr} plain={simple} />
       <TextureOverlay style={style} opacityMul={vr.texOpacity} />
-      {style.hud ? (
+      {!simple && style.hud ? (
         <TelemetryHUD starts={m.scenes.map((sc) => sc.start ?? 0)}
           accent={style.accent} accent2={style.accent2}
           milestones={milestones} metricLabel={metricLabel}
           metricUnit={metricUnit} />
-      ) : hasMetric ? (
+      ) : !simple && hasMetric ? (
         <MetricReadout milestones={milestones} label={metricLabel}
           unit={metricUnit} accent={style.accent} />
       ) : null}
-      <CtaLayer event={m.cta} style={style} fps={fps} />
+      {!simple ? <CtaLayer event={m.cta} style={style} fps={fps} /> : null}
       {m.watermarkPath ? (
         <Watermark src={m.watermarkPath} opacity={m.watermarkOpacity ?? 0.08}
           corner={style.layout?.watermark} />
       ) : null}
-      {m.progressBar && style.layout?.progress !== 'none' ? (
+      {!simple && m.progressBar && style.layout?.progress !== 'none' ? (
         <ProgressBar accent={style.accent} marks={chapterMarks}
           position={style.layout?.progress?.startsWith('bottom') ? 'bottom' : 'top'}
           thickness={style.layout?.progress === 'bottom-thick' ? 14 : 8} />
