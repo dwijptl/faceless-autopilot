@@ -1,0 +1,241 @@
+{
+  "stamp": "2026-09-17_0947",
+  "title": "400 साल पहले, एक गांव रातोंरात गायब हो गया, बचा बस एक शब्द",
+  "style": "documentary",
+  "retention_plan": {
+    "core_question": "पूरा रोनोक गांव आखिर कहां चला गया, और पीछे छोड़े गए उस एक रहस्यमय शब्द का क्या मतलब था?",
+    "viewer_assumption": "उन्हें लगा होगा कि गांव पर हमला हुआ, या लोग मर गए होंगे।",
+    "first_reversal": "असली सुराग हमला नहीं, बल्कि एक दोस्त का नाम था।",
+    "main_reveal": "रोनोक के लोग असल में स्थानीय आदिवासी समुदायों के साथ मिल गए थे, और उनका DNA आज भी उनके वंशजों में पाया जाता है।",
+    "main_reveal_scene": 10,
+    "open_loops": [
+      {
+        "question": "अगर वे सिर्फ क्रोटोअन गए थे, तो गवर्नर व्हाइट को यह जानने में इतना समय क्यों लगा?",
+        "opens_scene": 5,
+        "partial_scene": 6,
+        "closes_scene": 11
+      },
+      {
+        "question": "क्या सभी लोग शांति से चले गए थे, या कुछ पर हमला हुआ था?",
+        "opens_scene": 7,
+        "partial_scene": 9,
+        "closes_scene": 12
+      }
+    ]
+  },
+  "beats": [
+    {
+      "n": 1,
+      "title": "एक रहस्यमय शब्द, एक गायब गाँव",
+      "start": 0.0,
+      "end": 29.39,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "hook",
+      "rewardType": "fact",
+      "rewardStrength": 0.7,
+      "questionOut": "यह रहस्यमय शब्द क्या था, और इसका क्या मतलब था?",
+      "delivery": "hook",
+      "assets": [
+        "video:ai",
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 2,
+      "title": "3 साल का इंतज़ार",
+      "start": 29.14,
+      "end": 89.51,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "context",
+      "rewardType": "fact",
+      "rewardStrength": 0.8,
+      "questionOut": "वापस लौटने पर गवर्नर व्हाइट को क्या मिला?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 3,
+      "title": "सिर्फ 'CROATOAN'",
+      "start": 89.26,
+      "end": 140.47,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "discovery",
+      "rewardType": "visual_reveal",
+      "rewardStrength": 0.9,
+      "questionOut": "इस 'CROATOAN' शब्द का क्या मतलब था?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 4,
+      "title": "एक पुराना सीक्रेट समझौता",
+      "start": 140.22,
+      "end": 181.99,
+      "visualMode": "card",
+      "visualRole": "explanation",
+      "narrativeRole": "partial_answer",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.7,
+      "questionOut": "क्या वाकई वे क्रोटोअन द्वीप चले गए थे?",
+      "delivery": "calm",
+      "assets": [
+        "video:stock",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 5,
+      "title": "तूफान ने तोड़ा भरोसा",
+      "start": 181.74,
+      "end": 240.59,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "reversal",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.8,
+      "questionOut": "अगर वे सुरक्षित थे, तो बाद के जांचकर्ताओं को क्या मिला?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 6,
+      "title": "आदिवासियों की अफवाहें",
+      "start": 240.34,
+      "end": 291.91,
+      "visualMode": "ai_image",
+      "visualRole": "explanation",
+      "narrativeRole": "escalation",
+      "rewardType": "question",
+      "rewardStrength": 0.8,
+      "questionOut": "क्या ये कहानियां सच थीं, या सिर्फ अफवाहें?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 7,
+      "title": "पुरातत्व ने खोला राज",
+      "start": 291.66,
+      "end": 350.42,
+      "visualMode": "evidence",
+      "visualRole": "measurement",
+      "narrativeRole": "evidence",
+      "rewardType": "evidence",
+      "rewardStrength": 0.9,
+      "questionOut": "क्या सिर्फ क्रोटोअन द्वीप ही उनकी आखिरी मंज़िल थी?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 8,
+      "title": "गुमशुदा नहीं, घुलमिल गए",
+      "start": 350.17,
+      "end": 407.41,
+      "visualMode": "causal",
+      "visualRole": "explanation",
+      "narrativeRole": "explanation",
+      "rewardType": "explanation",
+      "rewardStrength": 0.8,
+      "questionOut": "क्या इसका कोई और सबूत है, खासकर DNA के स्तर पर?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 9,
+      "title": "DNA में रोनोक का सच",
+      "start": 407.16,
+      "end": 455.47,
+      "visualMode": "ai_image",
+      "visualRole": "measurement",
+      "narrativeRole": "evidence",
+      "rewardType": "evidence",
+      "rewardStrength": 0.9,
+      "questionOut": "तो क्या ये सारे सबूत एक ही कहानी की ओर इशारा कर रहे थे?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 10,
+      "title": "पहेली का फाइनल हल",
+      "start": 455.22,
+      "end": 527.89,
+      "visualMode": "glass",
+      "visualRole": "explanation",
+      "narrativeRole": "main_reveal",
+      "rewardType": "visual_reveal",
+      "rewardStrength": 1.0,
+      "questionOut": "तो क्या इसका मतलब है कि कोई भी नहीं मारा गया?",
+      "delivery": "reveal",
+      "assets": [
+        "video:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 11,
+      "title": "कुछ अनसुलझी बातें",
+      "start": 527.64,
+      "end": 593.25,
+      "visualMode": "map",
+      "visualRole": "explanation",
+      "narrativeRole": "implication",
+      "rewardType": "consequence",
+      "rewardStrength": 0.6,
+      "questionOut": "इस पूरी कहानी से हमें क्या सीख मिलती है?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 12,
+      "title": "मानवीय अनुकूलन की कहानी",
+      "start": 593.0,
+      "end": 638.28,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "conclusion",
+      "rewardType": "fact",
+      "rewardStrength": 0.8,
+      "questionOut": "",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai",
+        "image:ai"
+      ]
+    }
+  ]
+}
