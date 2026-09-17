@@ -168,9 +168,10 @@ llm:
                                        # API what models YOUR key has and
                                        # self-heals to the newest sonnet/haiku
   anthropic_fallback_models: ["claude-sonnet-4-5", "claude-haiku-4-5-20251001"]
-  model: "gemini-2.5-flash"
-  # tried in order if the model above is retired/404s:
-  fallback_models: ["gemini-3-flash", "gemini-flash-latest", "gemini-2.0-flash"]
+  model: "gemini-3.6-flash"
+  # tried in order if the model above is unavailable; script_gen also asks
+  # Gemini's models endpoint for current generateContent-capable Flash models.
+  fallback_models: ["gemini-flash-latest", "gemini-2.5-flash"]
   temperature: 0.9
 
 brand:

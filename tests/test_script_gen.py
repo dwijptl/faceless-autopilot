@@ -132,3 +132,59 @@ def test_llm_routes_openai_first_then_anthropic_then_gemini(monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY")
     monkeypatch.setattr(sg, "_anthropic", lambda *a, **k: '{"from": "claude"}')
     assert sg._llm("p", cfg, "gk") == '{"from": "claude"}'  # no key -> skip GPT
+
+
+def test_gemini_uses_replacement_model_named_by_retirement_error(monkeypatch):
+    import script_gen as sg
+
+    class Response:
+        def __init__(self, status, payload, text=""):
+            self.status_code = status
+            self._payload = payload
+            self.text = text
+
+        def raise_for_status(self):
+            if self.status_code >= 400:
+                raise RuntimeError(self.text)
+
+        def json(self):
+            return self._payload
+
+    called = []
+
+    def post(url, **kwargs):
+        called.append(url)
+        if "gemini-old" in url:
+            return Response(404, {}, (
+                "models/gemini-old is retired; use "
+                "models/gemini-3.6-flash instead"))
+        return Response(200, {"candidates": [{"content": {
+            "parts": [{"text": '{"ok": true}'}]}}]})
+
+    monkeypatch.setattr(sg, "_gemini_discover", lambda key: [])
+    monkeypatch.setattr(sg.requests, "post", post)
+    cfg = {"llm": {"model": "gemini-old", "fallback_models": [],
+                   "temperature": 0.1}}
+    assert sg._gemini("prompt", cfg, "key") == '{"ok": true}'
+    assert any("gemini-3.6-flash" in url for url in called)
+
+
+def test_anthropic_bad_request_does_not_retry_same_model(monkeypatch):
+    import script_gen as sg
+
+    class Response:
+        status_code = 400
+        text = "invalid max_tokens"
+
+        def raise_for_status(self):
+            raise AssertionError("400 should move directly to the next model")
+
+    calls = []
+    monkeypatch.setattr(sg, "_anthropic_discover", lambda headers: [])
+    monkeypatch.setattr(
+        sg.requests, "post",
+        lambda *a, **k: calls.append(a) or Response())
+    cfg = {"llm": {"anthropic_model": "a", "anthropic_fallback_models": ["b"]}}
+    with pytest.raises(RuntimeError):
+        sg._anthropic("prompt", cfg, "key")
+    assert len(calls) == 2

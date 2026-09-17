@@ -78,10 +78,17 @@ def _anthropic(prompt: str, cfg: dict, api_key: str) -> str:
             try:
                 r = requests.post(ANTHROPIC_URL, json=body, headers=headers,
                                   timeout=180)
-                if r.status_code == 404 or (r.status_code == 400
-                                            and "model" in r.text.lower()):
+                if r.status_code == 404:
                     print(f"[script] anthropic model {model} unavailable, next")
                     last_err = r.text[:200]
+                    break
+                if r.status_code == 400:
+                    # Invalid request bodies do not become valid after a
+                    # sleep. Move to the next model/provider immediately so
+                    # a stale provider cannot burn several workflow minutes.
+                    last_err = r.text[:300]
+                    print(f"[script] anthropic rejected {model}: "
+                          f"{last_err[:160]}")
                     break
                 if r.status_code in (429, 529):
                     wait = 20 * (attempt + 1)
@@ -201,8 +208,39 @@ def _llm(prompt: str, cfg: dict, gemini_key: str) -> str:
     return _gemini(prompt, cfg, gemini_key)
 
 
+_gemini_available: list | None = None
+
+
+def _gemini_discover(api_key: str) -> list[str]:
+    """Return current text Flash models that support generateContent."""
+    global _gemini_available
+    if _gemini_available is None:
+        try:
+            r = requests.get(f"{API_BASE}?key={api_key}&pageSize=1000",
+                             timeout=30)
+            r.raise_for_status()
+            found = []
+            for model in r.json().get("models", []):
+                name = str(model.get("name", "")).removeprefix("models/")
+                methods = model.get("supportedGenerationMethods") or []
+                if ("generateContent" in methods and "flash" in name
+                        and "image" not in name and "live" not in name
+                        and "tts" not in name):
+                    found.append(name)
+            _gemini_available = sorted(set(found), reverse=True)
+            print(f"[script] gemini models available: "
+                  f"{_gemini_available[:6]}")
+        except Exception:
+            _gemini_available = []
+    return _gemini_available
+
+
 def _gemini(prompt: str, cfg: dict, api_key: str) -> str:
-    models = [cfg["llm"]["model"]] + list(cfg["llm"].get("fallback_models", []))
+    models = ([cfg["llm"]["model"]]
+              + list(cfg["llm"].get("fallback_models", []))
+              + _gemini_discover(api_key))
+    seen: set = set()
+    models = [m for m in models if not (m in seen or seen.add(m))]
     last_err = None
     for model in models:
         url = f"{API_BASE}/{model}:generateContent?key={api_key}"
@@ -216,9 +254,17 @@ def _gemini(prompt: str, cfg: dict, api_key: str) -> str:
         for attempt in range(3):
             try:
                 r = requests.post(url, json=body, timeout=120)
-                if r.status_code == 404 or (r.status_code == 400 and "model" in r.text.lower()):
+                if r.status_code == 404 or (r.status_code == 400
+                                            and "model" in r.text.lower()):
                     print(f"[script] model {model} unavailable, trying next")
                     last_err = r.text
+                    # Gemini retirement errors name the replacement model.
+                    # Add it to this run even when config has gone stale.
+                    for suggested in re.findall(
+                            r"models/(gemini-[a-zA-Z0-9._-]+)", r.text):
+                        if ("flash" in suggested and "image" not in suggested
+                                and suggested not in models):
+                            models.append(suggested)
                     break
                 if r.status_code == 429:
                     wait = 20 * (attempt + 1)
