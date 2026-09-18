@@ -1,0 +1,241 @@
+{
+  "stamp": "2026-09-17_2355",
+  "title": "75 साल बाद मिला शरीर, कैमरा नहीं—क्या मैलरी एवरेस्ट जीत चुके थे?",
+  "style": "documentary",
+  "retention_plan": {
+    "core_question": "क्या जॉर्ज मैलरी और एंड्रयू इरविन 1924 में एवरेस्ट के शिखर तक पहुंच गए थे, और क्या उनका गायब कैमरा इसका जवाब छिपाए बैठा है?",
+    "viewer_assumption": "ज़्यादातर लोग मानते हैं कि एवरेस्ट पर सबसे पहले 1953 में एडमंड हिलेरी और तेनजिंग नोर्गे पहुंचे थे।",
+    "first_reversal": "आखिरी गवाह ने मैलरी और इरविन को दोपहर 12:50 बजे शिखर रिज की तरफ तेजी से चढ़ते देखा था।",
+    "main_reveal": "1999 में जॉर्ज मैलरी का शरीर 8,155 मीटर पर मिला। कमर पर टूटी रस्सी का निशान था, गॉगल्स जेब में थे, लेकिन कैमरा नहीं था और एंड्रयू इरविन भी गायब थे।",
+    "main_reveal_scene": 9,
+    "open_loops": [
+      {
+        "question": "आखिरी गवाह ने दोनों को शिखर से कितनी दूर देखा था?",
+        "opens_scene": 1,
+        "partial_scene": 3,
+        "closes_scene": 4
+      },
+      {
+        "question": "मैलरी की कमर पर रस्सी का निशान किस हादसे की तरफ इशारा करता है?",
+        "opens_scene": 5,
+        "partial_scene": 9,
+        "closes_scene": 10
+      },
+      {
+        "question": "कैमरा आखिर इरविन के पास था या बर्फ में कहीं और?",
+        "opens_scene": 6,
+        "partial_scene": 10,
+        "closes_scene": 12
+      }
+    ]
+  },
+  "beats": [
+    {
+      "n": 1,
+      "title": "कैमरा जो इतिहास बदल सकता है",
+      "start": 0.0,
+      "end": 31.26,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "hook",
+      "rewardType": "visual_reveal",
+      "rewardStrength": 0.98,
+      "questionOut": "आखिरी बार दोनों को किसने देखा था—और वे शिखर से कितनी दूर थे?",
+      "delivery": "hook",
+      "assets": [
+        "video:ai",
+        "image:ai",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 2,
+      "title": "1924 की आखिरी जोड़ी",
+      "start": 31.01,
+      "end": 76.74,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "context",
+      "rewardType": "fact",
+      "rewardStrength": 0.84,
+      "questionOut": "दोपहर में बादल हटे तो ऊपर खड़े एक आदमी ने उन्हें क्या करते देखा?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 3,
+      "title": "12:50 बजे बादल खुला",
+      "start": 76.49,
+      "end": 114.63,
+      "visualMode": "evidence",
+      "visualRole": "explanation",
+      "narrativeRole": "evidence",
+      "rewardType": "evidence",
+      "rewardStrength": 0.93,
+      "questionOut": "पर वे पहली चट्टानी सीढ़ी पर थे, या उस खतरनाक दूसरी सीढ़ी पर?",
+      "delivery": "urgent",
+      "assets": [
+        "image:stock",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 4,
+      "title": "वह दीवार जो फैसला बदलती है",
+      "start": 114.38,
+      "end": 149.85,
+      "visualMode": "map",
+      "visualRole": "measurement",
+      "narrativeRole": "reversal",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.91,
+      "questionOut": "और फिर 1933 में बर्फ से निकली एक चीज़ ने दोनों के आखिरी घंटे और डरावने बना दिए।",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "video:stock"
+      ]
+    },
+    {
+      "n": 5,
+      "title": "बर्फ में इरविन की कुल्हाड़ी",
+      "start": 149.6,
+      "end": 187.74,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "discovery",
+      "rewardType": "evidence",
+      "rewardStrength": 0.87,
+      "questionOut": "अगर इरविन यहीं गिरे थे, तो 75 साल बाद खोज दल ने पहले मैलरी को कैसे ढूंढ लिया?",
+      "delivery": "urgent",
+      "assets": [
+        "image:stock",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 6,
+      "title": "छोटा कैमरा, बड़ा जवाब",
+      "start": 187.49,
+      "end": 238.79,
+      "visualMode": "kinetic",
+      "visualRole": "explanation",
+      "narrativeRole": "question",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.9,
+      "questionOut": "1999 की खोज में बर्फ से पहले क्या निकला—कैमरा, इरविन, या कुछ और?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 7,
+      "title": "खोज ऊपर नहीं, नीचे गई",
+      "start": 238.54,
+      "end": 277.95,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "escalation",
+      "rewardType": "consequence",
+      "rewardStrength": 0.88,
+      "questionOut": "उस कपड़े पर क्या लिखा था जिसने पूरी टीम को रोक दिया?",
+      "delivery": "urgent",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 8,
+      "title": "बर्फ से निकला नाम",
+      "start": 277.7,
+      "end": 330.36,
+      "visualMode": "glass",
+      "visualRole": "measurement",
+      "narrativeRole": "mini_reveal",
+      "rewardType": "visual_reveal",
+      "rewardStrength": 0.96,
+      "questionOut": "मैलरी की कमर, जेब और चेहरे के पास मिले संकेत क्या कह रहे थे?",
+      "delivery": "reveal",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 9,
+      "title": "रस्सी टूटी थी",
+      "start": 330.11,
+      "end": 378.16,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "main_reveal",
+      "rewardType": "evidence",
+      "rewardStrength": 1.0,
+      "questionOut": "तो ये निशान हादसा तो दिखाते हैं, लेकिन चोटी तक पहुंचना क्यों नहीं दिखाते?",
+      "delivery": "reveal",
+      "assets": [
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 10,
+      "title": "हादसे का जवाब, शिखर का नहीं",
+      "start": 377.91,
+      "end": 426.87,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "partial_answer",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.93,
+      "questionOut": "फिर मैलरी की एक निजी चीज़ गायब क्यों थी, जिसने लोगों को दोबारा उम्मीद दे दी?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "graphic:stock"
+      ]
+    },
+    {
+      "n": 11,
+      "title": "पत्नी की फोटो कहां गई?",
+      "start": 426.62,
+      "end": 483.13,
+      "visualMode": "card",
+      "visualRole": "measurement",
+      "narrativeRole": "implication",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.9,
+      "questionOut": "तो 8,849 मीटर ऊंची चोटी के सामने इस केस का असली फैसला क्या है?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 12,
+      "title": "जवाब अब भी बर्फ में है",
+      "start": 482.88,
+      "end": 537.4,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "conclusion",
+      "rewardType": "consequence",
+      "rewardStrength": 0.97,
+      "questionOut": "",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai"
+      ]
+    }
+  ]
+}
