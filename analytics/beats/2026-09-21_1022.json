@@ -1,0 +1,220 @@
+{
+  "stamp": "2026-09-21_1022",
+  "title": "2,000 वर्ग किमी जंगल गिरा, लेकिन क्रेटर नहीं मिला | तुंगुस्का विस्फोट",
+  "style": "documentary",
+  "retention_plan": {
+    "core_question": "2,000 वर्ग किलोमीटर जंगल को गिराने वाला धमाका बिना क्रेटर छोड़े कैसे हुआ?",
+    "viewer_assumption": "इतना बड़ा धमाका हुआ है तो कोई विशाल उल्कापिंड जमीन से टकराया होगा और क्रेटर जरूर बना होगा।",
+    "first_reversal": "1927 में लियोनिद कुलिक को टक्कर का गड्ढा नहीं मिला; पेड़ एक केंद्र से बाहर की तरफ गिरे मिले।",
+    "main_reveal": "सबसे मजबूत वैज्ञानिक जवाब एयरबर्स्ट है: करीब 50 से 60 मीटर का अंतरिक्ष-पिंड कई किलोमीटर ऊपर टूटकर फटा और उसकी शॉकवेव ने जंगल गिराया।",
+    "main_reveal_scene": 8,
+    "open_loops": [
+      {
+        "question": "क्रेटर नहीं था, फिर जंगल को किसने एक साथ गिराया?",
+        "opens_scene": 1,
+        "partial_scene": 5,
+        "closes_scene": 8
+      },
+      {
+        "question": "हवा में फटा पिंड पत्थरीला था या बर्फीले धूमकेतु जैसा?",
+        "opens_scene": 6,
+        "partial_scene": 8,
+        "closes_scene": 11
+      }
+    ]
+  },
+  "beats": [
+    {
+      "n": 1,
+      "title": "2,000 वर्ग किमी जंगल एक झटके में गिरा",
+      "start": 0.0,
+      "end": 42.37,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "hook",
+      "rewardType": "visual_reveal",
+      "rewardStrength": 0.98,
+      "questionOut": "क्रेटर नहीं था, तो पेड़ों को बाहर की तरफ किसने फेंका?",
+      "delivery": "hook",
+      "assets": [
+        "video:ai",
+        "image:ai",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 2,
+      "title": "जहां खबर पहुंचने में हफ्ते लगे",
+      "start": 42.12,
+      "end": 87.21,
+      "visualMode": "map",
+      "visualRole": "measurement",
+      "narrativeRole": "context",
+      "rewardType": "fact",
+      "rewardStrength": 0.86,
+      "questionOut": "अगर कुछ जमीन से टकराया ही नहीं, तो धमाके की आवाज इतनी दूर कैसे गई?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 3,
+      "title": "धमाका सैकड़ों किलोमीटर दूर सुनाई दिया",
+      "start": 86.96,
+      "end": 133.04,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "question",
+      "rewardType": "comparison",
+      "rewardStrength": 0.82,
+      "questionOut": "19 साल बाद जब पहली टीम पहुंची, उसे जमीन पर क्या मिला?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 4,
+      "title": "1927: क्रेटर ढूंढने निकला आदमी",
+      "start": 132.79,
+      "end": 187.18,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "discovery",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.95,
+      "questionOut": "पेड़ों की दिशा ने उस गायब क्रेटर का जवाब कैसे दिया?",
+      "delivery": "reveal",
+      "assets": [
+        "image:stock",
+        "video:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 5,
+      "title": "जंगल ने तीर की तरह इशारा किया",
+      "start": 186.93,
+      "end": 246.83,
+      "visualMode": "kinetic",
+      "visualRole": "explanation",
+      "narrativeRole": "reversal",
+      "rewardType": "evidence",
+      "rewardStrength": 0.96,
+      "questionOut": "लेकिन हवा में इतना बड़ा धमाका पैदा होता कैसे है?",
+      "delivery": "reveal",
+      "assets": [
+        "video:stock",
+        "video:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 6,
+      "title": "एक झील ने केस फिर घुमा दिया",
+      "start": 246.58,
+      "end": 301.37,
+      "visualMode": "card",
+      "visualRole": "measurement",
+      "narrativeRole": "partial_answer",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.83,
+      "questionOut": "क्या कोई अंतरिक्ष-पिंड हवा में टूटकर 2,000 वर्ग किमी जंगल गिरा सकता है?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 7,
+      "title": "पिंड जमीन तक पहुंचने से पहले फट गया",
+      "start": 301.12,
+      "end": 352.23,
+      "visualMode": "causal",
+      "visualRole": "explanation",
+      "narrativeRole": "explanation",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.92,
+      "questionOut": "तुंगुस्का का पिंड कितना बड़ा था, और धमाका कितनी एनर्जी का था?",
+      "delivery": "calm",
+      "assets": [
+        "graphic:stock",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 8,
+      "title": "सबसे मजबूत जवाब: एयरबर्स्ट",
+      "start": 351.98,
+      "end": 415.96,
+      "visualMode": "glass",
+      "visualRole": "measurement",
+      "narrativeRole": "main_reveal",
+      "rewardType": "partial_answer",
+      "rewardStrength": 1.0,
+      "questionOut": "अगर वह पिंड हवा में खत्म हो गया, तो उसका कोई बड़ा टुकड़ा क्यों नहीं मिला?",
+      "delivery": "reveal",
+      "assets": [
+        "image:ai",
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 9,
+      "title": "2013 ने दिखाया: यह सिर्फ पुरानी कहानी नहीं",
+      "start": 415.71,
+      "end": 464.33,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "implication",
+      "rewardType": "consequence",
+      "rewardStrength": 0.94,
+      "questionOut": "तुंगुस्का के बाद भी साइंटिस्ट पिंड की असली बनावट पर क्यों अटके हैं?",
+      "delivery": "urgent",
+      "assets": [
+        "image:ai",
+        "graphic:stock"
+      ]
+    },
+    {
+      "n": 10,
+      "title": "सबूत हैं, मगर नाम का टैग नहीं",
+      "start": 464.08,
+      "end": 517.97,
+      "visualMode": "evidence",
+      "visualRole": "explanation",
+      "narrativeRole": "evidence",
+      "rewardType": "evidence",
+      "rewardStrength": 0.9,
+      "questionOut": "तो तुंगुस्का का रहस्य सुलझा है या अभी आधा बाकी है?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 11,
+      "title": "जवाब जमीन पर नहीं, आसमान में था",
+      "start": 517.72,
+      "end": 573.77,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "conclusion",
+      "rewardType": "visual_reveal",
+      "rewardStrength": 0.98,
+      "questionOut": "",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai",
+        "image:stock"
+      ]
+    }
+  ]
+}
