@@ -1,0 +1,228 @@
+{
+  "stamp": "2026-09-24_0941",
+  "title": "11 लोगों ने समुद्र पर चमकती चीज़ देखी—मलबा एक भी नहीं मिला | शैग हार्बर मामला",
+  "style": "documentary",
+  "retention_plan": {
+    "core_question": "11 लोगों के सामने समुद्र पर उतरी रोशनी की तलाश हुई, फिर उसका मलबा क्यों नहीं मिला?",
+    "viewer_assumption": "इतने गवाहों और रेस्क्यू बोट के बाद मामला किसी क्रैश हुए विमान का ही होना चाहिए।",
+    "first_reversal": "उस रात शैग हार्बर के पास कोई विमान लापता दर्ज ही नहीं था।",
+    "main_reveal": "सरकारी रिकॉर्ड घटना और तलाश की पुष्टि करते हैं, लेकिन उस चीज़ की पहचान नहीं करते। उसे अनआइडेंटिफाइड फ्लाइंग ऑब्जेक्ट फाइल में रखा गया।",
+    "main_reveal_scene": 4,
+    "open_loops": [
+      {
+        "question": "अगर वह विमान नहीं था, तो पानी पर तैर क्या रहा था?",
+        "opens_scene": 1,
+        "partial_scene": 4,
+        "closes_scene": 11
+      },
+      {
+        "question": "रेस्क्यू बोट को दिखा पीला झाग आखिर किस चीज़ का था?",
+        "opens_scene": 3,
+        "partial_scene": 6,
+        "closes_scene": 11
+      }
+    ]
+  },
+  "beats": [
+    {
+      "n": 1,
+      "title": "रोशनी समुद्र पर रुकी",
+      "start": 0.0,
+      "end": 42.98,
+      "visualMode": "kinetic",
+      "visualRole": "experience",
+      "narrativeRole": "hook",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.98,
+      "questionOut": "अगर विमान नहीं गिरा था, तो 11 लोगों ने समुद्र पर क्या देखा?",
+      "delivery": "hook",
+      "assets": [
+        "video:ai",
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 2,
+      "title": "चार लाइटें, एक चीज़",
+      "start": 42.73,
+      "end": 92.85,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "context",
+      "rewardType": "fact",
+      "rewardStrength": 0.86,
+      "questionOut": "रेस्क्यू बोट जब उस रोशनी तक पहुँची, तब पानी पर क्या बचा था?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 3,
+      "title": "रेस्क्यू बोट को मिला पीला झाग",
+      "start": 92.6,
+      "end": 145.7,
+      "visualMode": "map",
+      "visualRole": "measurement",
+      "narrativeRole": "discovery",
+      "rewardType": "evidence",
+      "rewardStrength": 0.9,
+      "questionOut": "क्या उस रात शैग हार्बर के पास कोई विमान सच में गायब हुआ था?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 4,
+      "title": "रिकॉर्ड ने पहचान नहीं दी",
+      "start": 145.45,
+      "end": 201.25,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "main_reveal",
+      "rewardType": "visual_reveal",
+      "rewardStrength": 1.0,
+      "questionOut": "अगर फाइल ने नाम नहीं दिया, तो जांच आखिर कितनी दूर तक गई?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 5,
+      "title": "फाइल के बाद भी तलाश जारी रही",
+      "start": 201.0,
+      "end": 244.29,
+      "visualMode": "evidence",
+      "visualRole": "measurement",
+      "narrativeRole": "evidence",
+      "rewardType": "evidence",
+      "rewardStrength": 0.94,
+      "questionOut": "अगर मामला इतना गंभीर था, तो नौसेना को पानी के नीचे क्या मिला?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "video:stock"
+      ]
+    },
+    {
+      "n": 6,
+      "title": "तलाश पानी के नीचे गई",
+      "start": 244.04,
+      "end": 300.99,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "escalation",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.82,
+      "questionOut": "क्या कोई साधारण नेचुरल चीज़ चार लाइटों और उस झाग को समझा सकती है?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "video:stock",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 7,
+      "title": "उल्का वाला जवाब क्यों नहीं चला",
+      "start": 300.74,
+      "end": 357.24,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "partial_answer",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.9,
+      "questionOut": "क्या इसका मतलब एलियन थे? नहीं—और यही इस केस का सबसे जरूरी फर्क है।",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 8,
+      "title": "फाइल का ईमानदार फैसला",
+      "start": 356.99,
+      "end": 405.23,
+      "visualMode": "glass",
+      "visualRole": "measurement",
+      "narrativeRole": "implication",
+      "rewardType": "visual_reveal",
+      "rewardStrength": 1.0,
+      "questionOut": "तो एलियन मान लेना गलत क्यों है, और गवाहों को झूठा कहना भी गलत क्यों है?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 9,
+      "title": "एलियन कहना भी सबूत नहीं",
+      "start": 404.98,
+      "end": 459.7,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "implication",
+      "rewardType": "fact",
+      "rewardStrength": 0.88,
+      "questionOut": "फिर इस केस का सबसे भारी सबूत कोई चीज़ नहीं, बल्कि लोगों का एक फैसला कैसे बन गया?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 10,
+      "title": "लोग मदद करने निकले थे",
+      "start": 459.45,
+      "end": 513.89,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "escalation",
+      "rewardType": "consequence",
+      "rewardStrength": 0.9,
+      "questionOut": "खाली समुद्र इस केस का सबसे मजबूत जवाब क्यों बन गया?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 11,
+      "title": "समुद्र ने जवाब नहीं दिया",
+      "start": 513.64,
+      "end": 572.58,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "conclusion",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.96,
+      "questionOut": "",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:stock",
+        "image:ai",
+        "image:ai"
+      ]
+    }
+  ]
+}
