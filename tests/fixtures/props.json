@@ -5,28 +5,14 @@
     "height": 1080,
     "xfadeFrames": 6,
     "maxShotSeconds": 5,
+    "mapShotSeconds": 5.5,
     "style": "documentary",
-    "accent": "#FFB020",
-    "progressBar": false,
-    "brandName": "SURAAGNAMA",
-    "brandTagline": "असली केस · असली सबूत · अनसुलझे सवाल",
-    "brandClosingLine": "फ़ाइल अभी बंद नहीं हुई।",
     "watermarkPath": null,
     "watermarkOpacity": 0.08,
-    "outroSeconds": 1,
     "captionY": 0.78,
     "title": "Test",
     "thumbText": "TEST",
     "thumbAiPath": null,
-    "motionSeed": "ci-smoke",
-    "cta": {
-      "start": 0.1,
-      "duration": 0.7,
-      "variant": "pill",
-      "title": "Subscribe",
-      "subtitle": "Weekly discoveries",
-      "compact": false
-    },
     "sfx": [],
     "musicPath": null,
     "musicVolume": 0,
@@ -35,24 +21,15 @@
     "scenes": [{
       "n": 1,
       "start": 0,
+      "impactStart": 0,
       "title": "Test scene",
       "visualMode": "broll",
-      "kineticText": "",
       "stat": {},
-      "card": {},
-      "glass": {},
       "map": {},
-      "motion": {
-        "statVariant": "glass",
-        "kineticVariant": "word-pop",
-        "cardVariant": "definition",
-        "frameVariant": "corners",
-        "lowerThirdVariant": "rail",
-        "glassVariant": "fact"
-      },
       "audioPath": null,
       "audioDuration": 1,
-      "assets": []
+      "assets": [{"path": "scene.png", "kind": "image"}],
+      "visualBeats": []
     }]
   }
 }

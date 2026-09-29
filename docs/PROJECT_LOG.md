@@ -26,16 +26,23 @@ Optional: FAL_KEY (FLUX signature stills), ANTHROPIC_API_KEY (Claude scripts).
 (Claude/Gemini + critique pass + visual beats) → grounded fact-check → Sarvam
 cloned voice (Kokoro fallback, reveal-pause pad) → STT word alignment →
 map render → assets (FLUX/Gemini AI + Pexels, never-repeat `assets_used.json`,
-vision QC) → hero attach → captions → motion/SFX/music-automation plan →
+vision QC) → hero attach → plain captions → SFX/music automation →
 manifest (`props.json`) → Remotion render (MoviePy fallback) → −14 LUFS
 mastering → quality report → thumbnail → release files (`metadata.md`,
 `run_summary.json`, chapters, title/thumb alternates). `run_short.py` =
 vertical variant. Remotion (`remotion/src/`): `Main`/`ShortMain`/`Thumb`
-compositions; `motion-library` (33 variants) + `glass` + `Map` + `hud` +
-`transitions` + `elements`; 5 style packs in `styles.ts` (documentary,
-kinetic, editorial, noir, telemetry) rotating per video.
+compositions with full-frame media, maps, plain captions, simple number
+emphasis and fade transitions. There are no in-video cards, frames, HUDs,
+lower thirds, CTAs, title treatments or visual-template fallbacks.
 
 ## Changelog
+
+**Sep 28 — Media-only presentation (Codex).** Removed the in-video motion
+template library, alternate caption skins, scene frames, cards, HUDs, CTAs,
+branded outro and programmatic fallback graphics. Long-form and Shorts now use
+one documentary presentation: full-frame footage/images/maps, plain captions,
+word-synced numbers when needed and soft fades. Missing media borrows the
+nearest real asset; an episode-wide media outage fails before render.
 
 **Jul 21 — Visual identity v2: 30 topic-driven style packs (Claude).**
 `styles.ts` + new `pipeline/style_packs.py` (mirrored registries, synced by

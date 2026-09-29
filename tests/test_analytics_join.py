@@ -21,7 +21,7 @@ BEATS_DOC = {
          "narrativeRole": "explanation", "visualMode": "stat",
          "delivery": "calm"},
         {"n": 3, "title": "end", "start": 60.0, "end": 100.0,
-         "narrativeRole": "main_reveal", "visualMode": "glass",
+         "narrativeRole": "main_reveal", "visualMode": "evidence",
          "delivery": "reveal"},
     ],
 }

@@ -2,8 +2,8 @@
 
 Generates a broadcast-style library with numpy at runtime: multiple whooshes,
 risers, impacts, ticks, pops, pulses, chimes, bell, shimmer and glitch accents.
-Events are selected by scene role and CTA type so the same sound is not used
-on every transition.
+Events are selected by scene role so the same sound is not used on every
+transition.
 The Remotion SfxLayer plays them from the manifest's `sfx` event list.
 """
 import hashlib
@@ -21,15 +21,6 @@ SOUND_CATALOG = (
     "glitch", "beep", "shutter", "page_turn", "rumble", "air",
     "swell", "thud", "ui_blip", "sonar",
 )
-
-GLASS_SFX = {
-    "fact": "ui_blip",
-    "metric": "ui_blip",
-    "location": "sonar",
-    "chapter": "thud",
-    "reveal": "swell",
-}
-
 
 def _norm(x: np.ndarray, peak: float = 0.9) -> np.ndarray:
     m = float(np.max(np.abs(x))) or 1.0
@@ -330,8 +321,7 @@ def plan_music_automation(scenes: list[dict], cfg: dict) -> list[dict]:
     for scene in scenes:
         delivery = str(scene.get("delivery", "calm")).lower()
         factor = factors.get(delivery, factors["calm"])
-        # Dense information graphics need slightly more room for narration.
-        if scene.get("visual_mode") in ("stat", "glass"):
+        if scene.get("visual_mode") == "stat":
             factor = min(factor, factors["reveal"] + 0.05)
         events.append({
             "start": round(float(scene.get("start", 0)), 3),
@@ -342,8 +332,7 @@ def plan_music_automation(scenes: list[dict], cfg: dict) -> list[dict]:
     return events
 
 
-def plan_events(scenes: list[dict], cfg: dict, workdir: str,
-                cta: dict | None = None) -> list[dict]:
+def plan_events(scenes: list[dict], cfg: dict, workdir: str) -> list[dict]:
     """Compute [{path, start, volume}] for the manifest. scenes need
     .start (absolute s) and .visual_mode. Fail-open: [] on any problem."""
     scfg = cfg.get("sfx", {})
@@ -374,11 +363,11 @@ def plan_events(scenes: list[dict], cfg: dict, workdir: str,
             events.append({"path": pack[transitions[(i - 1) % len(transitions)]],
                            "start": max(start - 0.18, 0.0),
                            "volume": round(base * 0.85, 3)})
-        if mode in ("kinetic", "stat"):
+        if mode == "stat":
             events.append({"path": pack["riser"],
                            "start": max(start - 1.35, 0.0),
                            "volume": round(base * 0.8, 3)})
-            events.append({"path": pack["hit" if mode == "kinetic" else "sub_hit"],
+            events.append({"path": pack["sub_hit"],
                            "start": start + 0.04,
                            "volume": round(base, 3)})
         if mode == "stat":
@@ -387,46 +376,16 @@ def plan_events(scenes: list[dict], cfg: dict, workdir: str,
                                "volume": round(base * 0.40, 3)})
             events.append({"path": pack["beep"], "start": start + 1.02,
                            "volume": round(base * 0.28, 3)})
-        elif mode == "kinetic" and style_pack == "kinetic":
-            events.append({"path": pack["glitch"], "start": start + 0.12,
-                           "volume": round(base * 0.32, 3)})
-        elif mode == "card":
-            events.append({"path": pack["pop"], "start": start + 0.06,
-                           "volume": round(base * 0.38, 3)})
-            events.append({"path": pack["chime"], "start": start + 0.36,
-                           "volume": round(base * 0.24, 3)})
         elif mode == "map":
             events.append({"path": pack["pulse"], "start": start + 0.16,
                            "volume": round(base * 0.58, 3)})
             events.append({"path": pack["chime"], "start": start + 0.60,
                            "volume": round(base * 0.36, 3)})
-        elif mode == "glass":
-            variant = str((sc.get("motion") or {}).get("glassVariant", "fact"))
-            cue = GLASS_SFX.get(variant, "ui_blip")
-            if variant == "reveal":
-                events.append({"path": pack["swell"],
-                               "start": max(start - 1.15, 0.0),
-                               "volume": round(base * .62, 3)})
-                events.append({"path": pack["thud"], "start": start + .08,
-                               "volume": round(base * .74, 3)})
-            else:
-                events.append({"path": pack[cue], "start": start + .10,
-                               "volume": round(base * .48, 3)})
         elif mode == "ai_image":
             events.append({"path": pack["shutter"], "start": start + 0.02,
                            "volume": round(base * 0.22, 3)})
             events.append({"path": pack["sparkle"], "start": start + 0.12,
                            "volume": round(base * 0.34, 3)})
 
-    if cta:
-        cta_start = float(cta.get("start", 0.0))
-        events.extend([
-            {"path": pack["pop"], "start": cta_start,
-             "volume": round(base * 0.54, 3)},
-            {"path": pack["bell"], "start": cta_start + 0.56,
-             "volume": round(base * 0.48, 3)},
-            {"path": pack["sparkle"], "start": cta_start + 0.88,
-             "volume": round(base * 0.28, 3)},
-        ])
     print(f"[sfx] planned {len(events)} sound-design events")
     return events

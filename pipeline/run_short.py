@@ -24,7 +24,6 @@ import calibration                  # noqa: E402
 import captions as captions_mod     # noqa: E402
 import factcheck                    # noqa: E402
 import mapgen                       # noqa: E402
-import motion as motion_mod         # noqa: E402
 import postprocess                  # noqa: E402
 import script_gen                   # noqa: E402
 import sfx as sfx_mod               # noqa: E402
@@ -40,7 +39,6 @@ from run import (  # noqa: E402
     _validate_scene_assets,
     _visual_beat_manifest,
 )
-import style_packs                  # noqa: E402
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REMOTION_DIR = os.path.join(REPO_ROOT, "remotion")
@@ -94,7 +92,7 @@ def short_cfg(cfg: dict) -> dict:
     c["captions"]["max_chars"] = s.get("captions_max_chars", 14)
     c["music"]["volume"] = s.get("music_volume", 0.18)
     c["tts"]["speed"] = s.get("tts_speed", 1.0)
-    c["render"]["progress_bar"] = bool(s.get("progress_bar", False))
+    c["render"]["presentation"] = "media_only"
     if os.environ.get("FAL_KEY", "").strip():  # FLUX on -> richer AI visuals
         c["ai_images"]["max_per_video"] = s.get("ai_images_max_flux", 2)
     else:
@@ -158,12 +156,9 @@ def main() -> None:
         shape=topic_shape.SINGLE_CLAIM, also_done=long_topics,
         max_seconds=short_max_seconds)
 
-    # topic-driven style pack (mystery -> noir family, space -> cosmos...),
-    # rotating away from the last few Shorts. Replaces done_count % N.
-    style = style_packs.select_and_log(topic, "", REPO_ROOT, is_short=True)
-    cfg.setdefault("render", {})["style_pack"] = style  # steers AI-image look
-    print(f"[style] topic-driven pack: {style}")
-    style_packs.apply_pacing(cfg, style, is_short=True)
+    style = "documentary"
+    cfg.setdefault("render", {})["style_pack"] = style
+    print("[style] media-only documentary presentation")
     measured_wpm = calibration.measured_wpm(
         REPO_ROOT, int(cfg.get("short", {}).get("wpm", 100)), kind="short")
     if measured_wpm:
@@ -183,8 +178,7 @@ def main() -> None:
 
     # 2) voiceover -------------------------------------------------------------
     fps = int(cfg["video"]["fps"])
-    jit = style_packs.render_jitter(script["title"] + ":short")
-    xfade = float(cfg["video"]["crossfade"]) * jit["xfade_mul"]
+    xfade = float(cfg["video"]["crossfade"])
     scenes, offset = [], 0.0
     short_settings = cfg.get("short", {})
     final_index = len(script["scenes"]) - 1
@@ -280,7 +274,7 @@ def main() -> None:
     if os.path.exists(src_wm):
         shutil.copyfile(src_wm, os.path.join(workdir, "brand_watermark.png"))
         wm = "brand_watermark.png"
-    motion_seed = f"{script['title']}:{style}:short"
+    audio_seed = f"{script['title']}:{style}:short"
     music_rel = None
     tracks = []
     for ext in ("mp3", "wav", "m4a", "ogg"):
@@ -291,48 +285,29 @@ def main() -> None:
         shutil.copyfile(track, os.path.join(workdir, music_rel))
     elif float(cfg["music"]["volume"]) > 0 and cfg["music"].get("auto_ambient", True):
         music_rel = sfx_mod.build_ambient_bed(
-            workdir, motion_seed, style, is_short=True)
+            workdir, audio_seed, style, is_short=True)
 
-    motion_mod.decorate_scenes(
-        scenes, motion_seed,
-        frame_pool=style_packs.frames_for(style),
-        lower_third_pool=style_packs.lower_thirds_for(style))
-    cta_event = motion_mod.plan_cta(scenes, cfg, motion_seed, is_short=True)
-    sfx_events = sfx_mod.plan_events(scenes, cfg, workdir, cta_event)
+    sfx_events = sfx_mod.plan_events(scenes, cfg, workdir)
 
-    # word-synced impact windows: the graphic enters on the spoken keyword
-    overlay_seconds = (float(short_settings.get("overlay_seconds", 3.5))
-                       * jit["overlay_mul"])
+    # Word-sync the only allowed overlay: a plain number over the media.
     for sc in scenes:
-        sc["impact_start"] = _impact_start(sc, overlay_seconds)
+        sc["impact_start"] = _impact_start(sc, 2.4)
         if sc["impact_start"] > 0:
-            print(f"[sync] scene {sc['n']}: {sc.get('visual_mode')} graphic "
+            print(f"[sync] scene {sc['n']}: plain number "
                   f"word-synced to +{sc['impact_start']:.2f}s")
 
     manifest = {"manifest": {
         "fps": fps, "width": 1080, "height": 1920,
         "xfadeFrames": max(int(round(xfade * fps)), 1),
-        "maxShotSeconds": float(cfg["video"].get("max_shot_seconds", 2.4))
-        * jit["max_shot_mul"],
-        "overlaySeconds": overlay_seconds,
+        "maxShotSeconds": float(cfg["video"].get("max_shot_seconds", 2.4)),
         "style": style,
-        "accent": cfg["render"].get("accent", "#FFB020"),
-        "progressBar": bool(cfg["render"].get("progress_bar", False)),
-        "brandName": brand_cfg.get("name", ""),
-        "brandTagline": brand_cfg.get("tagline", ""),
-        "brandClosingLine": brand_cfg.get("closing_line", "फ़ाइल अभी बंद नहीं हुई।"),
         "watermarkPath": wm,
         "watermarkOpacity": min(max(
-            float(brand_cfg.get("watermark_opacity", 0.08))
-            + jit["watermark_off"], 0.05), 0.14),
-        "outroSeconds": 0,
-        "captionY": min(max(
-            float(cfg.get("short", {}).get("caption_y", 0.62))
-            + jit["caption_y_off"], 0.5), 0.72),
+            float(brand_cfg.get("watermark_opacity", 0.08)), 0.05), 0.14),
+        "captionY": min(max(float(cfg.get("short", {}).get(
+            "caption_y", 0.62)), 0.5), 0.72),
         "title": script["title"],
         "thumbText": script.get("thumb_text", ""),
-        "motionSeed": motion_seed,
-        "cta": cta_event,
         "sfx": sfx_events,
         "musicPath": music_rel,
         "musicVolume": float(cfg["music"]["volume"]),
@@ -344,12 +319,8 @@ def main() -> None:
             "start": round(sc["start"], 3),
             "impactStart": sc.get("impact_start", 0.0),
             "visualMode": sc.get("visual_mode", "broll"),
-            "kineticText": sc.get("kinetic_text", ""),
             "stat": sc.get("stat", {}) or {},
-            "card": sc.get("card", {}) or {},
-            "glass": sc.get("glass", {}) or {},
             "map": sc.get("map_render") or {},
-            "motion": sc.get("motion") or {},
             "audioPath": os.path.basename(sc["audio_path"]),
             "audioDuration": round(sc["audio_duration"], 3),
             "assets": [_asset_manifest(a) for a in sc["assets"]],
@@ -435,7 +406,8 @@ voice: {voice_line} · run {stamp}
 - [ ] Instagram: same MP4 works as a Reel
 - [ ] Confirm the loop: does the ending feed the opening?
 
-*Vertical b-roll: Pexels. Voice: {voice_line}. Motion: Remotion. Brand: SURAAGNAMA · सुरागनामा.*
+*Vertical media: Pexels + licensed AI images. Voice: {voice_line}. Visuals:
+full-frame media with plain captions and simple fades. Brand: SURAAGNAMA · सुरागनामा.*
 """
     with open(os.path.join(outdir, "metadata.md"), "w", encoding="utf-8") as f:
         f.write(meta)
@@ -446,15 +418,14 @@ voice: {voice_line} · run {stamp}
                    "voice": voice_line, "captions": caption_status,
                    "factcheck": fact_report,
                    "visual_audit": visual_report,
-                   "motion_library": {
-                       "seed": motion_seed,
-                       "cta": cta_event,
-                       "scene_variants": [sc.get("motion", {}) for sc in scenes],
+                   "presentation": {
+                       "mode": "media_only",
+                       "number_overlays": sum(
+                           sc.get("visual_mode") == "stat" for sc in scenes),
                        "sound_events": len(sfx_events),
                    }}, f, indent=2, ensure_ascii=False)
 
     script_gen.log_topic_done(topic, DONE_FILE)
-    style_packs.record_use(style, REPO_ROOT, is_short=True)
 
     gh_out = os.environ.get("GITHUB_OUTPUT")
     if gh_out:

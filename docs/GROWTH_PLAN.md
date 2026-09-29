@@ -67,10 +67,10 @@
 ## 3. Gap analysis — honest and short
 
 **Already competitive** (do not rebuild): simulation engine (premise /
-changing variable / escalating milestones / story HUD), scenario+continuity
+changing variable / escalating milestones), scenario+continuity
 contracts enforced at script AND vision-QC layers, hero image continuity,
-sentence-level visual beats, word-synced impact graphics, 5 rotating style
-packs + motion library + custom transitions, delivery-driven voice/music/
+sentence-level visual beats, word-synced plain numbers, full-frame media with
+simple fades, delivery-driven voice/music/
 camera, grounded fact-check + failure registry, −14 LUFS mastering, chapters,
 tease-chain (each video's promise becomes the next video), packaging
 alternates, calm-caption hierarchy, word-budget + duration enforcement.

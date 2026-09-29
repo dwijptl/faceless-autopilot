@@ -298,7 +298,6 @@ def lint(script: dict, cfg: dict) -> dict:
     for i, s in enumerate(scenes):
         narration = str(s.get("narration", ""))
         for label, value in (("stat", (s.get("stat") or {}).get("value")),
-                             ("compare", (s.get("compare") or {}).get("value")),
                              ("milestone", (s.get("milestone") or {}).get("value"))):
             variants = _num_variants(value)
             if not variants or float(value) == 0:
@@ -361,7 +360,7 @@ def repair_prompt(script: dict, report: dict, cfg: dict,
     return f"""You are the story editor of a Hindi real-case investigation channel.
 The draft below FAILED the channel's deterministic retention audit.
 Fix EVERY listed violation while keeping the same JSON schema, scene count,
-visual_mode, search_terms and all visual payloads (stat/card/glass/map)
+visual_mode, search_terms and all visual payloads (stat/map/evidence)
 intact unless a violation explicitly requires changing them (for example
 'engine_flat' requires new escalating milestone values).
 

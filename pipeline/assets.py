@@ -2,8 +2,8 @@
 
 Priority per scene (by visual_mode from the script):
   ai_image  -> FLUX (fal.ai) or Gemini image gen -> stock fallback
-  kinetic / stat / card / glass -> one background asset (stock or AI) — overlays drawn in Remotion
-  broll     -> Pexels video -> Pexels photo -> animated evidence graphic
+  broll/stat/evidence -> Pexels video -> Pexels photo -> AI rescue still
+  map       -> generated map over a real image/video base
 
 CINEMATIC QUERY SHAPING: raw search terms pull generic vacation-stock. Every
 term is first searched with a rotating cinematic modifier ("aerial", "macro",
@@ -27,7 +27,7 @@ import re
 import time
 
 import requests
-from PIL import Image, ImageDraw
+from PIL import Image
 
 import ai_images
 import families as families_mod
@@ -151,75 +151,6 @@ def _best_video_file(video: dict, want_w: int, want_h: int | None = None,
         abs((f["width"] / float(f["height"])) - target_ratio),
         f["width"] * f["height"],
     ))
-
-
-def _gradient_card(path: str, w: int, h: int, seed: int) -> str:
-    """Legacy on-disk fallback kept for old hero-shot callers.
-
-    Scene and beat resolution must use :func:`fallback_graphic_asset` instead;
-    a full-frame gradient is indistinguishable from missing footage.
-    """
-    palettes = [((10, 20, 40), (18, 35, 63)), ((16, 12, 34), (70, 44, 108)),
-                ((8, 26, 26), (22, 78, 74)), ((28, 18, 8), (104, 64, 26))]
-    top, bottom = palettes[seed % len(palettes)]
-    img = Image.new("RGB", (w, h))
-    d = ImageDraw.Draw(img)
-    for y in range(h):
-        t = y / h
-        d.line([(0, y), (w, y)], fill=tuple(int(a + (b - a) * t) for a, b in zip(top, bottom)))
-    img.save(path, quality=90)
-    return path
-
-
-def fallback_graphic_asset(scene: dict, beat: dict | None = None,
-                           index: int = 0) -> dict:
-    """Return a zero-network, non-blank visual for a failed media lookup.
-
-    Remotion renders this as an animated evidence board.  It deliberately has
-    no filesystem dependency, so it also survives an episode-wide stock/AI
-    outage.  The ``fallback`` marker keeps the quality gate honest: the draft
-    remains review-only even though viewers never see a solid colour card.
-    """
-    beat = beat or {}
-    # Prefer the spoken cue. Internal failure wording must never leak into a
-    # finished frame as a giant on-screen title.
-    raw_title = (beat.get("cue") or beat.get("purpose")
-                 or scene.get("title") or scene.get("narration")
-                 or "Visual evidence")
-    title = " ".join(str(raw_title).split())[:60]
-    terms = (beat.get("search_terms") or scene.get("search_terms") or [])
-    labels = []
-    for term in terms:
-        label = " ".join(str(term).split())[:28]
-        if label and label.casefold() not in {x.casefold() for x in labels}:
-            labels.append(label)
-        if len(labels) == 3:
-            break
-    if not labels:
-        words = title.split()
-        width = max(int(math.ceil(len(words) / 3)), 1)
-        labels = [" ".join(words[pos:pos + width])[:28]
-                  for pos in range(0, len(words), width)][:3]
-    labels = labels or ["EVIDENCE"]
-    try:
-        scene_n = int(scene.get("n", 0))
-    except (TypeError, ValueError):
-        scene_n = 0
-    variants = ("evidence-orbit", "signal-trace", "archive-strip",
-                "terrain-scan")
-    variant = variants[(scene_n * 3 + index) % len(variants)]
-    return {
-        "path": f"s{scene_n:02d}_b{index:02d}_fallback_graphic",
-        "kind": "graphic",
-        "beat_index": index,
-        "graphic": {
-            "kind": "fallback",
-            "variant": variant,
-            "title": title,
-            "items": [{"label": label} for label in labels],
-        },
-        "fallback": "programmatic",
-    }
 
 
 def _orientation(cfg) -> str:
@@ -810,8 +741,6 @@ def _director_beat_asset(scene: dict, beat: dict, index: int, outdir: str,
     """Narrative-intent media resolution for one beat (visual director).
 
     Walks the beat family's media preference order:
-      pg    -> a free programmatic graphic (timeline/scale/branch/chart/
-               cutaway) drawn by Remotion from the planner's data payload
       ai    -> a family-composed AI still (only when this beat holds one of
                the priority-ranked grants, so the hook/reveal never lose
                their credit to an early filler beat)
@@ -826,13 +755,6 @@ def _director_beat_asset(scene: dict, beat: dict, index: int, outdir: str,
         return None  # authentic/archival only; AI would invent evidence
 
     order = families_mod.media_order(family)
-    if order and order[0] == "pg" and beat.get("graphic"):
-        print(f"[director] scene {scene['n']} beat {index + 1}: "
-              f"programmatic {beat['graphic'].get('kind')} ({family})")
-        return {"path": f"s{scene['n']:02d}_b{index:02d}_graphic",
-                "kind": "graphic", "graphic": beat["graphic"],
-                "family": family, "source_policy": policy}
-
     def generate_ai() -> dict | None:
         if not beat.get("ai_grant") or not director_budget \
                 or director_budget[0] <= 0:
@@ -884,12 +806,6 @@ def _director_beat_asset(scene: dict, beat: dict, index: int, outdir: str,
         if generated:
             return generated
     for medium in order:
-        if medium == "pg" and beat.get("graphic"):
-            print(f"[director] scene {scene['n']} beat {index + 1}: "
-                  f"programmatic {beat['graphic'].get('kind')} ({family})")
-            return {"path": f"s{scene['n']:02d}_b{index:02d}_graphic",
-                    "kind": "graphic", "graphic": beat["graphic"],
-                    "family": family}
         if medium == "ai":
             generated = generate_ai()
             if generated:
@@ -925,10 +841,8 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
             hook["beat_index"] = 0
             assets.append(hook)
 
-    # AI-generated hero image (for ai_image scenes, or as bg for kinetic/stat)
-    wants_ai = mode == "ai_image" or (
-        mode in ("kinetic", "stat", "card", "glass", "scale", "causal")
-        and not scene.get("search_terms"))
+    # AI-generated hero image for explicitly authored still scenes.
+    wants_ai = mode == "ai_image"
     prompt = (scene.get("ai_prompt") or "").strip()
     if prompt and scene.get("episode_signature"):
         prompt += (". Episode-specific photographic direction: "
@@ -1012,9 +926,8 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
                     if photo:
                         beat_assets.append(photo)
             if not beat_assets:
-                beat_assets.append(fallback_graphic_asset(scene, beat, index))
                 print(f"[assets] scene {scene['n']} beat {index + 1}: "
-                      "animated evidence fallback")
+                      "media unresolved; render guard will borrow nearby footage")
             for asset in beat_assets:
                 asset["beat_index"] = index
                 asset.setdefault("source_policy", policy)
@@ -1022,40 +935,22 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
                     assets.append(asset)
         return assets
 
-    # Overlay scenes need one strong background; the graphic carries the beat.
-    if mode in ("kinetic", "stat", "card", "glass", "scale", "causal"):
-        if not assets:
-            # Long overlay scenes still need visual development behind the
-            # graphic. Cap at three free stock clips to prevent a 30-second
-            # card from sitting over one repeated background.
-            max_shot = max(float(cfg["video"].get("max_shot_seconds", 5)), 0.5)
-            overlay_clips = max(1, min(3, int(math.ceil(need_seconds / max_shot))))
-            stock, _ = _stock_videos(scene, min(need_seconds, 10), outdir, cfg,
-                                     pexels_key, used, max_clips=overlay_clips,
-                                     gemini_key=gemini_key)
-            assets.extend(stock)
-        if not assets:
-            photo = _stock_photo(scene, outdir, pexels_key, used,
-                                 _orientation(cfg), cfg, gemini_key)
-            if photo:
-                assets.append(photo)
-    else:
-        if _nasa_relevant(scene.get("search_terms", [])):
-            nasa = _nasa_asset(scene, outdir, used, cfg, gemini_key)
-            if nasa:
-                assets.append(nasa)
-        covered = 6.0 * len(assets)
-        max_clips = max(2, int(need_seconds // cfg["video"]["max_shot_seconds"]) + 1)
-        stock, c = _stock_videos(scene, need_seconds - covered, outdir, cfg,
-                                 pexels_key, used, max_clips,
-                                 gemini_key=gemini_key)
-        assets.extend(stock)
-        covered += c
-        if covered < need_seconds and len(assets) < 2:
-            photo = _stock_photo(scene, outdir, pexels_key, used,
-                                 _orientation(cfg), cfg, gemini_key)
-            if photo:
-                assets.append(photo)
+    if _nasa_relevant(scene.get("search_terms", [])):
+        nasa = _nasa_asset(scene, outdir, used, cfg, gemini_key)
+        if nasa:
+            assets.append(nasa)
+    covered = 6.0 * len(assets)
+    max_clips = max(2, int(need_seconds // cfg["video"]["max_shot_seconds"]) + 1)
+    stock, c = _stock_videos(scene, need_seconds - covered, outdir, cfg,
+                             pexels_key, used, max_clips,
+                             gemini_key=gemini_key)
+    assets.extend(stock)
+    covered += c
+    if covered < need_seconds and len(assets) < 2:
+        photo = _stock_photo(scene, outdir, pexels_key, used,
+                             _orientation(cfg), cfg, gemini_key)
+        if photo:
+            assets.append(photo)
 
     if not assets and rescue_budget and rescue_budget[0] > 0:
         # AI rescue still (non-beat path, e.g. shorts): stock produced nothing
@@ -1073,7 +968,7 @@ def fetch_scene_assets(scene: dict, need_seconds: float, outdir: str, cfg: dict,
                 rescue_budget[0] -= 1
                 assets.append({"path": path, "kind": "image", "ai": True})
                 print(f"[assets] scene {scene['n']}: AI rescue still")
-    if not assets:  # absolute fallback — never show a solid colour card
-        assets.append(fallback_graphic_asset(scene))
-        print(f"[assets] scene {scene['n']}: animated evidence fallback")
+    if not assets:
+        print(f"[assets] scene {scene['n']}: media unresolved; render guard "
+              "will borrow nearby footage")
     return assets

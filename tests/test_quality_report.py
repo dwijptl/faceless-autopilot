@@ -60,7 +60,7 @@ def test_manifest_audit_rejects_gradient_fallback_asset():
     assert any("blank gradient fallback" in error for error in report["errors"])
 
 
-def test_manifest_audit_flags_programmatic_fallback_for_review():
+def test_manifest_audit_rejects_visual_template_kind():
     manifest = _manifest()
     manifest["scenes"][0]["visualBeats"][0]["assets"] = [{
         "path": "s01_b00_fallback_graphic", "kind": "graphic",
@@ -70,7 +70,7 @@ def test_manifest_audit_flags_programmatic_fallback_for_review():
     report = quality_report.audit_manifest(manifest, {})
 
     assert report["passed"] is False
-    assert any("animated evidence fallback requires review" in error
+    assert any("forbidden visual kind graphic" in error
                for error in report["errors"])
 
 

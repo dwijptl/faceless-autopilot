@@ -98,9 +98,8 @@ export const MapZoom: React.FC<{
             left: `${Math.min(rx * 100 + 3, 72)}%`,
             top: `${Math.max(ry * 100 - 8, 6)}%`,
             fontFamily: bodyFamily(style), fontSize: 40 * s, fontWeight: 800,
-            color: '#F4F7FB', background: 'rgba(10,20,40,0.85)',
-            border: `${2 * s}px solid ${style.accent}`,
-            padding: `${8 * s}px ${20 * s}px`, borderRadius: 10 * s,
+            color: '#F4F7FB',
+            textShadow: '0 3px 7px rgba(0,0,0,0.98), 0 10px 28px rgba(0,0,0,0.85)',
             opacity: labelIn, lineHeight: 1.4,
             transform: `translateY(${interpolate(labelIn, [0, 1], [16, 0])}px)`,
           }}>{map.label}</div>

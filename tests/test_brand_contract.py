@@ -17,15 +17,15 @@ def test_brand_config_is_complete_and_consistent():
     assert brand["closing_line"] == "फ़ाइल अभी बंद नहीं हुई।"
 
 
-def test_every_renderer_has_an_end_name_contract():
+def test_every_renderer_uses_only_the_corner_watermark():
     main = (ROOT / "remotion/src/Main.tsx").read_text(encoding="utf-8")
     short = (ROOT / "remotion/src/ShortMain.tsx").read_text(encoding="utf-8")
     fallback = (ROOT / "pipeline/render.py").read_text(encoding="utf-8")
-    assert "brandName={m.brandName || 'SURAAGNAMA'}" in main
-    assert "<ShortEndBrand" in short
-    assert "brandName={m.brandName || 'SURAAGNAMA'}" in short
-    assert "_brand_outro(cfg, w, h)" in fallback
-    assert 'brand.get("name") or "SURAAGNAMA"' in fallback
+    assert "<Watermark" in main
+    assert "<Watermark" in short
+    assert "_brand_watermark" in fallback
+    assert "ShortEndBrand" not in short
+    assert "_brand_outro" not in fallback
 
 
 def test_approved_assets_have_youtube_dimensions_and_alpha():

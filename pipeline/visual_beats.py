@@ -86,33 +86,6 @@ def _fallback_beats(scene: dict, count: int, scene_index: int = 0,
     return beats
 
 
-def _normalize_graphic(raw) -> dict:
-    """Bound the optional programmatic-graphic payload a beat may carry."""
-    data = raw if isinstance(raw, dict) else {}
-    kind = str(data.get("kind", "")).strip().lower()
-    if kind not in families.PG_KINDS:
-        return {}
-    items = []
-    for item in (data.get("items") or [])[:6]:
-        if not isinstance(item, dict):
-            continue
-        try:
-            value = float(item.get("value"))
-        except (TypeError, ValueError):
-            value = None
-        label = str(item.get("label", ""))[:28].strip()
-        if not label:
-            continue
-        entry = {"label": label}
-        if value is not None and math.isfinite(value):
-            entry["value"] = value
-        items.append(entry)
-    return {"kind": kind,
-            "title": str(data.get("title", ""))[:60],
-            "unit": str(data.get("unit", ""))[:10],
-            "items": items}
-
-
 def normalize_plan(script: dict, raw_plan: dict | None, cfg: dict) -> dict:
     """Attach a safe beat list to every scene; malformed plans fail open."""
     planned = {}
@@ -153,9 +126,6 @@ def normalize_plan(script: dict, raw_plan: dict | None, cfg: dict) -> dict:
                     beat["intensity"] = min(max(int(item.get("intensity", 1)), 1), 3)
                 except (TypeError, ValueError):
                     beat["intensity"] = 1
-                graphic = _normalize_graphic(item.get("graphic"))
-                if graphic:
-                    beat["graphic"] = graphic
                 policy = str(item.get("source_policy", "")).strip().lower()
                 if policy in families.SOURCE_POLICIES:
                     beat["source_policy"] = policy

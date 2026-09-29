@@ -17,12 +17,12 @@ def _audit_director(manifest: dict, cfg: dict,
                     errors: list, warnings: list) -> dict:
     """Narrative-intent semantic audit — replaces checkbox coverage with
     questions a human editor would ask: does every beat have a story
-    function, is the episode custom-visual first (AI + programmatic vs raw
+    function, is the episode custom-visual first (AI vs raw
     stock), and does any family drone on? Fail-open: warnings by default."""
     vd = (cfg or {}).get("visual_director", {}) or {}
     beat_total = 0
     tagged = 0
-    media = {"ai": 0, "graphic": 0, "stock_video": 0, "stock_image": 0}
+    media = {"ai": 0, "stock_video": 0, "stock_image": 0}
     prev_family, run_len = None, 0
     for scene in manifest.get("scenes", []):
         for beat in scene.get("visualBeats") or []:
@@ -40,9 +40,7 @@ def _audit_director(manifest: dict, cfg: dict,
                 prev_family, run_len = family, 1
             for asset in beat.get("assets") or []:
                 kind = str(asset.get("kind", ""))
-                if kind == "graphic":
-                    media["graphic"] += 1
-                elif asset.get("ai"):
+                if asset.get("ai"):
                     media["ai"] += 1
                 elif kind == "video":
                     media["stock_video"] += 1
@@ -50,9 +48,7 @@ def _audit_director(manifest: dict, cfg: dict,
                     media["stock_image"] += 1
             policy = str(beat.get("sourcePolicy", ""))
             beat_assets = beat.get("assets") or []
-            if policy == "custom" and not any(
-                    a.get("ai") or a.get("kind") == "graphic"
-                    for a in beat_assets):
+            if policy == "custom" and not any(a.get("ai") for a in beat_assets):
                 errors.append(
                     f"scene {scene.get('n')}: custom reconstruction beat "
                     "fell back to generic stock/card")
@@ -66,7 +62,7 @@ def _audit_director(manifest: dict, cfg: dict,
                         f"scene {scene.get('n')}: primary-source beat has no "
                         "authentic asset")
     total_assets = max(sum(media.values()), 1)
-    custom_ratio = (media["ai"] + media["graphic"]) / total_assets
+    custom_ratio = media["ai"] / total_assets
     coverage = tagged / max(beat_total, 1)
     if beat_total:
         min_cov = float(vd.get("min_family_coverage", 0.85))
@@ -75,7 +71,7 @@ def _audit_director(manifest: dict, cfg: dict,
                             f"narrative-intent family (want {min_cov:.0%})")
         min_custom = float(vd.get("min_custom_ratio", 0.45))
         if custom_ratio < min_custom:
-            message = (f"custom visuals (AI + programmatic) are only "
+            message = (f"custom AI visuals are only "
                        f"{custom_ratio:.0%} of beat assets "
                        f"(want {min_custom:.0%}) — episode leans stock-first")
             (errors if vd.get("strict_custom_ratio", False)
@@ -133,15 +129,15 @@ def audit_manifest(manifest: dict, cfg: dict) -> dict:
             for asset in beat.get("assets", []):
                 key = os.path.basename(str(asset.get("path", "")))
                 asset_uses[key] = asset_uses.get(key, 0) + 1
-                if (asset.get("fallback") == "gradient"
+                if asset.get("kind") not in ("image", "video"):
+                    errors.append(
+                        f"scene {scene.get('n')}: forbidden visual kind "
+                        f"{asset.get('kind')} reached render manifest")
+                elif (asset.get("fallback") == "gradient"
                         or key.endswith("_card.jpg")):
                     errors.append(
                         f"scene {scene.get('n')}: blank gradient fallback "
                         "reached render manifest")
-                elif asset.get("fallback") == "programmatic":
-                    errors.append(
-                        f"scene {scene.get('n')}: media lookup failed; "
-                        "animated evidence fallback requires review")
                 elif asset.get("borrowedFallback"):
                     errors.append(
                         f"scene {scene.get('n')}: media lookup failed; "
@@ -189,7 +185,7 @@ _BLANK_DEFAULTS = {
     "min_seconds": 0.6,     # longer than the 0.4s scene crossfade
 }
 
-# Crop away the burned-in HUD (top bar, corner brackets, caption band, counter)
+# Crop away captions and the small corner watermark
 # so chrome drawn over an empty scene cannot disguise it as a busy frame.
 _BLANK_CROP = "crop=iw*0.6:ih*0.45:iw*0.2:ih*0.12"
 

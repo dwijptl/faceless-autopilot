@@ -28,8 +28,7 @@ SKIP_RE = re.compile(
     r"face|चेहरा|hand|हाथ|text|लिख|अक्षर|diagram|आरेख|chart|चार्ट|graph",
     re.IGNORECASE)
 
-# Per-style-pack camera grammar lives in style_packs.PACKS (one camera
-# move per pack — matches ai_images wrappers).
+# Shared restrained camera direction lives in style_packs.PACKS.
 import style_packs
 
 NEGATIVE = ("text, watermark, morphing, warping, extra limbs, "

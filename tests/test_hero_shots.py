@@ -109,10 +109,10 @@ def test_select_targets_hook_and_reveal():
     assert len(hero_shots.select_targets(scenes, 1)) == 1
 
 
-def test_motion_prompt_uses_style_pack():
+def test_motion_prompt_uses_restrained_documentary_direction():
     p = hero_shots.motion_prompt("metal creaks", {"render": {"style_pack": "noir"}})
     assert p.startswith("metal creaks.")
-    assert "creeping zoom" in p
+    assert "slow restrained documentary push-in" in p
 
 
 def test_usage_summary_reports_spend():
@@ -162,8 +162,7 @@ def test_no_rescue_without_budget(tmp_path, monkeypatch):
                         lambda *a, **kw: (_ for _ in ()).throw(AssertionError))
     out = assets.fetch_scene_assets(scene, 4.0, str(tmp_path), cfg, "pk", "gk",
                                     set(), set(), [0], rescue_budget=[0])
-    assert out and out[0]["kind"] == "graphic"
-    assert out[0]["fallback"] == "programmatic"
+    assert out == []
 
 
 def test_primary_source_beat_never_uses_ai_rescue(tmp_path, monkeypatch):
@@ -184,7 +183,4 @@ def test_primary_source_beat_never_uses_ai_rescue(tmp_path, monkeypatch):
     out = assets.fetch_scene_assets(
         scene, 4.0, str(tmp_path), cfg, "pk", "gk", set(), set(), [0],
         rescue_budget=[4], director_budget=[4])
-    assert out[0]["kind"] == "graphic"
-    assert out[0]["fallback"] == "programmatic"
-    assert not out[0].get("ai")
-    assert out[0]["source_policy"] == "primary"
+    assert out == []

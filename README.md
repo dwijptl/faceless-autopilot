@@ -99,34 +99,27 @@ Each release `video-YYYY-MM-DD_HHMM` contains:
 
 ## The originality layer (anti-"generic AI channel")
 
-- **AI-directed signature shots** — long-form premium mode priority-ranks up
-  to 40 story beats for custom AI stills; the hook keeps its separate
-  three-candidate quality lane. Every episode receives a stable photographic
-  fingerprint assembled from lens, lighting and film-surface choices, giving
-  the video one coherent look without repeating the same look next upload.
+- **AI signature shots** — selected scenes use specific AI stills when stock
+  cannot depict the subject accurately; the hook keeps its separate
+  three-candidate quality lane.
 - **Cinematic stock shaping** — every Pexels search runs first with a
   rotating modifier (`aerial`, `macro close up`, `drone`, `dramatic`…), so
   the pipeline pulls the moody professional b-roll buried in Pexels instead
   of front-page vacation clips. Raw terms remain as recall fallback.
-- **Karaoke captions** — words appear as they're spoken, active word in
-  brand amber, spring pop per word (documentary + kinetic packs).
-- **33-variant native motion library** — six stat cards, seven kinetic-title
-  treatments, five editorial cards, six scene frames, five lower thirds and
-  four subscribe/bell CTAs rotate deterministically before repeating. The
-  matching 18-cue sound pack is synthesized at render time, so both libraries
-  are free and carry no marketplace-license dependency. See
-  [`docs/MOTION_LIBRARY.md`](docs/MOTION_LIBRARY.md).
+- **Plain captions** — clean white subtitles fade in and out without boxes,
+  ribbons, karaoke effects or decorative treatments.
+- **Media-only presentation** — every scene stays on full-frame footage,
+  images or maps. Simple number emphasis and soft frame transitions are the
+  only visual additions.
 - **Human-writing rules** — banned stock phrases ("did you know", "क्या आप
   जानते हैं"…), enforced sentence rhythm, one vivid named fact per scene;
   optional Claude script engine via `ANTHROPIC_API_KEY`.
 
 ## The intelligence layer
 
-- **Visual originality** — scenes are scripted with a `visual_mode`: stock
-  b-roll, AI-generated stills (Gemini image API, ~500/day free), kinetic
-  typography, or animated stat cards. `assets_used.json` guarantees no clip,
-  photo, or AI prompt ever repeats across videos. Four visual style packs
-  (documentary / kinetic / editorial / noir) rotate per video.
+- **Visual originality** — scenes use stock b-roll, photographs, maps and
+  AI-generated stills (Gemini image API, ~500/day free). `assets_used.json`
+  guarantees no clip, photo or AI prompt repeats across videos.
 - **Sentence-level visual editing** — one additional free Gemini planning call
   divides long-form narration into concrete visual beats. Each beat carries an
   exact Hindi cue and subject-specific English stock query, so imagery changes

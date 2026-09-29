@@ -4,8 +4,8 @@ Every visual beat is tagged with ONE family describing what the beat does in
 the STORY (never what it depicts): establishing the place, presenting
 evidence, showing scale, descending, branching hypotheses, the revelation…
 The family decides — before anything is generated — the beat's composition
-rule, camera move, media policy (programmatic graphic / AI still / exact
-stock) and the transition grammar into it.
+rule, camera move, media policy (AI still / exact stock) and the transition
+grammar into it.
 
 This is deliberately NOT the ornament-led approach of other channels:
 identity here is camera-led cinematic documentary realism. Parchment
@@ -32,7 +32,7 @@ GLOBAL_STYLE = (
 BANNED_STYLE = ("parchment", "ornamental frame", "gold filigree", "mandala",
                 "aura glow", "devotional painting", "sacred", "scroll border")
 
-# camera ids the renderer implements (remotion/src/graphics.tsx FamilyCamera)
+# Camera directions used when prompting AI stills and hero animation.
 CAMERAS = ("push", "pull", "crane_down", "crane_up", "lateral", "tilt_up",
            "tilt_down", "drift", "hold", "orbit")
 
@@ -40,8 +40,6 @@ CAMERAS = ("push", "pull", "crane_down", "crane_up", "lateral", "tilt_up",
 TRANSITIONS = ("cut", "dissolve", "fade", "push_down", "push_up", "whip",
                "wipe", "zoom_punch", "hold_push", "match_cut")
 
-# programmatic-graphic kinds the renderer draws for free (graphics.tsx)
-PG_KINDS = ("timeline", "scale", "branch", "chart", "cutaway")
 SOURCE_POLICIES = ("custom", "primary", "stock")
 
 _PRIMARY_FAMILIES = {
@@ -62,19 +60,17 @@ class FamilySpec:
     fn: str                       # story function (docs + planner prompt)
     comp: str                     # composition fragment for AI prompts
     camera: str                   # camera id (CAMERAS)
-    media: tuple                  # preference order over ("pg","ai","stock")
+    media: tuple                  # preference order over ("ai", "stock")
     tin: str                      # default transition-in (TRANSITIONS)
     prio: int = 3                 # AI credit priority 1 (hero) .. 5 (never)
-    pg: str | None = None         # programmatic kind when media includes "pg"
     kw: tuple = field(default=()) # classifier keywords (english, lowercase)
 
 
-def _f(key, cluster, fn, comp, camera, media, tin, prio=3, pg=None, kw=()):
+def _f(key, cluster, fn, comp, camera, media, tin, prio=3, kw=()):
     assert camera in CAMERAS, key
     assert tin in TRANSITIONS, key
-    assert pg is None or pg in PG_KINDS, key
     return FamilySpec(key, cluster, fn, comp, camera, tuple(media), tin,
-                      prio, pg, tuple(kw))
+                      prio, tuple(kw))
 
 
 FAMILIES: dict[str, FamilySpec] = {s.key: s for s in [
@@ -95,7 +91,7 @@ FAMILIES: dict[str, FamilySpec] = {s.key: s for s in [
        "historical", "soviet", "vintage")),
     _f("map_locate", "orientation", "pin the story on the globe",
        "top-down cartographic view, glowing route line, dark ocean tones",
-       "orbit", ("pg", "stock"), "zoom_punch", 5, pg="chart",
+       "orbit", ("stock",), "zoom_punch", 5,
        kw=("map", "coordinates", "located", "border", "geography")),
     _f("approach", "orientation", "move toward the subject",
        "one-point perspective path leading to the subject, foreground "
@@ -138,11 +134,11 @@ FAMILIES: dict[str, FamilySpec] = {s.key: s for s in [
        "expedition", "crossing")),
     _f("penetrate_layers", "movement", "pass through strata or levels",
        "stacked geological or structural layers with a clean cutaway edge",
-       "crane_down", ("pg", "ai"), "push_down", 4, pg="cutaway",
+       "crane_down", ("ai", "stock"), "push_down", 4,
        kw=("layers", "strata", "crust", "levels", "through the")),
     _f("follow_path", "movement", "track a route or trajectory",
        "glowing route line drawn over terrain from above", "lateral",
-       ("pg", "stock"), "cut", 5, pg="chart", kw=("route", "path", "trajectory",
+       ("stock",), "cut", 5, kw=("route", "path", "trajectory",
        "trail of", "moved from", "travelled")),
     _f("drift", "movement", "weightless ambient float",
        "suspended subject with drifting particulates, soft directionless "
@@ -177,7 +173,7 @@ FAMILIES: dict[str, FamilySpec] = {s.key: s for s in [
     _f("measurement", "evidence", "instruments and readings",
        "a period-accurate instrument with its scale readable, needle or "
        "readout mid-motion", "hold",
-       ("pg", "ai"), "cut", 4, pg="chart", kw=("measured", "reading",
+       ("ai", "stock"), "cut", 4, kw=("measured", "reading",
        "instrument", "recorded", "temperature of", "radiation", "level of")),
     _f("anomaly_highlight", "evidence", "the thing that does not fit",
        "an ordinary field with ONE element isolated by light while the "
@@ -196,14 +192,14 @@ FAMILIES: dict[str, FamilySpec] = {s.key: s for s in [
        "the moment", "sequence of events", "recreate")),
     _f("trace_origin", "evidence", "follow evidence backward",
        "a receding trail of markers leading away from camera into haze",
-       "pull", ("pg", "ai"), "cut", 4, pg="chart", kw=("origin", "source of",
+       "pull", ("ai", "stock"), "cut", 4, kw=("origin", "source of",
        "traced back", "came from", "began at")),
 
     # ── D. Scale & Comparison ──────────────────────────────────────────
     _f("scale_comparison", "scale", "object versus a familiar reference",
        "side-by-side silhouettes with a clean measuring bar, engineering "
        "diagram clarity", "pull",
-       ("pg", "ai"), "cut", 4, pg="scale", kw=("as tall as", "compared to",
+       ("ai", "stock"), "cut", 4, kw=("as tall as", "compared to",
        "the size of", "times bigger", "equivalent")),
     _f("human_vs_vast", "scale", "a person dwarfed by the phenomenon",
        "small human silhouette low in frame against a colossal subject, "
@@ -224,7 +220,7 @@ FAMILIES: dict[str, FamilySpec] = {s.key: s for s in [
        "transformed", "once was")),
     _f("side_by_side", "scale", "parallel comparison",
        "split-frame with mirrored composition, both halves equally lit",
-       "hold", ("pg", "ai"), "wipe", 4, pg="scale", kw=("versus", "both",
+       "hold", ("ai", "stock"), "wipe", 4, kw=("versus", "both",
        "while the other", "in contrast", "side by side")),
     _f("superimpose", "scale", "overlay two realities",
        "a ghosted overlay of the past over the present-day plate, matched "
@@ -235,7 +231,7 @@ FAMILIES: dict[str, FamilySpec] = {s.key: s for s in [
     # ── E. Time & Sequence ─────────────────────────────────────────────
     _f("timeline_advance", "time", "move along the chronology",
        "a horizontal chronology with event nodes lighting in order", "lateral",
-       ("pg",), "cut", 5, pg="timeline", kw=("timeline", "then", "days later",
+       ("stock",), "cut", 5, kw=("timeline", "then", "days later",
        "chronology", "sequence", "date", "february", "january", "hours passed")),
     _f("flashback", "time", "drop into the past",
        "period grade with softened frame edges, memory-like glow in the "
@@ -252,7 +248,7 @@ FAMILIES: dict[str, FamilySpec] = {s.key: s for s in [
        "constructed", "expanded")),
     _f("countdown", "time", "approach a critical moment",
        "a prominent clock, date stamp or gauge with the subject behind it",
-       "push", ("pg", "ai"), "cut", 4, pg="chart", kw=("countdown", "minutes left",
+       "push", ("ai", "stock"), "cut", 4, kw=("countdown", "minutes left",
        "final hours", "deadline", "clock", "ticking")),
     _f("moment_freeze", "time", "the critical instant held",
        "high-detail frozen action, particles suspended mid-air, absolute "
@@ -268,33 +264,33 @@ FAMILIES: dict[str, FamilySpec] = {s.key: s for s in [
     _f("mechanism_cutaway", "mechanism", "how it works inside",
        "technical cross-section with clean labeled zones, engineering "
        "illustration over darkness", "lateral",
-       ("pg", "ai"), "wipe", 4, pg="cutaway", kw=("mechanism", "how it works",
+       ("ai", "stock"), "wipe", 4, kw=("mechanism", "how it works",
        "inside the", "cross section", "internal")),
     _f("cause_chain", "mechanism", "one thing leads to another",
        "connected nodes with directional flow, each cause igniting the next",
-       "lateral", ("pg",), "cut", 5, pg="branch", kw=("caused", "led to",
+       "lateral", ("stock",), "cut", 5, kw=("caused", "led to",
        "because", "as a result", "chain of", "triggered")),
     _f("force_visualize", "mechanism", "invisible forces made visible",
        "field lines or waves rendered over a realistic scene, energy made "
        "luminous", "drift",
-       ("pg", "ai"), "wipe", 4, pg="cutaway", kw=("pressure", "waves", "force",
+       ("ai", "stock"), "wipe", 4, kw=("pressure", "waves", "force",
        "magnetic", "wind", "current", "infrasound", "vibration")),
     _f("process_cycle", "mechanism", "a repeating system",
        "circular loop layout, stages orbiting a center", "orbit",
-       ("pg",), "cut", 5, pg="branch", kw=("cycle", "repeats", "loop",
+       ("stock",), "cut", 5, kw=("cycle", "repeats", "loop",
        "again and again", "seasonal")),
     _f("simulation", "mechanism", "a model of what would happen",
        "wireframe hologram grade, a simulated world rendered in light",
-       "drift", ("pg", "ai"), "dissolve", 4, pg="cutaway", kw=("simulation",
+       "drift", ("ai", "stock"), "dissolve", 4, kw=("simulation",
        "model shows", "computed", "would happen", "predicted")),
     _f("cross_section", "mechanism", "the sliced-open view",
        "a clean cut-plane through the subject revealing interior strata",
-       "push", ("pg", "ai"), "wipe", 4, pg="cutaway", kw=("beneath the surface",
+       "push", ("ai", "stock"), "wipe", 4, kw=("beneath the surface",
        "under the", "interior of", "what lies below")),
     _f("data_story", "mechanism", "a chart that carries narrative",
        "one dominant data visual on a cinematic dark field, values drawing "
        "themselves", "push",
-       ("pg",), "cut", 5, pg="chart", kw=("percent", "statistics", "the numbers",
+       ("stock",), "cut", 5, kw=("percent", "statistics", "the numbers",
        "data shows", "graph", "rate of")),
 
     # ── G. Hypothesis & Tension ────────────────────────────────────────
@@ -305,7 +301,7 @@ FAMILIES: dict[str, FamilySpec] = {s.key: s for s in [
        "remains unanswered", "but what")),
     _f("hypothesis_branch", "hypothesis", "competing explanations",
        "one evidence node splitting into distinct branches of possibility",
-       "pull", ("pg",), "cut", 5, pg="branch", kw=("theories", "explanations",
+       "pull", ("stock",), "cut", 5, kw=("theories", "explanations",
        "one possibility", "some believe", "three reasons", "hypothesis")),
     _f("hypothesis_test", "hypothesis", "a theory tried against evidence",
        "split composition: the theory rendered on one side, the hard "
@@ -315,7 +311,7 @@ FAMILIES: dict[str, FamilySpec] = {s.key: s for s in [
     _f("hypothesis_collapse", "hypothesis", "a theory eliminated",
        "a branch of possibility graying out and crumbling while the rest "
        "remain lit", "lateral",
-       ("pg",), "cut", 5, pg="branch", kw=("ruled out", "debunked", "cannot explain",
+       ("stock",), "cut", 5, kw=("ruled out", "debunked", "cannot explain",
        "falls apart", "eliminated", "doesn't add up")),
     _f("contradiction", "hypothesis", "two facts that cannot both be true",
        "two opposing frames colliding at the center line, equal weight",
@@ -679,7 +675,7 @@ def allocate_ai(scenes: list[dict], budget: int) -> int:
             if policy == "primary":
                 continue
             custom = policy == "custom"
-            if custom and (not spec or spec.media[0] != "pg"):
+            if custom:
                 prio = spec.prio if spec else 3
                 candidates.append((0, prio, 0, si, bi, beat))
             elif spec and "ai" in spec.media:

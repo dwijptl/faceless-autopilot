@@ -1,9 +1,4 @@
-/** Per-pack Google-font loading.
- *
- * Every family registered here ships Devanagari glyphs (verified against
- * @remotion/google-fonts), so any pack's caption/heading font renders Hindi
- * natively instead of falling back mid-word. Fonts load lazily: a render
- * only fetches the two families its style pack asks for.
+/** Minimal Devanagari-safe font loading.
  *
  * Devanagari safety rules (learned the hard way — see learnings.md):
  * never negative letterSpacing, never per-letter animation (breaks
@@ -17,34 +12,8 @@ type FontModule = {
 
 // Static requires so the bundler sees literal module paths.
 const LOADERS: Record<string, () => FontModule> = {
-  AnekDevanagari: () => require('@remotion/google-fonts/AnekDevanagari'),
-  Amita: () => require('@remotion/google-fonts/Amita'),
-  Baloo2: () => require('@remotion/google-fonts/Baloo2'),
-  Biryani: () => require('@remotion/google-fonts/Biryani'),
-  Eczar: () => require('@remotion/google-fonts/Eczar'),
-  Gotu: () => require('@remotion/google-fonts/Gotu'),
-  Halant: () => require('@remotion/google-fonts/Halant'),
-  Hind: () => require('@remotion/google-fonts/Hind'),
-  Inter: () => require('@remotion/google-fonts/Inter'),
-  Kalam: () => require('@remotion/google-fonts/Kalam'),
-  Karma: () => require('@remotion/google-fonts/Karma'),
-  Khand: () => require('@remotion/google-fonts/Khand'),
-  Laila: () => require('@remotion/google-fonts/Laila'),
-  Martel: () => require('@remotion/google-fonts/Martel'),
-  MartelSans: () => require('@remotion/google-fonts/MartelSans'),
   Mukta: () => require('@remotion/google-fonts/Mukta'),
   NotoSansDevanagari: () => require('@remotion/google-fonts/NotoSansDevanagari'),
-  NotoSerifDevanagari: () => require('@remotion/google-fonts/NotoSerifDevanagari'),
-  Palanquin: () => require('@remotion/google-fonts/Palanquin'),
-  PalanquinDark: () => require('@remotion/google-fonts/PalanquinDark'),
-  Poppins: () => require('@remotion/google-fonts/Poppins'),
-  PragatiNarrow: () => require('@remotion/google-fonts/PragatiNarrow'),
-  Rajdhani: () => require('@remotion/google-fonts/Rajdhani'),
-  RozhaOne: () => require('@remotion/google-fonts/RozhaOne'),
-  Sarala: () => require('@remotion/google-fonts/Sarala'),
-  Teko: () => require('@remotion/google-fonts/Teko'),
-  TiroDevanagariHindi: () => require('@remotion/google-fonts/TiroDevanagariHindi'),
-  YatraOne: () => require('@remotion/google-fonts/YatraOne'),
 };
 
 export const FONT_MODULES = Object.keys(LOADERS);

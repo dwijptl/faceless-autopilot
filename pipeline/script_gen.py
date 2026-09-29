@@ -15,7 +15,6 @@ import time
 
 import requests
 
-import families as families_mod
 import retention_lint
 import topic_shape
 import visual_beats as visual_beats_mod
@@ -329,8 +328,8 @@ def _lang_rules(cfg: dict) -> str:
         return ""
     return """
 LANGUAGE — this channel speaks HINDI:
-- narration, title, description, tags, scene titles, kinetic_text and
-  stat.label are ALL in natural spoken Hindi (Devanagari script).
+- narration, title, description, tags, scene titles and stat.label are ALL
+  in natural spoken Hindi (Devanagari script).
 - EXCEPTION — thumb_text: bold ENGLISH/Hinglish keywords in Latin script
   ("DEADLY PLANET", "MYSTERY SOLVED", "AAKHIR KYUN?") — English thumbnail
   keywords outperform Devanagari in the Hindi market.
@@ -466,8 +465,7 @@ def _ai_max(cfg: dict) -> int:
     return int(aicfg.get("max_per_video", 2))
 
 
-VALID_MODES = ("broll", "ai_image", "kinetic", "stat", "card", "map", "glass",
-               "scale", "causal", "evidence")
+VALID_MODES = ("broll", "ai_image", "stat", "map", "evidence")
 
 
 def _num_or_none(value):
@@ -480,62 +478,19 @@ def _num_or_none(value):
 
 
 def _normalize_stat(raw) -> dict:
-    """Keep only safe, bounded fields understood by the Remotion stat cards."""
+    """Keep only fields used by the plain number-over-media treatment."""
     stat = raw if isinstance(raw, dict) else {}
     value = _num_or_none(stat.get("value"))
-    baseline = _num_or_none(stat.get("baseline"))
-    maximum = _num_or_none(stat.get("max"))
-    bars = []
-    if isinstance(stat.get("bars"), list):
-        for item in stat["bars"][:5]:
-            if not isinstance(item, dict):
-                continue
-            bar_value = _num_or_none(item.get("value"))
-            if bar_value is None:
-                continue
-            bars.append({"label": str(item.get("label", ""))[:24],
-                         "value": bar_value})
-    result = {
-        "value": value if value is not None else 0,
-        "suffix": str(stat.get("suffix", ""))[:12],
-        "label": str(stat.get("label", ""))[:100],
-    }
-    if baseline is not None:
-        result["baseline"] = baseline
-    if maximum is not None and maximum > 0:
-        result["max"] = maximum
-    if len(bars) >= 2:
-        result["bars"] = bars
-    return result
-
-
-def _normalize_glass(raw) -> dict:
-    """Bound the data contract consumed by the liquid-glass renderer."""
-    data = raw if isinstance(raw, dict) else {}
-    result = {
-        "kicker": str(data.get("kicker", ""))[:32],
-        "headline": str(data.get("headline", ""))[:90],
-        "body": str(data.get("body", ""))[:130],
-        "suffix": str(data.get("suffix", ""))[:14],
-        "label": str(data.get("label", ""))[:90],
-        "location": str(data.get("location", ""))[:60],
-        "coordinates": str(data.get("coordinates", ""))[:36],
-        "chapter": str(data.get("chapter", ""))[:24],
-    }
-    value = _num_or_none(data.get("value"))
-    delta = _num_or_none(data.get("delta"))
-    if value is not None:
-        result["value"] = value
-    if delta is not None:
-        result["delta"] = delta
-    direction = str(data.get("delta_direction", data.get("deltaDirection", ""))).lower()
-    if direction in ("up", "down", "flat"):
-        result["deltaDirection"] = direction
-    return result
+    label = str(stat.get("label", ""))[:100].strip()
+    if value is None or not label:
+        return {}
+    return {"value": value,
+            "suffix": str(stat.get("suffix", ""))[:12],
+            "label": label}
 
 
 def _normalize_milestone(raw) -> dict:
-    """Bound the per-scene simulation milestone for the story HUD."""
+    """Bound the per-scene simulation milestone used by story checks."""
     data = raw if isinstance(raw, dict) else {}
     value = _num_or_none(data.get("value"))
     if value is None:
@@ -550,33 +505,6 @@ def _int_or_none(value):
         return int(value)
     except (TypeError, ValueError):
         return None
-
-
-def _normalize_compare(raw) -> dict:
-    """Scale anchor: one unfamiliar number against one familiar unit."""
-    data = raw if isinstance(raw, dict) else {}
-    value = _num_or_none(data.get("value"))
-    anchor = _num_or_none(data.get("anchor_value", data.get("anchorValue")))
-    if value is None or anchor is None or anchor <= 0:
-        return {}
-    return {"value": value,
-            "unit": str(data.get("unit", ""))[:16],
-            "label": str(data.get("label", ""))[:60],
-            "anchorLabel": str(data.get("anchor_label",
-                                        data.get("anchorLabel", "")))[:40],
-            "anchorValue": anchor,
-            "anchorUnit": str(data.get("anchor_unit",
-                                       data.get("anchorUnit", "")))[:16]}
-
-
-def _normalize_causal(raw) -> dict:
-    """Mechanism chain A -> B -> C with 2-6 short steps."""
-    data = raw if isinstance(raw, dict) else {}
-    steps = [str(s).strip()[:60] for s in (data.get("steps") or [])
-             if str(s).strip()][:6]
-    if len(steps) < 2:
-        return {}
-    return {"headline": str(data.get("headline", ""))[:80], "steps": steps}
 
 
 def _normalize_evidence(raw) -> dict:
@@ -631,20 +559,14 @@ def _normalize(script: dict, min_scenes: int) -> dict:
             s["visual_mode"] = "broll"
         s.setdefault("search_terms", [])
         s.setdefault("ai_prompt", "")
-        s.setdefault("kinetic_text", "")
+        for obsolete in ("kinetic_text", "card", "glass", "compare", "causal"):
+            s.pop(obsolete, None)
         s["stat"] = _normalize_stat(s.get("stat"))
-        s["glass"] = _normalize_glass(s.get("glass"))
-        s["compare"] = _normalize_compare(s.get("compare"))
-        s["causal"] = _normalize_causal(s.get("causal"))
         s["evidence"] = _normalize_evidence(s.get("evidence"))
-        # a mode whose payload failed validation degrades to plain footage
-        if s["visual_mode"] == "scale" and not s["compare"]:
-            s["visual_mode"] = "broll"
-        if s["visual_mode"] == "causal" and not s["causal"]:
+        if s["visual_mode"] == "stat" and not s["stat"]:
             s["visual_mode"] = "broll"
         if s["visual_mode"] == "evidence" and not s["evidence"]:
             s["visual_mode"] = "broll"
-        s.setdefault("card", {})
         s.setdefault("map", {})
         s["milestone"] = _normalize_milestone(s.get("milestone"))
         d = str(s.get("delivery", "calm")).lower().strip()
@@ -721,7 +643,7 @@ Grade every scene 1-10 on ALL of:
 REWRITE any scene scoring below 8 — sharper verbs, more concrete nouns,
 tighter sentences, zero filler, natural spoken Hindi. Keep the same JSON
 schema, scene count, visual_mode, search_terms, narrative_role and
-retention_plan (you may improve narration, titles, kinetic_text, delivery,
+retention_plan (you may improve narration, titles, delivery,
 question_out, reward and thumb_text).
 {_lang_rules(cfg)}
 Return ONLY the full revised JSON — no scores, no commentary.
@@ -732,10 +654,9 @@ DRAFT:
         revised = _normalize(_parse_json(_llm(prompt, cfg, api_key)), min_scenes)
         # The critique edits words, not factual display payloads. Preserve the
         # first pass's structured visual data so a rewrite cannot silently turn
-        # a stat/glass/map scene into an empty overlay.
+        # a stat/map/evidence scene into an invalid media instruction.
         for before, after in zip(script["scenes"], revised["scenes"]):
-            for field in ("stat", "card", "glass", "map", "milestone",
-                          "compare", "causal", "evidence",
+            for field in ("stat", "map", "milestone", "evidence",
                           "must_show", "visual_role", "narrative_role"):
                 after[field] = before.get(field, after.get(field, {}))
             if not str(after.get("question_out", "")).strip():
@@ -1096,41 +1017,6 @@ CONTINUITY CONTRACT (breaking it ruins the episode):
   Beats about the protagonist are carried by that hero image — write those
   beats' queries for the surrounding ENVIRONMENT, never for stock humans.
 """
-    director_on = families_mod.enabled(cfg)
-    director_fields = ""
-    director_rules = ""
-    if director_on:
-        director_fields = """,
-  "family":"ONE narrative-intent family key from the menu below — what this beat DOES in the story",
-  "intensity":1,
-  "source_policy":"custom|primary|stock",
-  "graphic":{"kind":"timeline|scale|branch|chart|cutaway","title":"short ENGLISH title","unit":"km","items":[{"label":"short label","value":0}]}"""
-        director_rules = f"""
-NARRATIVE-INTENT FAMILIES (pick by story function, never by subject):
-{families_mod.prompt_hint_lines()}
-- "family" is REQUIRED per beat; "intensity" is 1 (calm) to 3 (peak moment),
-  at most one 3 per scene.
-- "source_policy" is REQUIRED and is a truth contract:
-  * custom = a clearly illustrative reconstruction is safer than generic
-    stock: historical people/events, period interiors, culturally specific
-    activity, or an abstract event no camera recorded.
-  * primary = viewers expect the REAL thing: named place/building, document,
-    photograph, religious object, inscription, archaeological artifact or
-    physical evidence. AI generation is forbidden for these beats.
-  * stock = generic geography, weather, materials or natural processes where
-    professional stock cannot change the meaning.
-- Wrong-country and wrong-culture substitutes are NEVER acceptable. A church,
-  Western office/businessman, unrelated deity, modern cars/AC/satellite dishes,
-  or English chore/signage footage cannot stand in for historical Rajasthan.
-- "graphic" ONLY for beats whose family is diagram-like (timeline_advance,
-  scale_comparison, hypothesis_branch, data_story, cause_chain, measurement,
-  mechanism_cutaway, penetrate_layers, countdown): give 2-6 items with short
-  ENGLISH labels and real numeric values from the narration. Omit "graphic"
-  for every other beat.
-- Families in the hypothesis cluster mark competing explanations; use
-  hypothesis_branch exactly where the narration lists multiple theories.
-- The final beat of the last scene should be lingering_question, legacy or
-  haunting_echo — never a random subject."""
     prompt = f"""You are the visual editor of a premium factual-mystery documentary.
 Turn the FINAL Hindi narration below into a sentence-level visual beat sheet.
 {contract}
@@ -1139,7 +1025,7 @@ Return ONLY JSON:
 {{"scenes":[{{"n":1,"visual_beats":[{{
   "cue":"an EXACT 3-8 word verbatim phrase from the Hindi narration where this visual starts",
   "search_terms":["one exact concrete ENGLISH Pexels query","one fallback query"],
-  "purpose":"what the viewer must understand from this visual"{director_fields}
+  "purpose":"what the viewer must understand from this visual"
 }}]}}]}}
 
 Rules:
@@ -1155,7 +1041,8 @@ Rules:
 - Never use metaphorical offices, typing, food, drinks, products or captive wildlife.
 - Vary scale and camera language across consecutive beats.
 - Do not request generated art, text, logos or copyrighted characters.
-{director_rules}
+Every beat must resolve to a full-frame image or video. Do not request cards,
+panels, diagrams, text layouts, timelines, charts, HUDs or other templates.
 
 SCENES:
 {json.dumps(payload, ensure_ascii=False)}"""
@@ -1176,7 +1063,7 @@ def _reconcile_display_numbers(script: dict, report: dict, cfg: dict) -> dict:
     narration never speaks is removed from the screen. Screen and voice must
     agree — when the repair could not make the voice say the number, the
     screen stops showing it. Milestones simply hide for that scene; a
-    stat/compare scene whose narration has no number falls back to broll
+    stat scene whose narration has no number falls back to broll
     (this runs pre-assets, so the fallback renders normally). Fail-open."""
     codes = {v.get("code") for v in report.get("violations", [])}
     if "claim_display_mismatch" not in codes:
@@ -1184,7 +1071,7 @@ def _reconcile_display_numbers(script: dict, report: dict, cfg: dict) -> dict:
     fixed = []
     for i, s in enumerate(script.get("scenes", [])):
         narration = str(s.get("narration", ""))
-        for field in ("stat", "compare", "milestone"):
+        for field in ("stat", "milestone"):
             payload = s.get(field) or {}
             value = payload.get("value")
             variants = retention_lint._num_variants(value)
@@ -1196,7 +1083,7 @@ def _reconcile_display_numbers(script: dict, report: dict, cfg: dict) -> dict:
             if any(v in narration for v in variants):
                 continue
             s[field] = {}
-            if field in ("stat", "compare") and s.get("visual_mode") == field:
+            if field == "stat" and s.get("visual_mode") == field:
                 s["visual_mode"] = "broll"
             fixed.append(f"scene {i + 1} {field}={value:g}")
     if fixed:
@@ -1229,8 +1116,7 @@ def _retention_pass(script: dict, cfg: dict, api_key: str, topic: str) -> dict:
             # keep visual payloads unless the repair legitimately changed them
             # (engine_flat repairs MUST rewrite milestones, so no blanket copy)
             for before, after in zip(script["scenes"], fixed["scenes"]):
-                for field in ("stat", "card", "glass", "map",
-                              "compare", "causal", "evidence"):
+                for field in ("stat", "map", "evidence"):
                     if not after.get(field) and before.get(field):
                         after[field] = before[field]
             for field in ("premise", "changing_variable", "hero_prompt",
@@ -1323,7 +1209,7 @@ def generate_script(cfg: dict, topic: str, api_key: str, learnings: str = "",
     learn_block = (f"\nCHANNEL LEARNINGS — apply these to hook style, pacing, and "
                    f"thumbnail text:\n{learnings}\n" if learnings else "")
     prompt = f"""You are a scriptwriter for a faceless YouTube channel
-(voiceover + b-roll + motion graphics + captions, no on-camera host).
+(voiceover + full-frame footage/images + plain captions, no on-camera host).
 
 TOPIC: {topic}
 TARGET: ADAPTIVE — the story decides its own natural length between
@@ -1365,7 +1251,7 @@ Write a scene-segmented script and return ONLY valid JSON with this exact shape:
       "n": 1,
       "title": "3-6 word scene title",
       "narration": "60-150 words of spoken narration",
-      "visual_mode": "broll | ai_image | kinetic | stat | card | map | glass | scale | causal | evidence",
+      "visual_mode": "broll | ai_image | stat | map | evidence",
       "visual_role": "experience | explanation | measurement",
       "narrative_role": "hook | question | context | discovery | explanation | comparison | reversal | evidence | escalation | partial_answer | mini_reveal | main_reveal | implication | conclusion | next_curiosity",
       "reward": {{"type": "fact | comparison | visual_reveal | partial_answer | contradiction | consequence | scale | evidence", "strength": 0.7}},
@@ -1375,13 +1261,8 @@ Write a scene-segmented script and return ONLY valid JSON with this exact shape:
       "milestone": {{"value": 0, "label": "optional ENGLISH override of the metric label", "unit": "km"}},
       "search_terms": ["stock video search term", "alternative term", "broader fallback term"],
       "ai_prompt": "detailed text-to-image prompt (only when visual_mode is ai_image, else empty string)",
-      "kinetic_text": "3-6 word punch phrase (only when visual_mode is kinetic, else empty string)",
-      "stat": {{"value": 0, "suffix": "", "label": "", "max": null, "baseline": null, "bars": [{{"label": "short label", "value": 0}}]}},
-      "card": {{"kicker": "short category", "headline": "5-10 word headline", "body": "one concise explanatory sentence"}},
-      "glass": {{"kicker": "short category", "headline": "main Hindi line", "body": "one short support line", "value": null, "suffix": "", "label": "", "delta": null, "delta_direction": "up | down | flat", "location": "", "coordinates": "", "chapter": ""}},
+      "stat": {{"value": 0, "suffix": "", "label": ""}},
       "map": {{"lat": 0.0, "lon": 0.0, "label": ""}},
-      "compare": {{"value": 0, "unit": "मीटर", "label": "what the number is (Hindi)", "anchor_label": "बुर्ज ख़लीफ़ा", "anchor_value": 828, "anchor_unit": "मीटर"}},
-      "causal": {{"headline": "optional short Hindi headline", "steps": ["3-6 SHORT Hindi steps, each <= 6 words, cause -> effect order"]}},
       "evidence": {{"kicker": "स्रोत", "headline": "short Hindi claim being proven", "source": "the REAL named source (mission/agency/journal + name)", "date": "year or date", "confidence": "पुष्टि | अनुमान | विवादित"}}
     }}
   ]
@@ -1396,37 +1277,17 @@ Map scenes: when ONE specific place is the star of a scene, set visual_mode
 "map" with accurate map.lat / map.lon and a short Hindi map.label (0-2 map
 scenes per video; still provide search_terms as fallback).
 
-Visual mode rules (variety is the goal — videos must not feel stock-only):
-- Most scenes are "broll" (stock footage exists for them).
+Visual mode rules (every scene remains full-frame media):
+- Most scenes are "broll" using relevant stock footage or photographs.
 - EXACTLY 1-{ai_max} scenes are "ai_image": visuals stock can't provide
   (ancient/extinct scenes, cutaway views, imagined perspectives, precise
   historical moments). Write a rich, specific ai_prompt: subject + setting +
   light + camera angle. These become the video's signature shots — use them
   on the hook, the re-hook and the payoff where possible.
-- EXACTLY 1-2 scenes are "kinetic": a bold typography moment for the strongest
-  line (often the hook or re-hook). kinetic_text = the phrase, punchy.
 - 0-2 scenes are "stat": when narration centers on ONE striking number.
   Fill stat.value (number only), stat.suffix ("%", "km", "×"...), stat.label
-  (what the number is). Narration must actually say that number. For a share of
-  a whole, add stat.max to opt into a ring gauge. For before/after, add numeric
-  stat.baseline. For a 2-5 item comparison, add stat.bars with short labels and
-  numeric values. Use only one of max, baseline or bars; omit unused fields.
-- 0-2 scenes are "card": use a concise editorial definition, warning,
-  comparison, quotation or timeline beat when text explains the idea better
-  than generic stock. Fill card.kicker/headline/body; keep body under 18 words.
-- EXACTLY 1 scene is "glass": a premium smoked liquid-glass information beat.
-  Use value/suffix/label for a metric, location/coordinates for a place,
-  chapter/headline for an act break, or headline/body for a fact. Reserve the
-  biggest reveal for delivery="reveal"; the renderer selects the matching layout.
-- 0-1 scenes are "scale": when ONE big number begs a physical comparison the
-  viewer can feel. Fill compare: the number (value+unit) and ONE familiar
-  Indian anchor (anchor_label + anchor_value in the same unit — बुर्ज ख़लीफ़ा
-  828 मीटर, कुतुब मीनार 73 मीटर, एक रेल डिब्बा 25 मीटर, हिमालय 8,849 मीटर).
-  The narration must SAY the value. Use on a "comparison" narrative_role scene.
-- 0-1 scenes are "causal": when the mechanism is a chain (A causes B causes C),
-  show it as a stepwise diagram instead of generic footage. causal.steps =
-  3-6 SHORT Hindi steps in strict cause->effect order. Pair with
-  narrative_role "explanation" — this replaces the weakest broll explanation.
+  (what the number is). Narration must actually say that number. The renderer
+  shows only this plain number and label directly over full-frame media.
 - 0-1 scenes are "evidence": on the video's strongest PROOF beat. Name the
   REAL source (mission, agency, journal, scientist + year) in evidence.source
   and tag confidence HONESTLY: "पुष्टि" only for well-established findings,
@@ -1434,7 +1295,12 @@ Visual mode rules (variety is the goal — videos must not feel stock-only):
   brackets real footage — search_terms must request authentic/archival
   material (NASA, expedition, observatory), NEVER generated art. Pair with
   narrative_role "evidence". An honest "अनुमान" tag builds more trust than a
-  fake certainty.
+  fake certainty. Search terms must request authentic/archival material
+  (NASA, expedition, observatory), never generated art. Pair with narrative
+  role "evidence". The source information guides footage selection and fact
+  checking; it is not rendered as a panel or frame.
+- NEVER request visual templates: no cards, panels, title treatments, glass,
+  HUDs, timelines, comparison layouts, charts, diagrams or framed evidence.
 - Every scene still needs search_terms as fallback. Concrete visual nouns only,
   and every term must belong to the topic's own visual world — never
   metaphorical/studio/commercial imagery (no drinks, food, offices, product
@@ -1451,11 +1317,11 @@ Visual mode rules (variety is the goal — videos must not feel stock-only):
   the footage must actually depict for the narration to be true (e.g.
   "deep ocean darkness", "volcanic vent"). Keep them findable in stock —
   the pipeline rejects footage that misses them, so never demand the
-  impossible; leave the list empty for abstract/graphic scenes.
+  impossible; leave the list empty when no literal must-show is needed.
 - VISUAL ROLE ROTATION (anti-montage rule): tag every scene's visual_role —
   "experience" (what the viewer would see/feel there), "explanation" (why it
-  happens — cards/diagrams/cutaways), "measurement" (how deep/hot/fast —
-  stat/glass/HUD moments). Never let three consecutive scenes share one
+  happens through concrete footage or a relevant image), "measurement"
+  (how deep/hot/fast, with an optional plain number). Never let three consecutive scenes share one
   role; this rotation is what separates a documentary from a stock montage.
 - SHOT RHYTHM (the idea sets the cut, not a timer): the hook cuts fast —
   write it in short punchy sentences; normal scenes breathe; give the single
@@ -1511,12 +1377,10 @@ Script rules:
   Jaipur distance, Burj Khalifa/Himalaya heights, a Rajdhani train's speed,
   monsoon rainfall, Mumbai's population). One vivid anchor beats three vague
   ones; never force it.
-- VISUAL PACING MIX (how a human editor cuts): ~60% of scenes are slow,
-  majestic b-roll moments that breathe; ~20% are rapid intercut stretches
-  (short beats, quick cuts, urgency); ~20% are graphic moments (kinetic /
-  stat / card / glass / map). Graphics are 3-5 second IMPACT hits, not
-  wallpaper — after a graphic lands, the narration must move on and hand the
-  screen back to footage. Never let two graphic scenes sit adjacent.
+- VISUAL PACING MIX (how a human editor cuts): most scenes use strong shots
+  that breathe; hooks and urgent passages may cut faster. Use maps for place
+  orientation and occasional plain numbers for measurement. Keep every other
+  frame focused on full-screen footage or imagery.
 - {v['scenes_min']} to {v['scenes_max']} scenes. Scene 1 is an 18-25 second COLD OPEN
   that states the premise immediately and opens a curiosity gap. Deliver the
   first concrete answer by 45 seconds. Add one-sentence re-hooks near 25%, 50%
@@ -1560,8 +1424,7 @@ DRAFT:
                 try:
                     expanded = _normalize(_parse_json(_llm(exp, cfg, api_key)), 4)
                     for before, after in zip(script["scenes"], expanded["scenes"]):
-                        for field in ("stat", "card", "glass", "map", "milestone",
-                                      "compare", "causal", "evidence",
+                        for field in ("stat", "map", "milestone", "evidence",
                                       "narrative_role"):
                             after[field] = before.get(field, {})
                     for field in ("premise", "changing_variable", "hero_prompt",
@@ -1590,8 +1453,8 @@ DRAFT:
                 trim = f"""The draft below runs {wc} spoken words but must stay
 under {int(max_words * 1.03)} words (band {min_words}-{max_words}). TRIM the
 most verbose scenes: cut adjectives, repeated ideas and any sentence that adds
-no new information — NEVER cut milestone values, reveals, numbers that graphics
-display, or the promise-ladder structure. Keep the same JSON schema, scene
+no new information — NEVER cut milestone values, reveals, numbers shown as
+plain emphasis, or the promise-ladder structure. Keep the same JSON schema, scene
 count, visual modes and every non-narration field unchanged.
 {_lang_rules(cfg)}
 Return ONLY the full revised JSON.
@@ -1601,8 +1464,7 @@ DRAFT:
                 try:
                     trimmed = _normalize(_parse_json(_llm(trim, cfg, api_key)), 4)
                     for before, after in zip(script["scenes"], trimmed["scenes"]):
-                        for field in ("stat", "card", "glass", "map", "milestone",
-                                      "compare", "causal", "evidence",
+                        for field in ("stat", "map", "milestone", "evidence",
                                       "narrative_role"):
                             after[field] = before.get(field, {})
                     for field in ("premise", "changing_variable", "hero_prompt",
@@ -1662,7 +1524,7 @@ def generate_short_script(cfg: dict, topic: str, api_key: str,
     learn_block = (f"\nCHANNEL LEARNINGS — apply to hook and pacing:\n{learnings}\n"
                    if learnings else "")
     prompt = f"""You are writing a YouTube SHORT / Instagram REEL script for a
-faceless channel (vertical video: voiceover + b-roll + big captions).
+faceless channel (vertical video: voiceover + full-frame media + plain captions).
 
 TOPIC: {topic}
 ONE PROMISE (the hard rule for this format): this Short makes exactly ONE
@@ -1715,14 +1577,13 @@ Return ONLY valid JSON:
       "n": 1,
       "title": "2-4 word label",
       "narration": "8-30 words",
-      "visual_mode": "broll | ai_image | kinetic | stat | card | map | glass",
+      "visual_mode": "broll | ai_image | stat | map | evidence",
       "search_terms": ["concrete visual term", "alternative", "broader fallback"],
       "ai_prompt": "text-to-image prompt (only for ai_image, else empty)",
-      "kinetic_text": "3-6 word punch phrase (only for kinetic, else empty)",
       "forbidden_visuals-note": "also return a top-level \"forbidden_visuals\" array: 3-6 ENGLISH phrases of footage that would break this premise (e.g. 'scuba diver', 'oxygen tank')",
-      "stat": {{"value": 0, "suffix": "", "label": "", "max": null, "baseline": null, "bars": [{{"label": "short label", "value": 0}}]}},
-      "card": {{"kicker": "category", "headline": "short headline", "body": "under 12 words"}},
-      "glass": {{"kicker": "category", "headline": "short Hindi line", "body": "under 10 words", "value": null, "suffix": "", "label": "", "delta": null, "delta_direction": "up | down | flat", "location": "", "coordinates": "", "chapter": ""}}
+      "stat": {{"value": 0, "suffix": "", "label": ""}},
+      "map": {{"lat": 0.0, "lon": 0.0, "label": ""}},
+      "evidence": {{"source": "real named source", "date": "year or date", "confidence": "पुष्टि | अनुमान | विवादित"}}
     }}
   ]
 }}
@@ -1760,15 +1621,14 @@ Shorts rules:
     "क्या होगा?", "...साबित करते हैं", "तो अगली बार", "इसीलिए" — any
     construction that leaves the sentence hanging. The video must feel
     complete even when autoplay does not replay it.
-- Exactly 0 "kinetic" scenes, 0-1 "stat", 0-{short_ai_max} "ai_image"
+- Use 0-1 "stat" scenes, 0-{short_ai_max} "ai_image" scenes, 0-1 map or
+  evidence scene, and make the rest "broll"
   (put an ai_image on the hook when the topic's strongest visual doesn't
   exist as stock), rest "broll".
-- A stat may add max (ring gauge), baseline (before/after) or 2-4 bars. Keep a
-  bare value/suffix/label for the original punchy big-number treatment.
-- 0-1 "card" scene may replace a broll scene when a definition, warning or
-  comparison communicates the idea faster. Keep all card text extremely short.
-- 0-1 "glass" scene may replace a stat/card beat for the hook or payoff. Use
-  only one focal number or one short fact; never stack multiple facts in it.
+- A stat is only one plain number, suffix and short label over full-frame media.
+  Narration must say that exact number.
+- NEVER request visual templates: no cards, panels, glass, title treatments,
+  timelines, diagrams, charts, HUDs or framed evidence.
 - SEARCH TERM DISCIPLINE (footage relevance depends on this):
   * Every term must belong to the TOPIC'S OWN VISUAL WORLD. If the topic is
     polar, terms are "glacier calving aerial", "arctic tundra", "ice sheet

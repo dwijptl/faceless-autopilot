@@ -26,11 +26,9 @@ def test_every_spec_is_complete_and_valid():
         assert spec.cluster and spec.fn and spec.comp
         assert spec.camera in families.CAMERAS
         assert spec.tin in families.TRANSITIONS
-        assert spec.media and all(m in ("pg", "ai", "stock")
+        assert spec.media and all(m in ("ai", "stock")
                                   for m in spec.media)
         assert 1 <= spec.prio <= 5
-        if "pg" in spec.media:
-            assert spec.pg in families.PG_KINDS, key
 
 
 def test_no_ornament_vocabulary_in_compositions():
@@ -39,13 +37,6 @@ def test_no_ornament_vocabulary_in_compositions():
         low = spec.comp.lower()
         for banned in families.BANNED_STYLE:
             assert banned not in low, f"{spec.key} uses banned '{banned}'"
-
-
-def test_pg_families_never_spend_ai_credits_first():
-    for spec in families.FAMILIES.values():
-        if spec.media and spec.media[0] == "pg":
-            assert spec.prio >= 4, (
-                f"{spec.key}: pg-first families must rank low for AI credits")
 
 
 # ── classifier ─────────────────────────────────────────────────────────
@@ -177,9 +168,7 @@ def _plan(director_on: bool):
     raw = {"scenes": [{"n": 1, "visual_beats": [
         {"cue": "word word word", "search_terms": ["torn tent"],
          "purpose": "the evidence artifact discovered", "family": "evidence_reveal",
-         "intensity": 7,
-         "graphic": {"kind": "chart", "title": "T", "unit": "km",
-                     "items": [{"label": "A", "value": 3}]}},
+         "intensity": 7},
         {"cue": "word word", "search_terms": ["snow prints"],
          "purpose": "footprints traced back to the origin"},
         {"cue": "word", "search_terms": ["dark ridge"],
@@ -193,7 +182,6 @@ def test_normalize_plan_keeps_and_classifies_families():
     beats = scene["visual_beats"]
     assert beats[0]["family"] == "cold_open_hook" or beats[0]["family"] == "evidence_reveal"
     assert beats[0]["intensity"] == 3          # clamped from 7
-    assert beats[0]["graphic"]["kind"] == "chart"
     assert all(b.get("family") for b in beats)  # classifier filled the rest
 
 
@@ -201,16 +189,3 @@ def test_normalize_plan_director_off_is_legacy():
     scene = _plan(False)
     for beat in scene["visual_beats"]:
         assert "family" not in beat
-        assert "graphic" not in beat
-
-
-def test_graphic_payload_is_bounded():
-    bad = visual_beats._normalize_graphic(
-        {"kind": "chart", "title": "x" * 500, "unit": "y" * 50,
-         "items": [{"label": "L" * 99, "value": "nan"}] * 40})
-    assert len(bad["title"]) <= 60
-    assert len(bad["unit"]) <= 10
-    assert len(bad["items"]) <= 6
-    assert all("value" not in i or isinstance(i["value"], float)
-               for i in bad["items"])
-    assert visual_beats._normalize_graphic({"kind": "hologram"}) == {}

@@ -6,10 +6,8 @@ Priority:
 Any failure returns False and the caller falls back to stock — the pipeline
 never blocks on this module.
 
-Every prompt gets a STYLE WRAPPER matched to the video's topic-driven style
-pack (30 packs in style_packs.PACKS — cosmos, abyss, archive, ...) so AI
-shots feel like one photographer shot the whole video instead of random AI
-output.
+Every prompt gets the same restrained documentary wrapper so AI shots feel
+like one photographer shot the whole video.
 """
 import base64
 import json
@@ -21,8 +19,7 @@ import requests
 API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 FAL_RUN = "https://fal.run/{model}"
 
-# Per-style-pack photographic grammar lives in style_packs.PACKS (30 packs,
-# one wrapper each — matches remotion/src/styles.ts).
+# Shared photographic direction lives in style_packs.PACKS.
 import style_packs
 
 COMMON_SUFFIX = ", photorealistic, high detail, no text, no watermark, no borders"

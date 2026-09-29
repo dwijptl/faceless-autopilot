@@ -33,8 +33,8 @@ channel:
     No cases fresher than ~15 years, no ongoing investigations or trials,
     no living private individuals as subjects, no recent news, no
     religion or mythology, no politics. Every topic must be illustrable
-    with stock footage, AI stills, maps, documents and programmatic
-    graphics — long-deceased people may be referenced respectfully,
+    with full-frame stock footage, AI stills, maps and documents —
+    long-deceased people may be referenced respectfully,
     never depicted with recognizable faces.
   tone: "शांत जांचकर्ता — a calm investigator laying out evidence; suspenseful and respectful, never shouty or sensational"
   audience: "Hindi-speaking viewers who love solving real mysteries — evidence, competing theories, and questions nobody has answered"
@@ -65,7 +65,7 @@ video:
   bitrate: "6000k"
   crossfade: 0.25          # short, quiet dissolve between spoken sections
   max_shot_seconds: 8      # let one strong visual carry a complete idea
-  outro_seconds: 4         # branded end card appended to every video
+  outro_seconds: 0         # finish on the final full-frame story shot
 
 # Retention story engine — deterministic pre-TTS audit of the script's
 # curiosity architecture (promise ladder, reveal placement, open loops,
@@ -86,26 +86,6 @@ retention:
   engine_active_until: 0.75  # milestone variable must keep moving until here
   rehook_tolerance: 0.12     # re-hook must exist near 25/50/75% (±12%)
   duration_tolerance: 0.10   # rendered narration within ±10% of target
-
-# ── Visual director — narrative-intent families (pipeline/families.py) ──
-# Every visual beat is tagged with ONE of 65 universal story-function
-# families (evidence_reveal, descend, hypothesis_branch, revelation…).
-# The family decides composition, camera move, media policy and the
-# transition grammar BEFORE anything is generated. Beats whose family
-# prefers a diagram render a free programmatic graphic (timeline / scale /
-# branch / chart / cutaway) instead of spending stock or AI credits.
-# docs/VISUAL_DIRECTOR.md has the full design. Fail-open everywhere:
-# enabled: false (or any per-beat miss) restores legacy stock-first behaviour.
-visual_director:
-  enabled: true
-  mode: premium            # correctness-first: custom stills beat wrong stock
-  modes:
-    economy:  {ai_stills: 18}   # ~$0.90/video at FLUX dev prices
-    balanced: {ai_stills: 28}
-    premium:  {ai_stills: 40}   # ~$2.00; specific/cultural beats are first
-  min_family_coverage: 0.85  # QC warning below this share of tagged beats
-  min_custom_ratio: 0.65     # wrong generic stock is the current failure mode
-  strict_custom_ratio: true  # below this becomes a publish-blocking QC error
 
 # Long-form quality system. The free Gemini beat-planning pass binds each
 # spoken idea to a concrete visual instead of rotating loosely related assets.
@@ -134,7 +114,6 @@ longform_quality:
       sample_fps: 6
       max_luma_span: 32    # 8-bit Y range inside the HUD-free crop
       min_seconds: 0.6     # longer than the scene crossfade
-  overlay_seconds: 5.0     # impact window for kinetic/stat/card/glass graphics
 
 tts:
   engine: "sarvam"         # "sarvam" = your cloned Hindi voice (bulbul:v3).
@@ -183,12 +162,10 @@ brand:
   watermark_opacity: 0.10  # corner logo watermark on every frame
 
 render:
-  engine: "remotion"       # "remotion" (motion design) or "moviepy" (simple);
+  engine: "remotion"       # Remotion, with MoviePy as the emergency renderer
                            # remotion auto-falls back to moviepy on any error
-  presentation: "simple_documentary" # full-screen evidence, plain subtitles,
-                           # no HUD/frame/card template or decorative transitions
-  accent: "#FFB020"        # brand amber: captions, lower thirds, progress bar
-  progress_bar: false
+  presentation: "media_only" # full-screen footage/images/maps, plain captions,
+                             # simple numbers and soft dissolves only
 
 # Animated hero shots — Kling 2.6 Pro image-to-video on fal animates the
 # hook's first beat and the reveal scene (docs/HERO_SHOTS_SPEC.md).
@@ -265,17 +242,13 @@ short:                     # vertical Shorts/Reels (Make Short workflow, Tue/Thu
   scenes_max: 6
   crossfade: 0.25          # faster cuts than long-form
   max_shot_seconds: 2.4    # fast novelty; renderer now treats this as a hard ceiling
-  overlay_seconds: 3.5     # impact window: graphics land on the spoken word,
-                           # hold ~3.5s, then hand the frame back to footage
-  captions_max_chars: 24   # 3-5 word thought groups (fragments hurt comprehension;
-                           # karaoke word-pops keep the energy)
+  captions_max_chars: 24   # short thought groups for clean plain captions
   caption_y: 0.62          # centered-low, inside the Shorts UI safe zone
   music_volume: 0.18       # music matters more in shorts
   loop_tail_seconds: 0.20  # brief completed-sentence breath before replay
   tts_speed: 1.0
   ai_images_max: 1
   ai_images_max_flux: 2    # when FAL_KEY is set
-  progress_bar: false      # Shorts player has its own progress bar
   visual_beats:            # semantic beats for shorts: imagery changes with
     enabled: true          # the spoken idea, not a rotation timer
     hook_max_seconds: 1.6  # faster semantic changes on the hook scene
@@ -300,7 +273,7 @@ sfx:                       # synthesized sound design (whoosh/riser/hit)
 
 qc:
   visual_check: true       # Gemini vision sanity-checks every stock clip
-                           # unchecked stock fails closed to a truthful card
+                           # unchecked stock is rejected before the render
   frames: 3                # sample 20/50/80% of each stock clip, not just one frame
   max_upscale: 1.25        # reject obvious blur after portrait crop/upscale
   max_requests_per_video: 72  # more exact-place/cultural checks before fallback
@@ -310,15 +283,6 @@ qc:
 maps:
   enabled: true            # animated map-zoom scenes for place-based topics
   max_fullscreen_seconds: 5.5 # orient once, then cut to scene-specific imagery
-
-motion_library:
-  enabled: true            # deterministic native Remotion motion-element library
-  cta_enabled: true        # one subtle subscribe + bell moment per video
-  cta_in_shorts: false     # protect retention; watermark carries Shorts branding
-  cta_seconds: 3.2
-  cta_short_seconds: 1.8
-  cta_title: "सब्सक्राइब करें"
-  cta_subtitle: "नई खोजें हर हफ्ते"
 
 captions:
   enabled: true

@@ -8,20 +8,11 @@ import glob
 import os
 import random
 
-import numpy as np
 from moviepy import (AudioFileClip, CompositeAudioClip, CompositeVideoClip,
                      ImageClip, TextClip, VideoFileClip, afx,
                      concatenate_videoclips, vfx)
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-# Same palette family as the Remotion evidence fallback.
-_FALLBACK_PALETTES = [
-    ((10, 20, 40), (18, 35, 63)),
-    ((16, 12, 34), (70, 44, 108)),
-    ((8, 26, 26), (22, 78, 74)),
-    ((28, 18, 8), (104, 64, 26)),
-]
 
 FONT_CANDIDATES = [
     "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Bold.ttf",
@@ -54,88 +45,10 @@ def _ken_burns(img_path: str, duration: float, w: int, h: int, zoom_in: bool):
     return CompositeVideoClip([moving.with_position("center")], size=(w, h)).with_duration(duration)
 
 
-def _gradient_frame(w: int, h: int, seed: int):
-    """Vertical gradient as an (h, w, 3) uint8 array — no disk I/O."""
-    top, bottom = _FALLBACK_PALETTES[seed % len(_FALLBACK_PALETTES)]
-    ramp = np.linspace(0.0, 1.0, h, dtype=np.float32)[:, None]        # (h, 1)
-    top_a, bot_a = np.array(top, np.float32), np.array(bottom, np.float32)
-    col = top_a[None, :] + (bot_a - top_a)[None, :] * ramp            # (h, 3)
-    return np.repeat(col[:, None, :], w, axis=1).astype("uint8")      # (h, w, 3)
-
-
-def _evidence_frame(w: int, h: int, seed: int):
-    """Dense technical evidence board for the emergency MoviePy path."""
-    frame = _gradient_frame(w, h, seed).astype(np.float32)
-    accent = np.array((240, 160, 32), dtype=np.float32)
-    grid = np.array((92, 116, 150), dtype=np.float32)
-
-    def line_y(y: int, thickness: int = 2, color=grid, alpha: float = 0.28):
-        y0, y1 = max(y, 0), min(y + thickness, h)
-        frame[y0:y1, :] = frame[y0:y1, :] * (1 - alpha) + color * alpha
-
-    def line_x(x: int, thickness: int = 2, color=grid, alpha: float = 0.28):
-        x0, x1 = max(x, 0), min(x + thickness, w)
-        frame[:, x0:x1] = frame[:, x0:x1] * (1 - alpha) + color * alpha
-
-    for x in range(max(w // 12, 1), w, max(w // 12, 1)):
-        line_x(x, 1)
-    for y in range(max(h // 8, 1), h, max(h // 8, 1)):
-        line_y(y, 1)
-
-    # Three evidence panels, connected by an accent trace.
-    panel_w, panel_h = max(w // 5, 24), max(h // 5, 20)
-    panels = [(w // 12, h // 2), (w // 2 - panel_w // 2, 2 * h // 3),
-              (w - w // 12 - panel_w, h // 2)]
-    centers = []
-    for x, y in panels:
-        x1, y1 = min(x + panel_w, w), min(y + panel_h, h)
-        frame[y:y1, x:x1] = frame[y:y1, x:x1] * 0.55 + grid * 0.18
-        thickness = max(min(w, h) // 240, 2)
-        frame[y:y + thickness, x:x1] = accent
-        frame[y1 - thickness:y1, x:x1] = accent * 0.55
-        frame[y:y1, x:x + thickness] = accent * 0.55
-        frame[y:y1, x1 - thickness:x1] = accent * 0.55
-        centers.append((x + panel_w // 2, y + panel_h // 2))
-
-    for (x0, y0), (x1, y1) in zip(centers, centers[1:]):
-        steps = max(abs(x1 - x0), abs(y1 - y0), 1)
-        xs = np.linspace(x0, x1, steps).astype(int)
-        ys = np.linspace(y0, y1, steps).astype(int)
-        frame[np.clip(ys, 0, h - 1), np.clip(xs, 0, w - 1)] = accent
-
-    yy, xx = np.ogrid[:h, :w]
-    radius = max(min(w, h) // 9, 8)
-    distance = np.sqrt((xx - w // 2) ** 2 + (yy - h // 2) ** 2)
-    ring = np.abs(distance - radius) <= max(radius // 20, 2)
-    core = distance <= max(radius // 5, 3)
-    frame[ring] = accent
-    frame[core] = frame[core] * 0.3 + accent * 0.7
-    line_y(max(h // 10, 2), max(h // 180, 2), accent, 0.9)
-    return np.clip(frame, 0, 255).astype("uint8")
-
-
-def _fallback_visual(duration: float, w: int, h: int, seed: int, zoom_in: bool):
-    """Gentle Ken Burns over a technical evidence board.
-
-    Map scenes (and any scene whose sourcing produced nothing) reach this
-    MoviePy fallback renderer with an empty asset list: Remotion draws their
-    background itself via MapZoom, but this renderer has no such component.
-    Rather than divide by zero or expose a solid frame, render a visibly active
-    evidence board that matches the Remotion emergency fallback.
-    """
-    base = ImageClip(_evidence_frame(w, h, seed)).with_duration(duration)
-    base = base.resized(1.12)  # headroom so the move never exposes an edge
-    z0, z1 = (1.0, 1.08) if zoom_in else (1.08, 1.0)
-    moving = base.resized(lambda t: z0 + (z1 - z0) * (t / max(duration, 0.01)))
-    return CompositeVideoClip([moving.with_position("center")],
-                              size=(w, h)).with_duration(duration)
-
-
 def _scene_visual(assets: list[dict], duration: float, cfg: dict, rng: random.Random):
     w, h, max_shot = cfg["video"]["width"], cfg["video"]["height"], cfg["video"]["max_shot_seconds"]
     if not assets:
-        return _fallback_visual(duration, w, h, int(rng.random() * 1000),
-                                rng.random() < 0.5)
+        raise RuntimeError("MoviePy render requires a real image or video asset")
     parts, remaining, i = [], duration, 0
     zoom_in = rng.random() < 0.5
     while remaining > 0.05:
@@ -147,13 +60,11 @@ def _scene_visual(assets: list[dict], duration: float, cfg: dict, rng: random.Ra
             seg = min(seg, usable)
             start = rng.uniform(0, max(usable - seg, 0)) if i >= len(assets) else 0
             parts.append(_fit(src.subclipped(start, start + seg), w, h))
-        elif a["kind"] == "graphic":
-            parts.append(_fallback_visual(
-                seg, w, h, int(rng.random() * 1000), zoom_in))
-            zoom_in = not zoom_in
-        else:
+        elif a["kind"] == "image":
             parts.append(_ken_burns(a["path"], seg, w, h, zoom_in))
             zoom_in = not zoom_in
+        else:
+            raise RuntimeError(f"Unsupported visual kind: {a['kind']}")
         remaining -= seg
         i += 1
     visual = parts[0] if len(parts) == 1 else concatenate_videoclips(parts)
@@ -214,44 +125,6 @@ def _brand_watermark(duration: float, cfg: dict, w: int, h: int):
             .with_position((w - size - margin, h - size - margin)))
 
 
-def _brand_outro(cfg: dict, w: int, h: int):
-    """Branded end card used whenever Remotion falls back to MoviePy."""
-    duration = max(float(cfg.get("video", {}).get("outro_seconds", 4)), 1.0)
-    brand = cfg.get("brand", {})
-    name = str(brand.get("name") or "SURAAGNAMA")
-    closing = str(brand.get("closing_line") or "फ़ाइल अभी बंद नहीं हुई।")
-    layers = [ImageClip(_gradient_frame(w, h, seed=0)).with_duration(duration)]
-
-    mark_path = os.path.join(REPO_ROOT, "brand", "watermark.png")
-    mark_size = max(round(min(w, h) * 0.18), 72)
-    if os.path.exists(mark_path):
-        layers.append(
-            ImageClip(mark_path).with_duration(duration).resized(width=mark_size)
-            .with_position(("center", round(h * 0.20)))
-        )
-
-    name_size = max(round(h * 0.085), 30)
-    name_clip = TextClip(
-        font=_font(), text=name, font_size=name_size, color="white",
-        method="caption", size=(round(w * 0.84), None), text_align="center",
-    ).with_duration(duration).with_position(("center", round(h * 0.47)))
-    layers.append(name_clip)
-
-    line_w, line_h = max(round(w * 0.12), 80), max(round(h * 0.004), 3)
-    line = np.full((line_h, line_w, 3), (255, 176, 32), dtype="uint8")
-    layers.append(ImageClip(line).with_duration(duration)
-                  .with_position(("center", round(h * 0.61))))
-
-    closing_size = max(round(h * 0.034), 18)
-    closing_clip = TextClip(
-        font=_font(), text=closing, font_size=closing_size, color="white",
-        method="caption", size=(round(w * 0.78), None), text_align="center",
-    ).with_duration(duration).with_opacity(0.88).with_position(
-        ("center", round(h * 0.66)))
-    layers.append(closing_clip)
-    return CompositeVideoClip(layers, size=(w, h)).with_duration(duration)
-
-
 def render(scenes: list[dict], events: list[tuple], out_path: str, cfg: dict) -> float:
     """scenes: [{assets, audio_path, audio_duration}] in order. Returns duration."""
     w, h = cfg["video"]["width"], cfg["video"]["height"]
@@ -279,9 +152,7 @@ def render(scenes: list[dict], events: list[tuple], out_path: str, cfg: dict) ->
         layers.append(watermark)
     story = CompositeVideoClip(layers, size=(w, h)).with_duration(video.duration)
 
-    # A failed primary renderer must not silently drop the channel identity.
-    final = concatenate_videoclips(
-        [story, _brand_outro(cfg, w, h)], method="compose")
+    final = story
 
     music = _music(final.duration, cfg)
     audio = CompositeAudioClip([final.audio, music]) if music else final.audio

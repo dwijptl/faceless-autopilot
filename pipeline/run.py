@@ -32,11 +32,9 @@ import factcheck                    # noqa: E402
 import families as families_mod     # noqa: E402
 import hero_shots                   # noqa: E402
 import mapgen                       # noqa: E402
-import motion as motion_mod         # noqa: E402
 import postprocess                  # noqa: E402
 import quality_report as quality_mod  # noqa: E402
 import script_gen                   # noqa: E402
-import style_packs                  # noqa: E402
 import sfx as sfx_mod               # noqa: E402
 import tts as tts_mod               # noqa: E402
 import visual_beats as visual_beats_mod  # noqa: E402
@@ -217,8 +215,8 @@ def _validate_scene_assets(scenes: list) -> None:
     written: drop vanished/zero-byte files, replace legacy gradient cards, and
     guarantee a non-blank visual pool for every timed narration beat."""
     def ok(asset: dict) -> bool:
-        if asset.get("kind") == "graphic":
-            return bool(asset.get("graphic"))
+        if asset.get("kind") not in ("image", "video"):
+            return False
         path = asset.get("path") or ""
         try:
             return bool(path) and os.path.getsize(path) > 1024
@@ -241,12 +239,8 @@ def _validate_scene_assets(scenes: list) -> None:
             beat["assets"] = [a for a in beat.get("assets", []) if ok(a)]
         sc["assets"] = kept
 
-    # A generated gradient card is technically a valid file, but it looks like
-    # a blank frame when it fills a narration beat. Replace it with the nearest
-    # real visual (same scene first, then neighboring scenes). If the entire
-    # episode has no usable media, use a full animated evidence graphic. This
-    # also repairs an empty first scene, which the old previous-scene-only
-    # guard could not recover.
+    # Replace legacy gradient cards and missing beat media with the nearest
+    # real image or video. Never manufacture a visual template as a fallback.
     concrete = [
         (scene_index, int(asset.get("beat_index", 0)), asset)
         for scene_index, scene in enumerate(scenes)
@@ -254,12 +248,10 @@ def _validate_scene_assets(scenes: list) -> None:
         if asset.get("kind") in ("image", "video")
         and not gradient_fallback(asset)
     ]
-    graphics = [
-        (scene_index, int(asset.get("beat_index", 0)), asset)
-        for scene_index, scene in enumerate(scenes)
-        for asset in scene.get("assets", [])
-        if asset.get("kind") == "graphic" and not gradient_fallback(asset)
-    ]
+    if not concrete:
+        raise RuntimeError(
+            "No full-frame image or video assets are available; refusing "
+            "to render a visual-template fallback")
 
     def pick(scene_index: int, beat_index: int,
              local: list[dict] | None = None) -> dict | None:
@@ -268,9 +260,7 @@ def _validate_scene_assets(scenes: list) -> None:
                       if a.get("kind") in ("image", "video")
                       and not gradient_fallback(a)]
         pool = ([(scene_index, int(a.get("beat_index", 0)), a)
-                 for a in local_real] or concrete or graphics)
-        if not pool:
-            return None
+                 for a in local_real] or concrete)
         return min(pool, key=lambda item: (
             abs(item[0] - scene_index), abs(item[1] - beat_index),
         ))[2]
@@ -295,11 +285,8 @@ def _validate_scene_assets(scenes: list) -> None:
             source = pick(scene_index, beat_index, scene.get("assets"))
             beat = (scene_beats[beat_index]
                     if beat_index < len(scene_beats) else {})
-            replacement = (borrowed(source, beat_index,
-                                    str(asset.get("source_policy", "")))
-                           if source else
-                           assets_mod.fallback_graphic_asset(
-                               scene, beat, beat_index))
+            replacement = borrowed(source, beat_index,
+                                   str(asset.get("source_policy", "")))
             replacement.setdefault("source_policy",
                                    asset.get("source_policy", ""))
             repaired.append(replacement)
@@ -319,27 +306,17 @@ def _validate_scene_assets(scenes: list) -> None:
         if asset.get("kind") in ("image", "video")
         and not gradient_fallback(asset)
     ]
-    graphics = [
-        (scene_index, int(asset.get("beat_index", 0)), asset)
-        for scene_index, scene in enumerate(scenes)
-        for asset in scene.get("assets", [])
-        if asset.get("kind") == "graphic" and not gradient_fallback(asset)
-    ]
     for scene_index, scene in enumerate(scenes):
         beats = scene.get("visual_beats") or []
         if not scene.get("assets"):
             if beats:
                 for beat_index, beat in enumerate(beats):
                     source = pick(scene_index, beat_index)
-                    scene.setdefault("assets", []).append(
-                        borrowed(source, beat_index,
-                                 str(beat.get("source_policy", "")))
-                        if source else assets_mod.fallback_graphic_asset(
-                            scene, beat, beat_index))
+                    scene.setdefault("assets", []).append(borrowed(
+                        source, beat_index, str(beat.get("source_policy", ""))))
             else:
                 source = pick(scene_index, 0)
-                scene["assets"] = ([borrowed(source, 0)] if source else [
-                    assets_mod.fallback_graphic_asset(scene)])
+                scene["assets"] = [borrowed(source, 0)]
             print(f"[render-guard] scene {scene.get('n')}: empty after guard — "
                   "supplying non-blank fallback visual(s)")
 
@@ -348,11 +325,8 @@ def _validate_scene_assets(scenes: list) -> None:
                    for a in scene.get("assets", [])):
                 continue
             source = pick(scene_index, beat_index, scene.get("assets"))
-            scene["assets"].append(
-                borrowed(source, beat_index,
-                         str(beat.get("source_policy", "")))
-                if source else assets_mod.fallback_graphic_asset(
-                    scene, beat, beat_index))
+            scene["assets"].append(borrowed(
+                source, beat_index, str(beat.get("source_policy", ""))))
             print(f"[render-guard] scene {scene.get('n')} beat "
                   f"{beat_index + 1}: filling missing visual assignment")
 
@@ -364,8 +338,6 @@ def _asset_manifest(asset: dict) -> dict:
         "duration": round(asset["duration"], 2) if asset.get("duration") else None,
         "ai": bool(asset.get("ai")),
     }
-    if asset.get("graphic"):
-        entry["graphic"] = asset["graphic"]
     if asset.get("family"):
         entry["family"] = asset["family"]
     if asset.get("premium_hook"):
@@ -387,8 +359,7 @@ def _asset_manifest(asset: dict) -> dict:
 def _render_fallbacks_require_review(scenes: list[dict]) -> bool:
     """True when the render stayed alive by substituting a visual."""
     return any(
-        asset.get("fallback") == "programmatic"
-        or bool(asset.get("borrowed_fallback"))
+        bool(asset.get("borrowed_fallback"))
         for scene in scenes
         for asset in scene.get("assets", [])
     )
@@ -404,6 +375,11 @@ def _assert_render_visual_coverage(manifest: dict) -> None:
         mode = str(scene.get("visualMode", "broll"))
         if not scene_assets:
             issues.append(f"scene {scene.get('n')} has no visual assets")
+        for asset in scene_assets:
+            if asset.get("kind") not in ("image", "video"):
+                issues.append(
+                    f"scene {scene.get('n')} uses forbidden visual kind "
+                    f"{asset.get('kind')}")
         cursor = 0
         for beat_index, beat in enumerate(beats):
             pool = beat.get("assets") or scene_assets
@@ -622,37 +598,21 @@ def _chapters_block(scenes: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def _impact_start(sc: dict, overlay_seconds: float) -> float:
-    """Word-synced start (seconds, scene-relative) for the scene's graphic.
-
-    Uses Sarvam STT word timestamps so a stat/kinetic/card/glass overlay
-    enters exactly when its key word or number is spoken — motion motivated
-    by narration is what separates 'edited' from 'animated'. Fails open to
-    0.0 (scene start) when alignment or a match is unavailable.
-    """
+def _impact_start(sc: dict, display_seconds: float) -> float:
+    """Word-synced start for an allowed plain-number emphasis."""
     words = sc.get("word_times") or []
     mode = sc.get("visual_mode", "broll")
-    if mode not in ("stat", "kinetic", "card", "glass") or not words:
+    if mode != "stat" or not words:
         return 0.0
 
     def norm(text) -> str:
         return re.sub(r"[^\wऀ-ॿ]", "", str(text)).lower()
 
     targets: list[str] = []
-    if mode == "stat":
-        v = (sc.get("stat") or {}).get("value")
-        if isinstance(v, (int, float)):
-            targets.append(str(int(v)) if float(v).is_integer() else str(v))
-    elif mode == "kinetic":
-        targets += str(sc.get("kinetic_text", "")).split()[:2]
-    elif mode == "card":
-        targets += str((sc.get("card") or {}).get("headline", "")).split()[:2]
-    elif mode == "glass":
-        g = sc.get("glass") or {}
-        v = g.get("value")
-        if isinstance(v, (int, float)):
-            targets.append(str(int(v)) if float(v).is_integer() else str(v))
-        targets += str(g.get("headline", "")).split()[:2]
+    v = (sc.get("stat") or {}).get("value")
+    if isinstance(v, (int, float)):
+        targets.append(str(int(v)) if float(v).is_integer() else str(v))
+    targets += str((sc.get("stat") or {}).get("label", "")).split()[:2]
     targets = [norm(t) for t in targets if len(norm(t)) >= 2]
     if not targets:
         return 0.0
@@ -666,9 +626,8 @@ def _impact_start(sc: dict, overlay_seconds: float) -> float:
         if not w:
             continue
         if any(t in w or w in t for t in targets):
-            impact = max(start - 0.15, 0.0)  # slight pre-roll: card lands ON the word
-            # keep runway so most of the overlay window fits before scene end
-            latest = max(sc["audio_duration"] - overlay_seconds * 0.8, 0.0)
+            impact = max(start - 0.12, 0.0)
+            latest = max(sc["audio_duration"] - display_seconds * 0.8, 0.0)
             return round(min(impact, latest), 3)
     return 0.0
 
@@ -717,8 +676,6 @@ def _visual_beat_manifest(scene: dict, fps: int) -> list[dict]:
             spec = families_mod.get_spec(beat["family"])
             if spec:
                 entry["camera"] = spec.camera
-        if beat.get("graphic"):
-            entry["graphic"] = beat["graphic"]
         if beat.get("source_policy"):
             entry["sourcePolicy"] = str(beat["source_policy"])
         result.append(entry)
@@ -775,20 +732,11 @@ def main() -> None:
     done_file = os.path.join(REPO_ROOT, "topics_done.txt")
     topic = script_gen.pick_topic(cfg, gemini_key, done_file, learnings)
 
-    # Keep one quiet on-screen language across the channel. Domain-specific
-    # art direction still guides the imagery; frames, captions and transitions
-    # no longer change skins from upload to upload.
-    simple_documentary = (str(cfg.get("render", {}).get("presentation", ""))
-                          == "simple_documentary")
-    style = ("documentary" if simple_documentary else
-             style_packs.select_and_log(topic, "", REPO_ROOT, is_short=False))
-    cfg.setdefault("render", {})["style_pack"] = style  # steers AI-image look
-    if simple_documentary:
-        print("[style] simple documentary presentation")
-    else:
-        print(f"[style] topic-driven pack: {style} "
-              f"(recent: {style_packs.recent_styles(style_packs.history_path(REPO_ROOT))})")
-        style_packs.apply_pacing(cfg, style, is_short=False)
+    # One media-only presentation: full-frame footage/images, plain captions,
+    # simple fades, and optional word-synced numbers.
+    style = "documentary"
+    cfg.setdefault("render", {})["style_pack"] = style
+    print("[style] media-only documentary presentation")
 
     # shipped topics drive title-form / skeleton / topic-family rotation
     done_titles = script_gen._done_titles(done_file)
@@ -850,11 +798,7 @@ def main() -> None:
 
     # 2) voiceover -----------------------------------------------------------
     fps = int(cfg["video"]["fps"])
-    jit = ({"xfade_mul": 1.0, "max_shot_mul": 1.0, "overlay_mul": 1.0,
-            "caption_y_off": 0.0, "watermark_off": 0.0}
-           if simple_documentary else
-           style_packs.render_jitter(script["title"]))
-    xfade = float(cfg["video"].get("crossfade", 0.4)) * jit["xfade_mul"]
+    xfade = float(cfg["video"].get("crossfade", 0.4))
     scenes, offset = [], 0.0
     for sc in script["scenes"]:
         wav = os.path.join(workdir, f"vo_s{sc['n']:02d}.wav")
@@ -991,17 +935,11 @@ def main() -> None:
     with open(os.path.join(outdir, "captions.srt"), "w", encoding="utf-8") as f:
         f.write(srt)
 
-    # 4b) deterministic motion library + sound design + dedicated thumbnail ----
-    motion_seed = f"{script['title']}:{style}"
-    motion_mod.decorate_scenes(
-        scenes, motion_seed,
-        frame_pool=style_packs.frames_for(style),
-        lower_third_pool=style_packs.lower_thirds_for(style))
-    cta_event = (None if simple_documentary else
-                 motion_mod.plan_cta(scenes, cfg, motion_seed, is_short=False))
-    sfx_events = sfx_mod.plan_events(scenes, cfg, workdir, cta_event)
+    # 4b) sound design + dedicated thumbnail ------------------------------
+    audio_seed = f"{script['title']}:{style}"
+    sfx_events = sfx_mod.plan_events(scenes, cfg, workdir)
     music_automation = sfx_mod.plan_music_automation(scenes, cfg)
-    music_path = pick_music(workdir, cfg, motion_seed, style)
+    music_path = pick_music(workdir, cfg, audio_seed, style)
     thumb_ai = None
     tp = (script.get("thumb_prompt") or "").strip()
     if tp:
@@ -1026,48 +964,28 @@ def main() -> None:
     # 5) manifest ------------------------------------------------------------
     rcfg = cfg.get("render", {})
     brand_cfg = cfg.get("brand", {})
-    overlay_seconds = (float(cfg.get("longform_quality", {})
-                             .get("overlay_seconds", 5.0))
-                       * jit["overlay_mul"])
     for sc in scenes:
-        sc["impact_start"] = _impact_start(sc, overlay_seconds)
+        sc["impact_start"] = _impact_start(sc, 3.2)
         if sc["impact_start"] > 0:
-            print(f"[sync] scene {sc['n']}: {sc.get('visual_mode')} graphic "
+            print(f"[sync] scene {sc['n']}: plain number "
                   f"word-synced to +{sc['impact_start']:.2f}s")
     manifest = {"manifest": {
         "fps": fps,
         "width": int(cfg["video"]["width"]),
         "height": int(cfg["video"]["height"]),
         "xfadeFrames": max(int(round(xfade * fps)), 1),
-        "maxShotSeconds": float(cfg["video"].get("max_shot_seconds", 5))
-        * jit["max_shot_mul"],
+        "maxShotSeconds": float(cfg["video"].get("max_shot_seconds", 5)),
         "mapShotSeconds": min(max(float(cfg.get("maps", {}).get(
             "max_fullscreen_seconds", 5.5)), 2.5), 8.0),
-        "overlaySeconds": overlay_seconds,
-        "simpleDocumentary": simple_documentary,
         "style": style,
-        "variableLabel": str((script.get("changing_variable") or {})
-                             .get("label", "")).upper()[:18],
-        "variableUnit": str((script.get("changing_variable") or {})
-                            .get("unit", ""))[:8],
-        "accent": rcfg.get("accent", "#FFB020"),
-        "progressBar": bool(rcfg.get("progress_bar", True)),
-        "brandName": brand_cfg.get("name", ""),
-        "brandTagline": brand_cfg.get("tagline", ""),
-        "brandClosingLine": brand_cfg.get("closing_line", "फ़ाइल अभी बंद नहीं हुई।"),
         "watermarkPath": stage_brand(workdir),
         "watermarkOpacity": min(max(
-            float(brand_cfg.get("watermark_opacity", 0.08))
-            + jit["watermark_off"], 0.05), 0.14),
-        "outroSeconds": float(cfg["video"].get("outro_seconds", 4)),
+            float(brand_cfg.get("watermark_opacity", 0.08)), 0.05), 0.14),
         "title": script["title"],
         "thumbText": script.get("thumb_text", script["title"][:24]),
         "thumbHeadline": script.get("thumb_headline", ""),
         "thumbQuestion": script.get("thumb_question", ""),
         "thumbAiPath": thumb_ai,
-        "motionSeed": motion_seed,
-        "domainPack": domain_pack,
-        "cta": cta_event,
         "sfx": sfx_events,
         "musicPath": music_path,
         "musicVolume": float(cfg["music"].get("volume", 0.12)),
@@ -1089,15 +1007,8 @@ def main() -> None:
             "milestone": sc.get("milestone") or {},
             "title": sc.get("title", ""),
             "visualMode": sc.get("visual_mode", "broll"),
-            "kineticText": sc.get("kinetic_text", ""),
             "stat": sc.get("stat", {}) or {},
-            "card": sc.get("card", {}) or {},
-            "glass": sc.get("glass", {}) or {},
-            "compare": sc.get("compare", {}) or {},
-            "causal": sc.get("causal", {}) or {},
-            "evidence": sc.get("evidence", {}) or {},
             "map": sc.get("map_render") or {},
-            "motion": sc.get("motion") or {},
             "audioPath": os.path.basename(sc["audio_path"]),
             "audioDuration": round(sc["audio_duration"], 3),
             "assets": [_asset_manifest(a) for a in sc["assets"]],
@@ -1312,8 +1223,8 @@ def main() -> None:
       channel keeps learning
 
 *Assets: Pexels + licensed AI images{(' + Wikimedia Commons' if commons_credits else '')}. Voice: {voice_line}
-(your cloned Sarvam voice; Kokoro Apache-2.0 fallback). Motion design:
-Remotion. Brand: SURAAGNAMA · सुरागनामा.*
+(your cloned Sarvam voice; Kokoro Apache-2.0 fallback). Visuals: full-frame
+media with plain captions and simple fades. Brand: SURAAGNAMA · सुरागनामा.*
 """
     with open(os.path.join(outdir, "metadata.md"), "w", encoding="utf-8") as f:
         f.write(meta)
@@ -1337,10 +1248,10 @@ Remotion. Brand: SURAAGNAMA · सुरागनामा.*
                        "wpm_realized": realized_wpm,
                        "gate": r_gate,
                    },
-                   "motion_library": {
-                       "seed": motion_seed,
-                       "cta": cta_event,
-                       "scene_variants": [sc.get("motion", {}) for sc in scenes],
+                   "presentation": {
+                       "mode": "media_only",
+                       "number_overlays": sum(
+                           sc.get("visual_mode") == "stat" for sc in scenes),
                        "sound_events": len(sfx_events),
                    }}, f, indent=2, ensure_ascii=False)
 
@@ -1377,8 +1288,6 @@ Remotion. Brand: SURAAGNAMA · सुरागनामा.*
         print(f"[beats] analytics copy skipped ({exc})")
 
     script_gen.log_topic_done(topic, os.path.join(REPO_ROOT, "topics_done.txt"))
-    if not simple_documentary:
-        style_packs.record_use(style, REPO_ROOT, is_short=False)
     # No automatic next-episode lock: the owner either adds a manual
     # "NEXT: <topic>" line to topics_done.txt or lets pick_topic choose.
 
