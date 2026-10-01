@@ -1,0 +1,203 @@
+{
+  "stamp": "2026-10-01_1119",
+  "title": "1859 में तारों में आग लगी थी—आज ग्रिड कितनी देर टिकेगा? | कैरिंगटन घटना",
+  "style": "documentary",
+  "retention_plan": {
+    "core_question": "1859 जैसा सोलर तूफान आज आए तो क्या शहर मिनटों में अंधेरे में जाएंगे, या ग्रिड खुद को बचा लेगा?",
+    "viewer_assumption": "ज़्यादातर लोग सोलर तूफान को बस खूबसूरत ऑरोरा और हल्के नेटवर्क प्रॉब्लम से जोड़ते हैं।",
+    "first_reversal": "1859 में टेलीग्राफ तारों से चिंगारियां निकलीं, ऑपरेटरों को झटके लगे और कुछ लाइनों ने बैटरी हटाने के बाद भी संदेश भेजे।",
+    "main_reveal": "सबसे बड़ा खतरा सूरज की गर्मी नहीं है। धरती के मैग्नेटिक फील्ड के हिलने से बना धीमा करंट लंबी ट्रांसमिशन लाइनों में घुस सकता है। सुरक्षा सिस्टम मिनटों में बिजली काट सकते हैं; लेकिन बड़े ट्रांसफॉर्मर खर",
+    "main_reveal_scene": 8,
+    "open_loops": [
+      {
+        "question": "बैटरी हटाने के बाद टेलीग्राफ में करंट आया कहां से?",
+        "opens_scene": 1,
+        "partial_scene": 3,
+        "closes_scene": 8
+      },
+      {
+        "question": "आज का ग्रिड पहले मिनट में बचेगा या बिजली काट देगा?",
+        "opens_scene": 2,
+        "partial_scene": 6,
+        "closes_scene": 10
+      }
+    ]
+  },
+  "beats": [
+    {
+      "n": 1,
+      "title": "बैटरी बंद, तार जिंदा",
+      "start": 0.0,
+      "end": 43.74,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "hook",
+      "rewardType": "visual_reveal",
+      "rewardStrength": 0.98,
+      "questionOut": "बैटरी हटाने के बाद उस तार को चला कौन रहा था?",
+      "delivery": "hook",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 2,
+      "title": "5 मिनट की सफेद चमक",
+      "start": 43.49,
+      "end": 92.63,
+      "visualMode": "evidence",
+      "visualRole": "measurement",
+      "narrativeRole": "evidence",
+      "rewardType": "evidence",
+      "rewardStrength": 0.92,
+      "questionOut": "सूरज पर दिखी 5 मिनट की चमक ने धरती के तारों को कैसे छुआ?",
+      "delivery": "calm",
+      "assets": [
+        "video:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 3,
+      "title": "झटका ऑपरेटर को लगा",
+      "start": 92.38,
+      "end": 145.48,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "discovery",
+      "rewardType": "fact",
+      "rewardStrength": 0.9,
+      "questionOut": "अगर फॉल्ट स्टेशन में नहीं था, तो एक साथ इतनी दूर की लाइनों में करंट किसने भरा?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 4,
+      "title": "एक पैटर्न, कोई जवाब नहीं",
+      "start": 145.23,
+      "end": 187.8,
+      "visualMode": "ai_image",
+      "visualRole": "explanation",
+      "narrativeRole": "partial_answer",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.94,
+      "questionOut": "टेलीग्राफ से हजार गुना ज्यादा पावर वाले आज के तारों में ऐसा झटका पहुंचे तो क्या होगा?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 5,
+      "title": "90 सेकंड में क्यूबेक अंधेरा",
+      "start": 187.55,
+      "end": 236.64,
+      "visualMode": "map",
+      "visualRole": "measurement",
+      "narrativeRole": "reversal",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.96,
+      "questionOut": "अगर ग्रिड खुद बिजली काट दे, तो क्या यह फेलियर है—या बड़ी तबाही से बचाव?",
+      "delivery": "urgent",
+      "assets": [
+        "image:stock",
+        "video:stock"
+      ]
+    },
+    {
+      "n": 6,
+      "title": "हर शहर एक साथ नहीं गिरेगा",
+      "start": 236.39,
+      "end": 296.87,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "comparison",
+      "rewardType": "comparison",
+      "rewardStrength": 0.9,
+      "questionOut": "ग्रिड की वह कौन-सी मशीन है जिसे खराब होने पर अगले दिन बदला नहीं जा सकता?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 7,
+      "title": "ग्रिड का सबसे भारी दिल",
+      "start": 296.62,
+      "end": 350.56,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "escalation",
+      "rewardType": "consequence",
+      "rewardStrength": 0.93,
+      "questionOut": "इतने बड़े ट्रांसफॉर्मर को बदलने में असली अड़चन मशीन बनाना है, या उसे पहुंचाना?",
+      "delivery": "urgent",
+      "assets": [
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 8,
+      "title": "असली खतरा गर्मी नहीं",
+      "start": 350.31,
+      "end": 429.85,
+      "visualMode": "stat",
+      "visualRole": "measurement",
+      "narrativeRole": "main_reveal",
+      "rewardType": "partial_answer",
+      "rewardStrength": 1.0,
+      "questionOut": "फिर भी एक सवाल बचता है—क्या हमारे पास तूफान आने से पहले कुछ करने का वक्त होगा?",
+      "delivery": "reveal",
+      "assets": [
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 9,
+      "title": "सूरज चुपके नहीं आता",
+      "start": 429.6,
+      "end": 494.1,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "implication",
+      "rewardType": "fact",
+      "rewardStrength": 0.91,
+      "questionOut": "तो ईमानदार जवाब क्या है—1859 जैसा तूफान आए, तो आपकी लाइट कितनी देर में जा सकती है?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 10,
+      "title": "जवाब: मिनट, या महीने",
+      "start": 493.85,
+      "end": 557.66,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "conclusion",
+      "rewardType": "consequence",
+      "rewardStrength": 0.97,
+      "questionOut": "",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    }
+  ]
+}
