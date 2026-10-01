@@ -1,0 +1,216 @@
+{
+  "stamp": "2026-09-30_2338",
+  "title": "4,000 साल पुराना कोड, लेकिन चाबी अब तक नहीं मिली | सिंधु लिपि",
+  "style": "documentary",
+  "retention_plan": {
+    "core_question": "सिंधु घाटी के लोग इतने निशान छोड़ गए, फिर भी उनकी लिपि आज तक पढ़ी क्यों नहीं जा सकी?",
+    "viewer_assumption": "ज़्यादातर लोग सोचते हैं कि ये बस जानवरों वाली तस्वीरें होंगी, या किसी एक्सपर्ट ने इन्हें कब का पढ़ लिया होगा।",
+    "first_reversal": "ये बेतरतीब तस्वीरें नहीं हैं। कई निशान बार-बार तय जगह पर आते हैं, जैसे लिखने का कोई नियम हो।",
+    "main_reveal": "रहस्य किसी जादुई कोड का नहीं है। हमारे पास न पक्का दो-भाषी लेख है, न कोई लंबा टेक्स्ट, न उस बोली की पहचान जिस पर सब सहमत हों।",
+    "main_reveal_scene": 8,
+    "open_loops": [
+      {
+        "question": "क्या ये असली लिखावट है, या सिर्फ व्यापार के निशान?",
+        "opens_scene": 1,
+        "partial_scene": 3,
+        "closes_scene": 9
+      },
+      {
+        "question": "अगर यह लिखावट है, तो इसे खोलने वाली चाबी आखिर गायब कहां है?",
+        "opens_scene": 4,
+        "partial_scene": 6,
+        "closes_scene": 11
+      }
+    ]
+  },
+  "beats": [
+    {
+      "n": 1,
+      "title": "हथेली में बंद संदेश",
+      "start": 0.0,
+      "end": 36.29,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "hook",
+      "rewardType": "visual_reveal",
+      "rewardStrength": 0.9,
+      "questionOut": "इन छोटे निशानों में क्या कोई तय पैटर्न दिखता है?",
+      "delivery": "hook",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 2,
+      "title": "ईंटों वाले शहरों का नेटवर्क",
+      "start": 36.04,
+      "end": 78.79,
+      "visualMode": "map",
+      "visualRole": "measurement",
+      "narrativeRole": "context",
+      "rewardType": "fact",
+      "rewardStrength": 0.82,
+      "questionOut": "क्या मुहरें सिर्फ माल की पहचान थीं, या इनमें असली शब्द भी छिपे हैं?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 3,
+      "title": "तस्वीर नहीं, तय क्रम",
+      "start": 78.54,
+      "end": 122.64,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "discovery",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.9,
+      "questionOut": "नियम दिख गया, लेकिन उसे पढ़ने के लिए सबसे पहली चीज़ क्या चाहिए?",
+      "delivery": "calm",
+      "assets": [
+        "video:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 4,
+      "title": "करीब 400 निशानों की दीवार",
+      "start": 122.39,
+      "end": 165.33,
+      "visualMode": "stat",
+      "visualRole": "measurement",
+      "narrativeRole": "question",
+      "rewardType": "scale",
+      "rewardStrength": 0.83,
+      "questionOut": "द्रविड़ भाषा, संस्कृत से पहले की कोई बोली, या कुछ ऐसा जो अब खत्म हो चुका है?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 5,
+      "title": "द्रविड़ थ्योरी का सुराग",
+      "start": 165.08,
+      "end": 209.63,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "explanation",
+      "rewardType": "fact",
+      "rewardStrength": 0.82,
+      "questionOut": "तो हर बड़े अनुवाद के सामने आखिर कौन-सी दीवार खड़ी हो जाती है?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 6,
+      "title": "हर जवाब नई मुहर पर टूटता है",
+      "start": 209.38,
+      "end": 246.05,
+      "visualMode": "ai_image",
+      "visualRole": "explanation",
+      "narrativeRole": "reversal",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.94,
+      "questionOut": "इतनी मुहरें होने के बाद भी सबूत आखिर कम कैसे पड़ गए?",
+      "delivery": "urgent",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 7,
+      "title": "3,700 टुकड़े, पर कहानी नहीं",
+      "start": 245.8,
+      "end": 281.84,
+      "visualMode": "stat",
+      "visualRole": "measurement",
+      "narrativeRole": "escalation",
+      "rewardType": "comparison",
+      "rewardStrength": 0.95,
+      "questionOut": "अगर लंबे टेक्स्ट नहीं हैं, तो इसे खोलने वाली चाबी कहां से आएगी?",
+      "delivery": "urgent",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 8,
+      "title": "गायब है असली चाबी",
+      "start": 281.59,
+      "end": 332.82,
+      "visualMode": "evidence",
+      "visualRole": "explanation",
+      "narrativeRole": "main_reveal",
+      "rewardType": "evidence",
+      "rewardStrength": 1.0,
+      "questionOut": "क्या इसका मतलब है कि यह पहेली हमेशा के लिए बंद है?",
+      "delivery": "reveal",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 9,
+      "title": "क्या यह भाषा थी भी?",
+      "start": 332.57,
+      "end": 374.52,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "partial_answer",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.86,
+      "questionOut": "एक ऐसी कौन-सी खोज है जो यह बहस एक दिन में पलट देगी?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 10,
+      "title": "वह एक खोज जो सब बदल दे",
+      "start": 374.27,
+      "end": 428.52,
+      "visualMode": "broll",
+      "visualRole": "measurement",
+      "narrativeRole": "implication",
+      "rewardType": "consequence",
+      "rewardStrength": 0.88,
+      "questionOut": "जब तक वह चाबी नहीं मिलती, इस मुहर के बारे में हम क्या पक्का जानते हैं?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 11,
+      "title": "संदेश यहीं पड़ा है",
+      "start": 428.27,
+      "end": 473.26,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "conclusion",
+      "rewardType": "visual_reveal",
+      "rewardStrength": 0.95,
+      "questionOut": "",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    }
+  ]
+}
