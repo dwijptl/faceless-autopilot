@@ -1,0 +1,232 @@
+{
+  "stamp": "2026-10-04_1638",
+  "title": "नॉर्वे की इस घाटी में 45 साल से उड़ रही हैं रोशनियाँ | हैस्डालेन लाइट्स",
+  "style": "documentary",
+  "retention_plan": {
+    "core_question": "जब कैमरे, रडार और सेंसर इन रोशनियों को पकड़ चुके हैं, तो नॉर्वे की हैस्डालेन घाटी में आखिर उड़ क्या रहा है?",
+    "viewer_assumption": "ज़्यादातर लोग मानते हैं कि ऐसी लाइट या तो UFO की कहानी है, या दूर की गाड़ी और विमान का भ्रम।",
+    "first_reversal": "कुछ घटनाओं में सिर्फ आंखों ने नहीं, कैमरे और दूसरे इंस्ट्रूमेंट्स ने भी उसी वक्त कुछ दर्ज किया था।",
+    "main_reveal": "हैस्डालेन लाइट्स का एक जवाब नहीं है। कई रिपोर्ट गाड़ियों, विमान या आसमान की चीजों से समझ जाती हैं, लेकिन अच्छे इंस्ट्रूमेंट रिकॉर्ड वाले कुछ केस अब भी बिना तय वजह के असली रोशनी की घटनाएं हैं।",
+    "main_reveal_scene": 4,
+    "open_loops": [
+      {
+        "question": "क्या ये रोशनी बस विमान, तारा या पहाड़ी सड़क की हेडलाइट है?",
+        "opens_scene": 1,
+        "partial_scene": 3,
+        "closes_scene": 4
+      },
+      {
+        "question": "अगर कुछ रिकॉर्ड वाले केस बचते हैं, तो घाटी की मिट्टी, हवा और चार्ज उनमें क्या रोल निभाते हैं?",
+        "opens_scene": 5,
+        "partial_scene": 8,
+        "closes_scene": 12
+      }
+    ]
+  },
+  "beats": [
+    {
+      "n": 1,
+      "title": "हवा में रुका हुआ गोला",
+      "start": 0.0,
+      "end": 26.78,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "hook",
+      "rewardType": "visual_reveal",
+      "rewardStrength": 0.9,
+      "questionOut": "क्या कैमरे में सिर्फ चमक आई थी, या सच में कोई चीज घाटी के ऊपर मौजूद थी?",
+      "delivery": "hook",
+      "assets": [
+        "video:ai",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 2,
+      "title": "नक्शे पर एक छोटी घाटी",
+      "start": 26.53,
+      "end": 56.61,
+      "visualMode": "map",
+      "visualRole": "measurement",
+      "narrativeRole": "discovery",
+      "rewardType": "fact",
+      "rewardStrength": 0.82,
+      "questionOut": "अगर लोग सही देख रहे थे, तो क्या कोई मशीन भी उसी लाइट को पकड़ पाएगी?",
+      "delivery": "calm",
+      "assets": [
+        "video:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 3,
+      "title": "आंखों को धोखा भी हो सकता है",
+      "start": 56.36,
+      "end": 91.21,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "context",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.78,
+      "questionOut": "जब घाटी में कैमरे लगाए गए, तो रिकॉर्ड में क्या निकला?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 4,
+      "title": "जवाब एक नहीं है",
+      "start": 90.96,
+      "end": 138.4,
+      "visualMode": "evidence",
+      "visualRole": "explanation",
+      "narrativeRole": "main_reveal",
+      "rewardType": "evidence",
+      "rewardStrength": 1.0,
+      "questionOut": "जो केस आसान जवाब से नहीं सुलझते, उनमें घाटी की जमीन और हवा क्या कर रही है?",
+      "delivery": "reveal",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 5,
+      "title": "सबसे पहले आसान जवाब हटाइए",
+      "start": 138.15,
+      "end": 178.84,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "reversal",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.86,
+      "questionOut": "क्या हैस्डालेन की जमीन खुद हवा में चमकती चीज बना सकती है?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 6,
+      "title": "चट्टान, पानी और चार्ज",
+      "start": 178.59,
+      "end": 218.11,
+      "visualMode": "ai_image",
+      "visualRole": "explanation",
+      "narrativeRole": "explanation",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.82,
+      "questionOut": "अगर चार्ज और गैस जिम्मेदार हैं, तो सेंसरों में उनका साफ निशान क्यों नहीं मिलता?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 7,
+      "title": "जब लाइट के साथ सिग्नल भी आया",
+      "start": 217.86,
+      "end": 253.19,
+      "visualMode": "stat",
+      "visualRole": "measurement",
+      "narrativeRole": "escalation",
+      "rewardType": "evidence",
+      "rewardStrength": 0.88,
+      "questionOut": "रोशनी को रंगों में तोड़ें, तो क्या उसका असली सोर्स बाहर आ जाएगा?",
+      "delivery": "urgent",
+      "assets": [
+        "image:ai",
+        "video:stock"
+      ]
+    },
+    {
+      "n": 8,
+      "title": "रंगों में छिपा सुराग",
+      "start": 252.94,
+      "end": 291.11,
+      "visualMode": "broll",
+      "visualRole": "measurement",
+      "narrativeRole": "partial_answer",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.8,
+      "questionOut": "क्या हर रंग और हर मूवमेंट को एक ही थ्योरी से समझा जा सकता है?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "video:stock"
+      ]
+    },
+    {
+      "n": 9,
+      "title": "एक मॉडल पूरा केस नहीं समझाता",
+      "start": 290.86,
+      "end": 324.28,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "",
+      "rewardType": "visual_reveal",
+      "rewardStrength": 0.9,
+      "questionOut": "अगर जवाब इतने अलग हैं, तो UFO वाला लेबल इस केस से चिपका कैसे?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 10,
+      "title": "UFO का मतलब एलियन नहीं",
+      "start": 324.03,
+      "end": 355.54,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "implication",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.84,
+      "questionOut": "इतने साल बाद भी रिसर्चर्स अगली लाइट का इंतजार क्यों करते हैं?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 11,
+      "title": "लाइट अपॉइंटमेंट लेकर नहीं आती",
+      "start": 355.29,
+      "end": 392.21,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "escalation",
+      "rewardType": "consequence",
+      "rewardStrength": 0.82,
+      "questionOut": "45 साल की जांच के बाद आखिर कौन-सी बात पक्की बचती है?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 12,
+      "title": "रहस्य का असली जवाब",
+      "start": 391.96,
+      "end": 432.47,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "conclusion",
+      "rewardType": "consequence",
+      "rewardStrength": 0.94,
+      "questionOut": "",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:stock"
+      ]
+    }
+  ]
+}
