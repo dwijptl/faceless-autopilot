@@ -1,0 +1,234 @@
+{
+  "stamp": "2026-10-05_1200",
+  "title": "अल्काट्राज़ से 3 कैदी निकले—क्या वे ठंडे समुद्र को पार कर गए?",
+  "style": "documentary",
+  "retention_plan": {
+    "core_question": "क्या फ्रैंक मॉरिस और एंग्लिन भाई अल्काट्राज़ से निकलकर सैन फ्रांसिस्को बे का ठंडा, तेज़ धार वाला पानी पार कर पाए थे?",
+    "viewer_assumption": "इतने ठंडे पानी और अंधेरी रात में रबर की हाथ से बनी राफ्ट पर निकलना लगभग मौत जैसा लगता है।",
+    "first_reversal": "गार्डों को सुबह तक लगा कि तीनों अपने बिस्तरों में सो रहे हैं, क्योंकि तकियों पर उनके नकली सिर रखे थे।",
+    "main_reveal": "एफबीआई ने 1979 में डूबने को सबसे संभावित नतीजा माना। लेकिन उनके पास न तीनों के शव थे, न राफ्ट, न ऐसा सबूत जो बताए कि आखिरी बार वे कहाँ पहुंचे।",
+    "main_reveal_scene": 9,
+    "open_loops": [
+      {
+        "question": "बिस्तर में सिर पड़े थे, तो असली कैदी सेल से निकले कैसे?",
+        "opens_scene": 1,
+        "partial_scene": 3,
+        "closes_scene": 6
+      },
+      {
+        "question": "अगर वे डूब गए, तो समुद्र ने तीनों में से किसी का पक्का निशान क्यों नहीं लौटाया?",
+        "opens_scene": 4,
+        "partial_scene": 8,
+        "closes_scene": 12
+      }
+    ]
+  },
+  "beats": [
+    {
+      "n": 1,
+      "title": "सुबह बिस्तर में सिर थे",
+      "start": 0.0,
+      "end": 35.46,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "hook",
+      "rewardType": "visual_reveal",
+      "rewardStrength": 0.98,
+      "questionOut": "नकली सिर ने गार्ड को धोखा दिया, पर कैदियों ने दीवार को कैसे हराया?",
+      "delivery": "hook",
+      "assets": [
+        "video:ai",
+        "image:ai",
+        "video:stock"
+      ]
+    },
+    {
+      "n": 2,
+      "title": "दुनिया की सबसे मुश्किल जेल",
+      "start": 35.21,
+      "end": 70.77,
+      "visualMode": "map",
+      "visualRole": "measurement",
+      "narrativeRole": "context",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.86,
+      "questionOut": "तीन कैदी बंद सेल से निकलकर गार्डों की नजर से ओझल कहाँ हुए?",
+      "delivery": "calm",
+      "assets": [
+        "video:stock",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 3,
+      "title": "दीवार के पीछे सुरंग",
+      "start": 70.52,
+      "end": 112.65,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "evidence",
+      "rewardType": "evidence",
+      "rewardStrength": 0.9,
+      "questionOut": "छत पर पहुंचकर उन्होंने छलांग नहीं लगाई—तो पानी के लिए क्या तैयार रखा था?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 4,
+      "title": "रेनकोटों की राफ्ट",
+      "start": 112.4,
+      "end": 158.75,
+      "visualMode": "ai_image",
+      "visualRole": "explanation",
+      "narrativeRole": "escalation",
+      "rewardType": "visual_reveal",
+      "rewardStrength": 0.95,
+      "questionOut": "अगर राफ्ट पानी में गई थी, तो बाद में उसका पूरा ढांचा मिला क्यों नहीं?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 5,
+      "title": "2 किलोमीटर का जाल",
+      "start": 158.5,
+      "end": 194.16,
+      "visualMode": "stat",
+      "visualRole": "measurement",
+      "narrativeRole": "comparison",
+      "rewardType": "scale",
+      "rewardStrength": 0.88,
+      "questionOut": "समुद्र ने जो सामान लौटाया, क्या वह डूबने का सबूत था या बच निकलने का?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 6,
+      "title": "किनारे पर मिला पैडल",
+      "start": 193.91,
+      "end": 231.12,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "reversal",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.94,
+      "questionOut": "क्या ज्वार उन्हें सैन फ्रांसिस्को से दूर नहीं, किसी पहुंचने लायक किनारे की तरफ धकेल सकता था?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 7,
+      "title": "धारा ने रास्ता बदला?",
+      "start": 230.87,
+      "end": 274.14,
+      "visualMode": "map",
+      "visualRole": "explanation",
+      "narrativeRole": "partial_answer",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.9,
+      "questionOut": "जब बच निकलना संभव था, तो एफबीआई की फाइल डूबने की तरफ क्यों झुकी?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "video:stock"
+      ]
+    },
+    {
+      "n": 8,
+      "title": "मां ने मोमबत्तियां जलाईं",
+      "start": 273.89,
+      "end": 313.24,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "question",
+      "rewardType": "consequence",
+      "rewardStrength": 0.84,
+      "questionOut": "भावनाओं से अलग होकर एफबीआई ने आखिर किन ठोस बातों को ज्यादा वजन दिया?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 9,
+      "title": "एफबीआई का सबसे कड़ा जवाब",
+      "start": 312.99,
+      "end": 364.82,
+      "visualMode": "evidence",
+      "visualRole": "measurement",
+      "narrativeRole": "main_reveal",
+      "rewardType": "evidence",
+      "rewardStrength": 1.0,
+      "questionOut": "अगर डूबना साबित नहीं हुआ, तो क्या बाद का एक फोटो इस केस को पलट सकता है?",
+      "delivery": "reveal",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 10,
+      "title": "ब्राज़ील वाली तस्वीर",
+      "start": 364.57,
+      "end": 405.8,
+      "visualMode": "ai_image",
+      "visualRole": "explanation",
+      "narrativeRole": "implication",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.9,
+      "questionOut": "एक तरफ समुद्र का खतरा, दूसरी तरफ बच निकलने का मौका—सबूत किस तरफ झुकते हैं?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 11,
+      "title": "किस तरफ झुकता है केस?",
+      "start": 405.55,
+      "end": 449.92,
+      "visualMode": "broll",
+      "visualRole": "measurement",
+      "narrativeRole": "comparison",
+      "rewardType": "comparison",
+      "rewardStrength": 0.9,
+      "questionOut": "तो अल्काट्राज़ फरारी का सबसे सच्चा, और सबसे बेचैन करने वाला जवाब क्या है?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 12,
+      "title": "जेल हारी, समुद्र चुप रहा",
+      "start": 449.67,
+      "end": 495.12,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "conclusion",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.98,
+      "questionOut": "",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai",
+        "image:stock"
+      ]
+    }
+  ]
+}
