@@ -1,0 +1,221 @@
+{
+  "stamp": "2026-10-08_1144",
+  "title": "5 विमान भटके, उन्हें ढूंढने गया विमान भी गायब | फ्लाइट 19",
+  "style": "documentary",
+  "retention_plan": {
+    "core_question": "फ्लाइट 19 के 5 विमान आखिर किस दिशा में निकले, और उन्हें ढूंढने वाला पीबीएम मैरिनर भी उसी रात क्यों गायब हुआ?",
+    "viewer_assumption": "बरमूडा ट्रायंगल की कहानी सुनते ही लगता है कि कोई अनजान ताकत 6 विमानों को निगल गई होगी।",
+    "first_reversal": "रेडियो रिकॉर्ड में न कोई अजीब रोशनी है, न कोई अनजान चीज़। वहाँ बस एक लीड पायलट है जो अपनी लोकेशन गलत समझ बैठा।",
+    "main_reveal": "सबसे मजबूत रिकॉर्ड-आधारित जवाब यह है कि फ्लाइट 19 ने बहामास को फ्लोरिडा कीज़ समझ लिया, गलत दिशा में समुद्र के भीतर जाती रही और ईंधन खत्म होने पर रात में पानी पर उतरी। बचाव वाला मैरिनर शायद अलग ईंधन की",
+    "main_reveal_scene": 8,
+    "open_loops": [
+      {
+        "question": "क्या सच में सभी कंपास खराब हुए थे, या पायलट अपनी जगह ही गलत मान रहे थे?",
+        "opens_scene": 1,
+        "partial_scene": 3,
+        "closes_scene": 8
+      },
+      {
+        "question": "13 लोगों वाला बचाव विमान फ्लाइट 19 तक पहुंचने से पहले कैसे गायब हो गया?",
+        "opens_scene": 6,
+        "partial_scene": 9,
+        "closes_scene": 10
+      }
+    ]
+  },
+  "beats": [
+    {
+      "n": 1,
+      "title": "रेडियो पर आखिरी सवाल",
+      "start": 0.0,
+      "end": 44.0,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "hook",
+      "rewardType": "fact",
+      "rewardStrength": 0.98,
+      "questionOut": "तो उस दोपहर कौन-सी छोटी गलती ने पूरे स्क्वाड्रन को समुद्र के भीतर धकेल दिया?",
+      "delivery": "hook",
+      "assets": [
+        "video:ai",
+        "image:ai",
+        "video:stock"
+      ]
+    },
+    {
+      "n": 2,
+      "title": "रूट आसान था, शुरुआत भी",
+      "start": 43.75,
+      "end": 95.76,
+      "visualMode": "map",
+      "visualRole": "measurement",
+      "narrativeRole": "context",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.88,
+      "questionOut": "अभ्यास सही हुआ था, तो लौटते वक्त टेलर को अपना नक्शा गलत क्यों लगने लगा?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 3,
+      "title": "“मेरे कंपास ठीक नहीं हैं”",
+      "start": 95.51,
+      "end": 136.64,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "evidence",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.93,
+      "questionOut": "अगर हर कंपास फेल नहीं हुआ था, तो टेलर खुद को किस जगह पर समझ रहा था?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 4,
+      "title": "बहामास को फ्लोरिडा समझ लिया",
+      "start": 136.39,
+      "end": 187.62,
+      "visualMode": "ai_image",
+      "visualRole": "explanation",
+      "narrativeRole": "reversal",
+      "rewardType": "visual_reveal",
+      "rewardStrength": 0.97,
+      "questionOut": "क्या किसी दूसरे पायलट ने इस गलत दिशा को पकड़ लिया था?",
+      "delivery": "reveal",
+      "assets": [
+        "video:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 5,
+      "title": "रेडियो पर किसी ने कहा: पश्चिम चलो",
+      "start": 187.37,
+      "end": 222.7,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "escalation",
+      "rewardType": "evidence",
+      "rewardStrength": 0.95,
+      "questionOut": "पूर्व की तरफ बढ़ते हुए उनके पास सबसे पहले क्या खत्म होने वाला था—रोशनी या ईंधन?",
+      "delivery": "urgent",
+      "assets": [
+        "image:ai",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 6,
+      "title": "अब कंपास नहीं, ईंधन फैसला कर रहा था",
+      "start": 222.45,
+      "end": 263.93,
+      "visualMode": "stat",
+      "visualRole": "measurement",
+      "narrativeRole": "discovery",
+      "rewardType": "consequence",
+      "rewardStrength": 0.92,
+      "questionOut": "फ्लाइट 19 की आखिरी रेडियो लाइन में ईंधन का कौन-सा नंबर आया था?",
+      "delivery": "urgent",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 7,
+      "title": "10 गैलन से कम",
+      "start": 263.68,
+      "end": 318.58,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "mini_reveal",
+      "rewardType": "evidence",
+      "rewardStrength": 0.98,
+      "questionOut": "उस आखिरी कॉल, हवा और रूट को जोड़ें, तो 5ों विमान किस तरफ गिरे होंगे?",
+      "delivery": "reveal",
+      "assets": [
+        "image:ai",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 8,
+      "title": "सबसे मजबूत जवाब: वे घर से दूर जा रहे थे",
+      "start": 318.33,
+      "end": 375.06,
+      "visualMode": "map",
+      "visualRole": "measurement",
+      "narrativeRole": "main_reveal",
+      "rewardType": "partial_answer",
+      "rewardStrength": 1.0,
+      "questionOut": "क्या पीबीएम मैरिनर सच में फ्लाइट 19 के उसी हादसे में फंसा था?",
+      "delivery": "reveal",
+      "assets": [
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 9,
+      "title": "बचाव विमान के नीचे आग दिखी थी",
+      "start": 374.81,
+      "end": 417.48,
+      "visualMode": "evidence",
+      "visualRole": "explanation",
+      "narrativeRole": "reversal",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.94,
+      "questionOut": "अगर दोनों हादसे अलग थे, तो समुद्र ने किसी का मलबा क्यों नहीं लौटाया?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 10,
+      "title": "समुद्र ने कोई सबूत नहीं छोड़ा",
+      "start": 417.23,
+      "end": 462.87,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "implication",
+      "rewardType": "consequence",
+      "rewardStrength": 0.9,
+      "questionOut": "जांच ने क्या चार्ल्स टेलर को इस पूरे हादसे का दोषी माना?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 11,
+      "title": "रहस्य नहीं, लेकिन जवाब भी पूरा नहीं",
+      "start": 462.62,
+      "end": 509.06,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "conclusion",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.96,
+      "questionOut": "",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:stock",
+        "image:stock"
+      ]
+    }
+  ]
+}
