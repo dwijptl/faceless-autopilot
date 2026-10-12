@@ -1,0 +1,219 @@
+{
+  "stamp": "2026-10-12_1240",
+  "title": "49 लोग निकले, जहाज़ भी गायब—अरब सागर ने क्या छिपाया? | एम.वी. कैराली",
+  "style": "documentary",
+  "retention_plan": {
+    "core_question": "49 लोगों वाला एम.वी. कैराली अरब सागर में कैसे गायब हुआ, जबकि न कोई मदद का संदेश मिला, न पक्का मलबा?",
+    "viewer_assumption": "इतना बड़ा जहाज़ डूबे तो रेडियो कॉल, तेल का धब्बा, लाइफबोट या कुछ मलबा जरूर दिखेगा।",
+    "first_reversal": "कैराली की फाइल में सबसे डरावनी चीज़ तूफान नहीं है—खतरे का कोई पक्का रेडियो संदेश ही दर्ज नहीं हुआ।",
+    "main_reveal": "उपलब्ध रिकॉर्ड यह साबित नहीं करते कि कैराली किस वजह से डूबी या कहां डूबी। बस इतना सबसे ज्यादा मुमकिन है कि जहाज़ अरब सागर में खो गया और फिर कभी नहीं मिला।",
+    "main_reveal_scene": 9,
+    "open_loops": [
+      {
+        "question": "इतनी बड़ी मुसीबत में जहाज़ ने SOS क्यों नहीं भेजा?",
+        "opens_scene": 1,
+        "partial_scene": 3,
+        "closes_scene": 9
+      },
+      {
+        "question": "तलाशी के बाद समुद्र ने कैराली का एक टुकड़ा भी क्यों नहीं लौटाया?",
+        "opens_scene": 3,
+        "partial_scene": 4,
+        "closes_scene": 11
+      }
+    ]
+  },
+  "beats": [
+    {
+      "n": 1,
+      "title": "49 लोग, फिर पूरा सन्नाटा",
+      "start": 0.0,
+      "end": 44.93,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "hook",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.98,
+      "questionOut": "रिकॉर्ड में कैराली को आखिरी बार किस यात्रा पर दर्ज किया गया था?",
+      "delivery": "hook",
+      "assets": [
+        "video:ai",
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 2,
+      "title": "मंगलुरु से मुंबई, बस इतना रूट था",
+      "start": 44.68,
+      "end": 91.57,
+      "visualMode": "map",
+      "visualRole": "measurement",
+      "narrativeRole": "context",
+      "rewardType": "fact",
+      "rewardStrength": 0.84,
+      "questionOut": "जहाज़ पर मुसीबत आई थी, तो रेडियो से एक शब्द भी क्यों नहीं गया?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 3,
+      "title": "वो SOS जो कभी आया ही नहीं",
+      "start": 91.32,
+      "end": 141.29,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "question",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.82,
+      "questionOut": "तलाशी में कैराली का पहला पक्का टुकड़ा क्या मिला?",
+      "delivery": "calm",
+      "assets": [
+        "video:stock",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 4,
+      "title": "समुद्र ने कुछ लौटाया ही नहीं",
+      "start": 141.04,
+      "end": 189.63,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "evidence",
+      "rewardType": "evidence",
+      "rewardStrength": 0.93,
+      "questionOut": "क्या उस वक्त का मानसून इतना खराब था कि जहाज़ और मलबा—दोनों मिट जाएं?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 5,
+      "title": "मानसून: सबसे आसान जवाब, मगर अधूरा",
+      "start": 189.38,
+      "end": 246.25,
+      "visualMode": "stat",
+      "visualRole": "measurement",
+      "narrativeRole": "explanation",
+      "rewardType": "comparison",
+      "rewardStrength": 0.8,
+      "questionOut": "तो क्या तूफान से पहले कैराली खुद ही किसी कमजोरी से जूझ रही थी?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 6,
+      "title": "जहाज़ के अंदर क्या खराब हुआ होगा?",
+      "start": 246.0,
+      "end": 300.8,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "reversal",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.86,
+      "questionOut": "फिर लोगों ने हादसे से आगे बढ़कर किस खौफनाक बात पर शक किया?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 7,
+      "title": "जब सबूत नहीं मिले, कहानियां बन गईं",
+      "start": 300.55,
+      "end": 346.27,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "reversal",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.88,
+      "questionOut": "जांच के पास आखिर कौन-सी 3 चीज़ें नहीं थीं, जिनके बिना कारण तय नहीं हो सकता?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 8,
+      "title": "फाइल में 3 बड़े खालीपन",
+      "start": 346.02,
+      "end": 392.75,
+      "visualMode": "broll",
+      "visualRole": "measurement",
+      "narrativeRole": "escalation",
+      "rewardType": "scale",
+      "rewardStrength": 0.9,
+      "questionOut": "क्या रिकॉर्ड ने कम से कम इतना तय किया कि कैराली डूबी थी?",
+      "delivery": "urgent",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 9,
+      "title": "आधिकारिक जवाब: पता नहीं",
+      "start": 392.5,
+      "end": 450.05,
+      "visualMode": "evidence",
+      "visualRole": "explanation",
+      "narrativeRole": "main_reveal",
+      "rewardType": "partial_answer",
+      "rewardStrength": 1.0,
+      "questionOut": "और इस अधूरे जवाब का सबसे भारी बोझ किसके हिस्से आया?",
+      "delivery": "reveal",
+      "assets": [
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 10,
+      "title": "49 घरों में रुका हुआ इंतज़ार",
+      "start": 449.8,
+      "end": 493.28,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "implication",
+      "rewardType": "consequence",
+      "rewardStrength": 0.94,
+      "questionOut": "क्या बिना मलबे और बिना जगह के यह केस कभी सच में बंद हो सकता है?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 11,
+      "title": "अरब सागर का अधूरा जवाब",
+      "start": 493.03,
+      "end": 535.87,
+      "visualMode": "ai_image",
+      "visualRole": "measurement",
+      "narrativeRole": "conclusion",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.98,
+      "questionOut": "",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai",
+        "image:stock"
+      ]
+    }
+  ]
+}
