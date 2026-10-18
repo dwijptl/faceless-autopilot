@@ -19,22 +19,4 @@
 *   **Anchor baseline content on Case Family 1 (Disappearances & Deaths) and Case Family 2 (Indian Cases):** Grounded human mysteries (e.g., Dyatlov Pass, Yuba County Five, Stoneman, Roopkund) consistently generate stronger emotional investment and watch time than purely abstract phenomena.
 *   **Maintain strict 1-in-2 or 1-in-3 Indian case rotation:** Prioritize Indian real-mystery investigations (e.g., Roopkund, Stoneman, Jatinga, Kuldhara) to capitalize on untapped Hindi-market search demand and establish niche authority.
 *   **Cap Scientific Anomalies (Case Family 4) at 1 in 4 videos:** Limit scientific cases strictly to evidence-driven investigations with clear human or observational anchors (e.g., The Bloop, Hessdalen lights). Avoid abstract astrophysics or planetary geology lacking direct human stakes.
-*   **Enforce the One-Breath Test:** Every topic premise must be stateable in one simple Hindi sentence with zero unfamiliar proper nouns, instantly prompting a follow-up question from a stranger.
-
-## Hook & pacing guidance
-
-*   **Eliminate 0:27 Search Drop-Off (First 15-30 Seconds):** Remove channel intros, branding slates, and slow preamble. Display an official document, archival map, or key artifact on screen within the first 5 seconds while stating the core mystery query in plain Hindi.
-*   **Evidence-first structural arc:** Frame every long-form case strictly like a detective file: (1) The Unexplained Event → (2) Documented Official Evidence → (3) Evaluated Theories → (4) The Unresolved Reality.
-*   **Non-graphic visual density:** Maintain visual momentum using full-frame stock footage, dynamic map coordinates, historical documents, and AI stills. Strict adherence to non-graphic visuals (no blood, bodies, or explicit suffering) ensures advertiser safety.
-
-## Thumbnail & title guidance
-
-*   **Optimize packaging for Suggested Videos (Target CTR > 6%):** To capitalize on the 65.5% impression share in Suggested Videos, thumbnails need extreme visual clarity: high-contrast focal points, magnified evidence overlays (yellow markers, red circles, document stamps), and 2–4 large Hindi text words maximum.
-*   **Title Formula:** Structure titles using a high-curiosity plain Hindi hook followed by the recognized case name: `[High-Curiosity Hindi Hook] | [Case Name]`.
-*   **Maintain Channel Promise:** Ground titles in verified evidence and real mystery ("असली सबूत", "गायब", "रहस्य") without resorting to supernatural claim-bait or policy-violating shock tactics.
-
-```yaml
-overrides:
-  target_minutes: 8
-  scenes_max: 12
-
+*   **Enforce the One-Breath Test:** Every topic
