@@ -1,0 +1,245 @@
+{
+  "stamp": "2026-10-19_1027",
+  "title": "99 नाविकों वाली पनडुब्बी 3,000 मीटर नीचे क्यों टूटी?",
+  "style": "documentary",
+  "retention_plan": {
+    "core_question": "यूएसएस स्कॉर्पियन आखिर क्यों डूबी—सोवियत हमला, समुद्र का प्रेशर, या उसके अपने टॉरपीडो रूम में शुरू हुआ संकट?",
+    "viewer_assumption": "शीत युद्ध में गायब हुई अमेरिकी पनडुब्बी सुनते ही ज्यादातर लोग सोवियत हमले का अंदाज़ा लगाते हैं।",
+    "first_reversal": "मलबे ने दिखाया कि आखिरी विनाश बाहर से टकराकर नहीं आया; पनडुब्बी पहले बहुत गहराई तक बेबस होकर उतरी थी।",
+    "main_reveal": "सबसे मजबूत थ्योरी मार्क 37 टॉरपीडो की बैटरी या फायरिंग सिस्टम में खराबी की है। इससे अंदर इमरजेंसी शुरू हो सकती थी, लेकिन अमेरिकी नौसेना ने इसे कभी पक्का कारण नहीं माना।",
+    "main_reveal_scene": 9,
+    "open_loops": [
+      {
+        "question": "उस रात पनडुब्बी के अंदर ऐसा क्या हुआ कि वह सतह तक नहीं लौट सकी?",
+        "opens_scene": 1,
+        "partial_scene": 4,
+        "closes_scene": 12
+      },
+      {
+        "question": "क्या किसी सोवियत जहाज या टॉरपीडो ने स्कॉर्पियन को निशाना बनाया था?",
+        "opens_scene": 3,
+        "partial_scene": 5,
+        "closes_scene": 10
+      }
+    ]
+  },
+  "beats": [
+    {
+      "n": 1,
+      "title": "99 लोग, फिर रेडियो सन्नाटा",
+      "start": 0.0,
+      "end": 35.6,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "hook",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.9,
+      "questionOut": "क्या वह किसी जहाज से टकराई थी, या शीत युद्ध में किसी ने उसे चुपचाप मार गिराया?",
+      "delivery": "hook",
+      "assets": [
+        "video:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 2,
+      "title": "3,000 मीटर नीचे दो टुकड़े",
+      "start": 35.35,
+      "end": 82.15,
+      "visualMode": "stat",
+      "visualRole": "measurement",
+      "narrativeRole": "discovery",
+      "rewardType": "scale",
+      "rewardStrength": 0.92,
+      "questionOut": "3,000 मीटर पर पानी का प्रेशर पनडुब्बी के साथ क्या कर सकता है?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 3,
+      "title": "पहला शक: सोवियत हमला",
+      "start": 81.9,
+      "end": 120.71,
+      "visualMode": "map",
+      "visualRole": "explanation",
+      "narrativeRole": "context",
+      "rewardType": "fact",
+      "rewardStrength": 0.82,
+      "questionOut": "क्या मलबे पर दुश्मन के टॉरपीडो या टक्कर का कोई साफ निशान मिला?",
+      "delivery": "calm",
+      "assets": [
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 4,
+      "title": "मलबे ने हमला थ्योरी पलट दी",
+      "start": 120.46,
+      "end": 173.62,
+      "visualMode": "ai_image",
+      "visualRole": "explanation",
+      "narrativeRole": "reversal",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.94,
+      "questionOut": "अगर आखिरी वार समुद्र ने किया, तो पनडुब्बी को इतनी नीचे भेजने वाला पहला संकट क्या था?",
+      "delivery": "reveal",
+      "assets": [
+        "video:ai",
+        "image:ai",
+        "image:ai",
+        "image:ai"
+      ]
+    },
+    {
+      "n": 5,
+      "title": "दुश्मन का सबूत गायब था",
+      "start": 173.37,
+      "end": 207.3,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "evidence",
+      "rewardType": "evidence",
+      "rewardStrength": 0.88,
+      "questionOut": "पनडुब्बी के अंदर कौन-सी चीज़ अपने ही क्रू के लिए हथियार बन सकती थी?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 6,
+      "title": "समुद्र ने आखिरी आवाज़ें रिकॉर्ड कीं",
+      "start": 207.05,
+      "end": 252.97,
+      "visualMode": "broll",
+      "visualRole": "measurement",
+      "narrativeRole": "escalation",
+      "rewardType": "fact",
+      "rewardStrength": 0.86,
+      "questionOut": "क्या वह आवाज़ एक अंदरूनी विस्फोट की थी—और क्या उसका रिश्ता टॉरपीडो रूम से था?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 7,
+      "title": "एक टॉरपीडो की खतरनाक बैटरी",
+      "start": 252.72,
+      "end": 299.61,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "partial_answer",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.9,
+      "questionOut": "क्या खराब टॉरपीडो ने स्कॉर्पियन को खुद अपने खिलाफ लड़ने पर मजबूर कर दिया?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 8,
+      "title": "ट्रेनिंग के पास कितने सेकंड थे?",
+      "start": 299.36,
+      "end": 349.68,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "context",
+      "rewardType": "consequence",
+      "rewardStrength": 0.9,
+      "questionOut": "इमरजेंसी में क्रू ने पनडुब्बी को बचाने के लिए क्या किया होगा—और क्या वही फैसला उसे नीचे ले गया?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 9,
+      "title": "सबसे मजबूत थ्योरी: अंदर से शुरू हुआ संकट",
+      "start": 349.43,
+      "end": 406.98,
+      "visualMode": "ai_image",
+      "visualRole": "explanation",
+      "narrativeRole": "main_reveal",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.98,
+      "questionOut": "इतनी मजबूत थ्योरी के बाद भी अमेरिकी नौसेना ने इसे पक्का कारण क्यों नहीं कहा?",
+      "delivery": "reveal",
+      "assets": [
+        "image:ai",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 10,
+      "title": "नौसेना ने कहा: कारण तय नहीं",
+      "start": 406.73,
+      "end": 449.84,
+      "visualMode": "evidence",
+      "visualRole": "measurement",
+      "narrativeRole": "reversal",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.95,
+      "questionOut": "तो 99 नाविकों के मामले में पक्का क्या है, और क्या आज भी सिर्फ अंदाज़ा है?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 11,
+      "title": "क्या साबित है, क्या नहीं",
+      "start": 449.59,
+      "end": 489.11,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "implication",
+      "rewardType": "comparison",
+      "rewardStrength": 0.9,
+      "questionOut": "तो यूएसएस स्कॉर्पियन पर अंतिम, ईमानदार फैसला क्या होना चाहिए?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 12,
+      "title": "3,000 मीटर नीचे दबा आखिरी मिनट",
+      "start": 488.86,
+      "end": 536.72,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "conclusion",
+      "rewardType": "consequence",
+      "rewardStrength": 0.97,
+      "questionOut": "",
+      "delivery": "reveal",
+      "assets": [
+        "image:ai",
+        "image:stock",
+        "image:stock"
+      ]
+    }
+  ]
+}
