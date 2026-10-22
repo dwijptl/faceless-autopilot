@@ -1,0 +1,232 @@
+{
+  "stamp": "2026-10-22_0954",
+  "title": "जहाज़ बच गया, 25 लोग गायब हुए—जॉयटा का अनसुलझा केस",
+  "style": "documentary",
+  "retention_plan": {
+    "core_question": "जॉयटा से 25 लोग उस वक्त क्यों निकले, जब उनका जहाज़ आखिर तक पानी पर तैरता रहा?",
+    "viewer_assumption": "खाली जहाज़ मिला है, तो वह डूबने या किसी बड़े हादसे का साफ निशान देगा।",
+    "first_reversal": "जॉयटा टूटा हुआ मलबा नहीं था। वह झुका था, उसमें पानी था, फिर भी तैर रहा था।",
+    "main_reveal": "सबसे मजबूत जांच यही इशारा करती है: इंजन की खराबी, अंदर भरता पानी और बेकार रेडियो देखकर लोगों ने जल्दी में लाइफबोट उतारी। जॉयटा बच गया, छोटी नाव नहीं मिली।",
+    "main_reveal_scene": 9,
+    "open_loops": [
+      {
+        "question": "जहाज़ तैर रहा था, फिर 25 लोग उसे छोड़कर क्यों गए?",
+        "opens_scene": 1,
+        "partial_scene": 6,
+        "closes_scene": 9
+      },
+      {
+        "question": "क्या वे मदद के लिए रेडियो चला सकते थे?",
+        "opens_scene": 3,
+        "partial_scene": 7,
+        "closes_scene": 11
+      }
+    ]
+  },
+  "beats": [
+    {
+      "n": 1,
+      "title": "जहाज़ मिला, लोग नहीं",
+      "start": 0.0,
+      "end": 29.66,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "hook",
+      "rewardType": "visual_reveal",
+      "rewardStrength": 0.98,
+      "questionOut": "जॉयटा तैर रहा था, तो उसके 25 लोग कहाँ गए?",
+      "delivery": "hook",
+      "assets": [
+        "video:stock",
+        "video:stock"
+      ]
+    },
+    {
+      "n": 2,
+      "title": "बस 2 दिन का सफर",
+      "start": 29.41,
+      "end": 64.53,
+      "visualMode": "map",
+      "visualRole": "measurement",
+      "narrativeRole": "context",
+      "rewardType": "fact",
+      "rewardStrength": 0.82,
+      "questionOut": "2 दिन का सफर आखिर 38 दिन की खामोशी कैसे बना?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "video:stock"
+      ]
+    },
+    {
+      "n": 3,
+      "title": "जहाज़ पहुंचा ही नहीं",
+      "start": 64.28,
+      "end": 96.6,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "question",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.86,
+      "questionOut": "अगर जॉयटा डूबा था, तो समुद्र ने उसका एक टुकड़ा भी क्यों नहीं लौटाया?",
+      "delivery": "calm",
+      "assets": [
+        "video:stock",
+        "video:stock"
+      ]
+    },
+    {
+      "n": 4,
+      "title": "खोज, मगर सिर्फ पानी",
+      "start": 96.35,
+      "end": 128.67,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "escalation",
+      "rewardType": "scale",
+      "rewardStrength": 0.84,
+      "questionOut": "तो ऐसा क्या हुआ कि इंतज़ार करना भी उन्हें सुरक्षित नहीं लगा?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 5,
+      "title": "जिस जहाज़ को डूबना नहीं था",
+      "start": 128.42,
+      "end": 167.49,
+      "visualMode": "broll",
+      "visualRole": "measurement",
+      "narrativeRole": "discovery",
+      "rewardType": "fact",
+      "rewardStrength": 0.83,
+      "questionOut": "क्या जॉयटा सच में डूबने के बजाय कहीं बहुत दूर बह रहा था?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 6,
+      "title": "38वें दिन वह दिखा",
+      "start": 167.24,
+      "end": 209.37,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "reversal",
+      "rewardType": "visual_reveal",
+      "rewardStrength": 0.98,
+      "questionOut": "जहाज़ बचा हुआ था, तो लोगों को किस चीज़ ने लाइफबोट तक पहुंचाया?",
+      "delivery": "reveal",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 7,
+      "title": "रेडियो पर मदद की पुकार",
+      "start": 209.12,
+      "end": 252.77,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "evidence",
+      "rewardType": "evidence",
+      "rewardStrength": 0.92,
+      "questionOut": "रेडियो बेकार था, तो क्या 25 लोगों ने बचने के लिए छोटी नाव उतार दी?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 8,
+      "title": "गायब थी लाइफबोट",
+      "start": 252.52,
+      "end": 295.18,
+      "visualMode": "evidence",
+      "visualRole": "measurement",
+      "narrativeRole": "partial_answer",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.94,
+      "questionOut": "उन्होंने जॉयटा को डूबने वाला जहाज़ क्यों समझ लिया था?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 9,
+      "title": "सबसे मजबूत जवाब",
+      "start": 294.93,
+      "end": 343.1,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "main_reveal",
+      "rewardType": "partial_answer",
+      "rewardStrength": 1.0,
+      "questionOut": "अगर जवाब इतना साफ लगता है, तो जांच इसे आखिरी सच क्यों नहीं कह पाई?",
+      "delivery": "reveal",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 10,
+      "title": "कड़वी विडंबना",
+      "start": 342.85,
+      "end": 385.6,
+      "visualMode": "stat",
+      "visualRole": "measurement",
+      "narrativeRole": "implication",
+      "rewardType": "comparison",
+      "rewardStrength": 0.91,
+      "questionOut": "उस छोटी नाव के बिना कौन-सा आखिरी सच हमेशा के लिए गायब हो गया?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 11,
+      "title": "कोई आखिरी गवाह नहीं",
+      "start": 385.35,
+      "end": 425.5,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "mini_reveal",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.88,
+      "questionOut": "तो जॉयटा केस पर सबसे ईमानदार फैसला क्या है?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 12,
+      "title": "जहाज़ लौटा, लोग नहीं",
+      "start": 425.25,
+      "end": 467.04,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "conclusion",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.96,
+      "questionOut": "",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    }
+  ]
+}
