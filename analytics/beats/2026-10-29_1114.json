@@ -1,0 +1,210 @@
+{
+  "stamp": "2026-10-29_1114",
+  "title": "102 लोगों वाला विमान हिमालय में गायब हुआ—35 साल बाद मिला मलबा",
+  "style": "documentary",
+  "retention_plan": {
+    "core_question": "35 साल बाद मलबा मिलने पर क्या पता चला कि 102 लोगों वाला भारतीय वायुसेना का विमान हिमालय में क्यों गिरा?",
+    "viewer_assumption": "मलबा मिल जाए, तो हादसे की वजह भी साफ हो जाती है।",
+    "first_reversal": "मलबा मिला, लेकिन ब्लैक बॉक्स नहीं मिला। यानी हादसे के सबसे ज़रूरी आख़िरी मिनट अब भी बर्फ़ के नीचे हैं।",
+    "main_reveal": "रूट, पहाड़ी मौसम और मलबे की जगह मिलाकर सबसे मजबूत संभावना यह दिखती है कि विमान उड़ने लायक हालत में था, लेकिन खराब विज़िबिलिटी या नेविगेशन की गड़बड़ी में पहाड़ की तरफ चला गया। इसे कंट्रोल्ड फ्लाइट इंटू",
+    "main_reveal_scene": 3,
+    "open_loops": [
+      {
+        "question": "विमान हवा में टूटा था, या उड़ते-उड़ते पहाड़ से टकराया?",
+        "opens_scene": 1,
+        "partial_scene": 2,
+        "closes_scene": 3
+      },
+      {
+        "question": "पायलट को सामने का पहाड़ दिखा क्यों नहीं?",
+        "opens_scene": 3,
+        "partial_scene": 6,
+        "closes_scene": 10
+      }
+    ]
+  },
+  "beats": [
+    {
+      "n": 1,
+      "title": "35 साल तक बर्फ़ में दबा विमान",
+      "start": 0.0,
+      "end": 54.44,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "hook",
+      "rewardType": "visual_reveal",
+      "rewardStrength": 0.96,
+      "questionOut": "मलबा मिला था, लेकिन क्या उससे हादसे की जगह सच में तय हो गई?",
+      "delivery": "hook",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 2,
+      "title": "मलबा मिला, जवाब नहीं",
+      "start": 54.19,
+      "end": 104.41,
+      "visualMode": "map",
+      "visualRole": "measurement",
+      "narrativeRole": "discovery",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.9,
+      "questionOut": "अगर मलबा अपनी जगह से सरक चुका था, तो फिर हादसे का सबसे मजबूत पैटर्न क्या बचता है?",
+      "delivery": "calm",
+      "assets": [
+        "video:stock",
+        "video:stock",
+        "video:stock",
+        "image:stock",
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 3,
+      "title": "सबसे मजबूत जवाब",
+      "start": 104.16,
+      "end": 160.95,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "main_reveal",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.98,
+      "questionOut": "पायलट को सामने का पहाड़ दिखा क्यों नहीं?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 4,
+      "title": "जब आसमान और जमीन एक रंग के हो जाएँ",
+      "start": 160.7,
+      "end": 221.54,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "question",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.88,
+      "questionOut": "तो क्या मौसम अकेला दोषी था, या विमान के साथ भी कुछ हुआ था?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 5,
+      "title": "क्या विमान हवा में टूट गया था?",
+      "start": 221.29,
+      "end": 277.35,
+      "visualMode": "ai_image",
+      "visualRole": "explanation",
+      "narrativeRole": "reversal",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.87,
+      "questionOut": "जब मलबा भी साफ़ जवाब नहीं दे रहा था, तब बचा क्या?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 6,
+      "title": "बर्फ़ ने धातु लौटाई, आवाज़ नहीं",
+      "start": 277.1,
+      "end": 335.31,
+      "visualMode": "evidence",
+      "visualRole": "measurement",
+      "narrativeRole": "evidence",
+      "rewardType": "evidence",
+      "rewardStrength": 0.94,
+      "questionOut": "ब्लैक बॉक्स नहीं था, तो क्या पहाड़ और रूट खुद हादसे का पैटर्न दिखा सकते हैं?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 7,
+      "title": "एक गलत घाटी, सामने पहाड़",
+      "start": 335.06,
+      "end": 393.12,
+      "visualMode": "stat",
+      "visualRole": "measurement",
+      "narrativeRole": "escalation",
+      "rewardType": "scale",
+      "rewardStrength": 0.9,
+      "questionOut": "क्या विमान काम कर रहा था, लेकिन क्रू को पहाड़ की असली दूरी पता नहीं चली?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 8,
+      "title": "बचने के लिए कितने सेकंड?",
+      "start": 392.87,
+      "end": 444.34,
+      "visualMode": "ai_image",
+      "visualRole": "explanation",
+      "narrativeRole": "escalation",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.95,
+      "questionOut": "लेकिन उस चेन की पहली कड़ी क्या थी—मौसम, नेविगेशन या मशीन?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 9,
+      "title": "वह एक जवाब जो कभी नहीं मिला",
+      "start": 444.09,
+      "end": 502.85,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "implication",
+      "rewardType": "consequence",
+      "rewardStrength": 0.9,
+      "questionOut": "तो 35 साल बाद मिली बर्फ़ ने आखिर हमें क्या दिया—जवाब, या बस अधूरा सच?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 10,
+      "title": "बर्फ़ के नीचे बचा आख़िरी राज़",
+      "start": 502.6,
+      "end": 562.71,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "conclusion",
+      "rewardType": "consequence",
+      "rewardStrength": 0.96,
+      "questionOut": "",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    }
+  ]
+}
