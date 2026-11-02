@@ -1,0 +1,233 @@
+{
+  "stamp": "2026-11-02_1302",
+  "title": "211 लोग समुद्र में गायब हुए, जहाज़ का एक टुकड़ा भी नहीं मिला",
+  "style": "documentary",
+  "retention_plan": {
+    "core_question": "211 लोगों को लेकर निकला एसएस वराता आखिर समुद्र में कैसे गायब हुआ, और उसका मलबा आज तक क्यों नहीं मिला?",
+    "viewer_assumption": "इतने बड़े जहाज़ के डूबने पर कुछ न कुछ मलबा, लाइफबोट या आख़िरी वायरलेस संदेश जरूर मिलता है।",
+    "first_reversal": "वराता के पास वायरलेस सेट ही नहीं था। और खोज के बावजूद समुद्र ने एक भी पक्की लाइफबोट या मलबा वापस नहीं दिया।",
+    "main_reveal": "सबसे मजबूत, मगर अप्रमाणित जवाब यह है कि वराता तेज तूफान में अस्थिर होकर पलटा और बहुत तेजी से डूब गया। इसलिए मदद भेजने का मौका भी नहीं मिला होगा।",
+    "main_reveal_scene": 9,
+    "open_loops": [
+      {
+        "question": "आख़िरी बार वराता को देखने वाले जहाज़ ने क्या देखा था?",
+        "opens_scene": 2,
+        "partial_scene": 5,
+        "closes_scene": 9
+      },
+      {
+        "question": "अगर वराता डूबा था, तो समुद्र ने उसका एक भी पक्का टुकड़ा क्यों नहीं लौटाया?",
+        "opens_scene": 1,
+        "partial_scene": 6,
+        "closes_scene": 12
+      }
+    ]
+  },
+  "beats": [
+    {
+      "n": 1,
+      "title": "211 लोग, और फिर खाली समुद्र",
+      "start": 0.0,
+      "end": 39.59,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "hook",
+      "rewardType": "fact",
+      "rewardStrength": 0.96,
+      "questionOut": "आख़िरी बार इस जहाज़ को किसने देखा था?",
+      "delivery": "hook",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 2,
+      "title": "नाम था एसएस वराता",
+      "start": 39.34,
+      "end": 81.56,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "context",
+      "rewardType": "fact",
+      "rewardStrength": 0.88,
+      "questionOut": "उस आख़िरी गवाही में वराता कैसा दिख रहा था?",
+      "delivery": "calm",
+      "assets": [
+        "video:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 3,
+      "title": "खतरनाक समुद्री रास्ता",
+      "start": 81.31,
+      "end": 121.99,
+      "visualMode": "map",
+      "visualRole": "measurement",
+      "narrativeRole": "question",
+      "rewardType": "scale",
+      "rewardStrength": 0.85,
+      "questionOut": "क्लैन मैकइंटायर के क्रू ने तूफान में क्या देखा?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 4,
+      "title": "जहाज़ जो बहुत झूलता था",
+      "start": 121.74,
+      "end": 167.73,
+      "visualMode": "evidence",
+      "visualRole": "explanation",
+      "narrativeRole": "evidence",
+      "rewardType": "evidence",
+      "rewardStrength": 0.9,
+      "questionOut": "फिर आख़िरी बार दिखने पर वराता की हालत कैसी थी?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 5,
+      "title": "तूफान में आख़िरी दर्शन",
+      "start": 167.48,
+      "end": 210.59,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "discovery",
+      "rewardType": "visual_reveal",
+      "rewardStrength": 0.94,
+      "questionOut": "जब खोज शुरू हुई, समुद्र ने सबसे पहले क्या लौटाया?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 6,
+      "title": "खोज में मिला सिर्फ पानी",
+      "start": 210.34,
+      "end": 264.73,
+      "visualMode": "stat",
+      "visualRole": "measurement",
+      "narrativeRole": "reversal",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.95,
+      "questionOut": "क्या धाराएं हर सबूत को खोज वाले इलाके से बहुत दूर ले गईं?",
+      "delivery": "reveal",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 7,
+      "title": "धाराएं सबूत को चुरा सकती हैं",
+      "start": 264.48,
+      "end": 310.2,
+      "visualMode": "map",
+      "visualRole": "explanation",
+      "narrativeRole": "partial_answer",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.86,
+      "questionOut": "क्या बॉयलर फटा था, या जहाज़ के अंदर कुछ टूट गया था?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 8,
+      "title": "धमाका क्यों फिट नहीं बैठता",
+      "start": 309.95,
+      "end": 355.5,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "reversal",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.87,
+      "questionOut": "कौन-सी घटना जहाज़ को बिना संदेश भेजे मिनटों में खत्म कर सकती थी?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 9,
+      "title": "सबसे मजबूत जवाब: पलटना",
+      "start": 355.25,
+      "end": 417.8,
+      "visualMode": "ai_image",
+      "visualRole": "measurement",
+      "narrativeRole": "main_reveal",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.98,
+      "questionOut": "लेकिन अगर वराता यहीं डूबा, तो उसका मलबा समुद्रतल पर कहां है?",
+      "delivery": "reveal",
+      "assets": [
+        "image:stock",
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 10,
+      "title": "किनारे पर बचा इंतज़ार",
+      "start": 417.55,
+      "end": 463.72,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "implication",
+      "rewardType": "consequence",
+      "rewardStrength": 0.9,
+      "questionOut": "क्या बाद की किसी खोज ने वराता को सच में ढूंढ लिया?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 11,
+      "title": "मलबा मिलने के दावे",
+      "start": 463.47,
+      "end": 506.86,
+      "visualMode": "stat",
+      "visualRole": "measurement",
+      "narrativeRole": "mini_reveal",
+      "rewardType": "evidence",
+      "rewardStrength": 0.89,
+      "questionOut": "तो इस केस पर सबसे ईमानदार फैसला क्या है?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 12,
+      "title": "रहस्य का सबसे ईमानदार जवाब",
+      "start": 506.61,
+      "end": 552.06,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "conclusion",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.96,
+      "questionOut": "",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    }
+  ]
+}
