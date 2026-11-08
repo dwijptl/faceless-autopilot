@@ -18,7 +18,7 @@
 
 *   **Anchor baseline content on Case Family 1 (Disappearances & Deaths) and Case Family 2 (Indian Cases):** Grounded human mysteries (e.g., Dyatlov Pass, Yuba County Five, Stoneman, Roopkund) consistently generate stronger emotional investment than purely abstract phenomena. Human beings must come first, objects second.
 *   **Maintain strict 1-in-2 or 1-in-3 Indian case rotation:** Prioritize Indian real-mystery investigations (e.g., Roopkund, Stoneman, Jatinga, Kuldhara) to capitalize on untapped Hindi-market search demand and establish niche authority.
-*   **Cap Scientific Anomalies (Case Family 4) at 1 in 4 videos:** Limit scientific cases strictly to evidence-driven investigations with clear human or observational anchors (e.g., The Bloop, Hessdalen lights). Avoid abstract astrophysics or planetary geology lacking direct human stakes (e.g., Mariana Trench, White Holes).
+*   **Cap Scientific Anomalies (Case Family 4) at 1 in 4 videos:** Limit scientific cases strictly to evidence-driven investigations with clear human or observational anchors (e.g., The Bloop, Hessdalen lights). Avoid abstract astrophysics or planetary geology lacking direct human stakes.
 *   **Enforce the One-Breath Test:** Every topic premise must be deliverable in one plain-Hindi sentence with zero unfamiliar proper nouns, instantly prompting a follow-up question from a stranger.
 
 ## Hook & pacing guidance
