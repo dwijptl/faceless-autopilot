@@ -1,0 +1,232 @@
+{
+  "stamp": "2026-11-09_1334",
+  "title": "72 सेकंड का सिग्नल आया, फिर आसमान चुप हो गया",
+  "style": "documentary",
+  "retention_plan": {
+    "core_question": "72 सेकंड तक बिग ईयर ने जो सिग्नल सुना था, वह आया किस चीज़ से था—और फिर कभी वापस क्यों नहीं आया?",
+    "viewer_assumption": "इतना साफ और अजीब सिग्नल देखकर लोग सीधे एलियंस या किसी मशीन की गड़बड़ी सोचते हैं।",
+    "first_reversal": "रिकॉर्ड का आकार बताता है कि सिग्नल जमीन के पास की मशीन से नहीं, आसमान में टेलिस्कोप की बीम से गुजरते किसी स्रोत से मेल खाता है।",
+    "main_reveal": "बिग ईयर के दो रिसीवरों में सिग्नल सिर्फ एक में मिला। इसलिए रिकॉर्ड एक सटीक पॉइंट नहीं देता; धनु राशि की तरफ दो पतली संभावित दिशाएं छोड़ता है।",
+    "main_reveal_scene": 9,
+    "open_loops": [
+      {
+        "question": "क्या यह सिग्नल सच में पृथ्वी के बाहर से आया था?",
+        "opens_scene": 1,
+        "partial_scene": 3,
+        "closes_scene": 10
+      },
+      {
+        "question": "अगर स्रोत आसमान में था, तो वह फिर कभी क्यों नहीं मिला?",
+        "opens_scene": 4,
+        "partial_scene": 8,
+        "closes_scene": 12
+      }
+    ]
+  },
+  "beats": [
+    {
+      "n": 1,
+      "title": "72 सेकंड की दस्तक",
+      "start": 0.0,
+      "end": 33.05,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "hook",
+      "rewardType": "fact",
+      "rewardStrength": 0.97,
+      "questionOut": "लेकिन यह अजीब कोड 6EQUJ5 आखिर किसी इंसान ने देखा कैसे?",
+      "delivery": "hook",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 2,
+      "title": "लाल पेन से लिखा “Wow!”",
+      "start": 32.8,
+      "end": 68.97,
+      "visualMode": "evidence",
+      "visualRole": "explanation",
+      "narrativeRole": "evidence",
+      "rewardType": "evidence",
+      "rewardStrength": 0.92,
+      "questionOut": "6 से U तक चढ़ता यह कोड, जमीन की मशीन को कैसे बेनकाब करता है?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "video:stock"
+      ]
+    },
+    {
+      "n": 3,
+      "title": "कोड नहीं, सिग्नल की चाल",
+      "start": 68.72,
+      "end": 106.8,
+      "visualMode": "stat",
+      "visualRole": "measurement",
+      "narrativeRole": "partial_answer",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.9,
+      "questionOut": "क्या 72 सेकंड सिग्नल भेजने वाले की टाइमिंग थी—या टेलिस्कोप की सीमा?",
+      "delivery": "calm",
+      "assets": [
+        "video:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 4,
+      "title": "72 सेकंड क्यों थे?",
+      "start": 106.55,
+      "end": 149.8,
+      "visualMode": "ai_image",
+      "visualRole": "explanation",
+      "narrativeRole": "reversal",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.94,
+      "questionOut": "क्या बाद की तलाश में टेलिस्कोप गलत जगह सुन रहे थे?",
+      "delivery": "reveal",
+      "assets": [
+        "image:stock",
+        "video:stock"
+      ]
+    },
+    {
+      "n": 5,
+      "title": "रातों की खाली स्क्रीन",
+      "start": 149.55,
+      "end": 191.49,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "escalation",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.86,
+      "questionOut": "1,420 मेगाहर्ट्ज के पास होना इतना खास क्यों माना गया?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 6,
+      "title": "हाइड्रोजन के पास",
+      "start": 191.24,
+      "end": 237.32,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "question",
+      "rewardType": "fact",
+      "rewardStrength": 0.84,
+      "questionOut": "जिस दिशा से सिग्नल आया, क्या वहाँ कोई एक खास तारा मिला?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 7,
+      "title": "धनु की भीड़",
+      "start": 237.07,
+      "end": 274.79,
+      "visualMode": "map",
+      "visualRole": "measurement",
+      "narrativeRole": "context",
+      "rewardType": "scale",
+      "rewardStrength": 0.85,
+      "questionOut": "एक सिग्नल ने एक दिशा की जगह दो अलग-अलग गलियारे कैसे छोड़ दिए?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 8,
+      "title": "धूमकेतु वाला जवाब",
+      "start": 274.54,
+      "end": 325.66,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "mini_reveal",
+      "rewardType": "partial_answer",
+      "rewardStrength": 0.9,
+      "questionOut": "वह कौन-सी कमी थी जिसने हर जवाब को अधूरा कर दिया?",
+      "delivery": "reveal",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 9,
+      "title": "दो कान, एक सिग्नल",
+      "start": 325.41,
+      "end": 374.9,
+      "visualMode": "broll",
+      "visualRole": "explanation",
+      "narrativeRole": "main_reveal",
+      "rewardType": "visual_reveal",
+      "rewardStrength": 0.99,
+      "questionOut": "तो क्या “एलियंस का सिग्नल” कहना विज्ञान है, या सिर्फ हमारी उम्मीद?",
+      "delivery": "reveal",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 10,
+      "title": "एलियंस? अभी नहीं",
+      "start": 374.65,
+      "end": 423.06,
+      "visualMode": "stat",
+      "visualRole": "measurement",
+      "narrativeRole": "implication",
+      "rewardType": "contradiction",
+      "rewardStrength": 0.9,
+      "questionOut": "49 साल बाद इस केस की ईमानदार रिपोर्ट क्या कहती है?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 11,
+      "title": "जो सच में पता है",
+      "start": 422.81,
+      "end": 466.64,
+      "visualMode": "broll",
+      "visualRole": "experience",
+      "narrativeRole": "conclusion",
+      "rewardType": "evidence",
+      "rewardStrength": 0.9,
+      "questionOut": "तो 72 सेकंड की उस लाइन का अंतिम जवाब क्या है?",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    },
+    {
+      "n": 12,
+      "title": "फाइल अब भी खुली है",
+      "start": 466.39,
+      "end": 504.93,
+      "visualMode": "ai_image",
+      "visualRole": "experience",
+      "narrativeRole": "conclusion",
+      "rewardType": "consequence",
+      "rewardStrength": 0.96,
+      "questionOut": "",
+      "delivery": "calm",
+      "assets": [
+        "image:stock",
+        "image:stock"
+      ]
+    }
+  ]
+}
